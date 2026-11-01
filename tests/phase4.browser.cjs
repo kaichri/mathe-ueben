@@ -326,6 +326,10 @@ async function layout(page){return page.evaluate(()=>{
       await target('[data-modus="gabby"]');await target('#losKnopf');
       await target('.bereich:not([hidden]) input',false);await p.keyboard.type('7');
       for(let section=0;section<6;section++)await target('#pruefenKnopf');
+      // Fast leere Runde: die Rückfrage muss erscheinen und per Tastatur bestätigbar sein.
+      assert.equal(await p.evaluate(()=>document.getElementById('frageUeberlagerung').hidden),false,'Rückfrage vor dem Abgeben fehlt');
+      assert.equal(await p.evaluate(()=>document.activeElement.id),'frageNeinKnopf','Fokus muss auf "Abbrechen" liegen');
+      await target('#frageJaKnopf');
       assert.equal(await p.evaluate(()=>fertigAnsicht),true);
       assert.equal(await p.evaluate(()=>speicher.daten().runden.length),1);
       assert.match(await p.locator('#rueckmeldung').textContent(),/von 50/);

@@ -36,17 +36,20 @@ werden die ältesten Ausschlüsse gelockert.
 - Eine begonnene Tagesrunde behält ihre Aufgaben, Antworten und ursprüngliche
   Welt. Eine andere Auswahl auf der Startseite verändert diese Runde nicht.
 - „Weiter“, „Zurück“ und die Bereichsnavigation wechseln zwischen Abschnitten.
-  Erst „Fertig“ bewertet die gesamte Runde und sperrt die Antworten.
+  Erst „Fertig“ bewertet die gesamte Runde und sperrt die Antworten. Sind mehr
+  als die Hälfte der Aufgaben noch offen, fragt das Spiel vorher nach.
 - Fehlerhafte Aufgaben lassen sich anschließend in einer Wiederholungsrunde üben.
 - „Neuer Versuch“ erzeugt nach einer Rückfrage ein neues Set für denselben Tag.
   Die bisherigen Tagesantworten werden dabei ersetzt; verdiente Sterne,
   Gutscheine und bereits für diesen Tag geöffnete Bonuswelten bleiben erhalten.
 - Am nächsten Tag wird beim Starten eine neue Tagesrunde erzeugt. Maßgeblich
-  ist die Zeitzone **Europe/Vienna**, einschließlich Sommer-/Winterzeit.
+  ist die Zeitzone **Europe/Vienna**, einschließlich Sommer-/Winterzeit. Sind
+  von der Runde des Vortags noch Antworten gespeichert, fragt das Spiel vor dem
+  Verwerfen nach.
 
 ### Sterne, Bonuswelten und Gutscheine
 
-Reguläre Runden und Wiederholungsrunden vergeben ein bis fünf Sterne:
+Reguläre Runden vergeben ein bis fünf Sterne:
 
 | Anteil richtig | Sterne |
 |---|---:|
@@ -55,6 +58,11 @@ Reguläre Runden und Wiederholungsrunden vergeben ein bis fünf Sterne:
 | Ab 60 % | 3 |
 | Ab 40 % | 2 |
 | Darunter | 1 |
+
+Wiederholungsrunden vergeben nach demselben Anteil, aber **höchstens einen Stern
+je zwei Aufgaben der Runde** (mindestens einen). Eine einzelne richtige
+Wiederholungsaufgabe ergibt damit genau einen Stern und nicht die Höchstzahl
+einer perfekten 50er-Runde.
 
 Eine abgeschlossene reguläre Tagesrunde mit **mindestens 25 von 50** richtigen
 Antworten öffnet die Bonuswelt ihrer Themenwelt für diesen Tag.
@@ -107,7 +115,7 @@ die Entwicklung und Tests benötigt.
 - **Geld:** Euro und Cent getrennt eingeben, beispielsweise `16` und `50`.
   Ein einzelnes leeres Teilfeld gilt als null; zwei leere Felder bleiben
   unbeantwortet. Nichtleere ungültige Angaben machen die Antwort ungültig.
-- **Uhrzeit:** Zum Beispiel `9:25`, `9.25` oder `9 Uhr 25`.
+- **Uhrzeit:** Zum Beispiel `9:25`, `9.25`, `9 Uhr 25` oder kurz `925`.
 
 ## Projektstruktur
 
@@ -130,8 +138,14 @@ mathe-ueben/
 │   ├── phase3.test.cjs
 │   ├── phase3-helper.cjs
 │   ├── phase4.test.cjs
-│   └── phase4.browser.cjs
+│   ├── phase4.browser.cjs
+│   ├── audit-math.test.cjs         Mathematik mit unabhängigen Orakeln
+│   ├── audit-invariants.test.cjs   Zustand, Speicher, Tageswechsel
+│   └── audit-regressions.test.cjs  Regressionstests der Audit-Korrekturen
 ├── PHASE1.md … PHASE4.md        Entwicklungs- und Prüfberichte
+├── reports/
+│   ├── code-audit.md           Code-Audit mit 15 Befunden
+│   └── fix-report.md           Bericht zu den Korrekturen
 ├── So funktioniert es.txt       Zusätzliche Bedienungsanleitung
 └── README.md
 ```
@@ -212,14 +226,19 @@ Versionsverwaltung ausgeschlossen.
 
 ### Regression und Syntax
 
-Die 69 Regressionstests verwenden den integrierten Node.js-Testläufer und
-benötigen keine zusätzlichen npm-Pakete. Node.js 24 wurde für die dokumentierten
-Prüfungen verwendet; zum Spielen ist Node.js nicht erforderlich.
+Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 44
+Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
+Orakeln, Invarianten für Zustand und Speicher sowie je ein Regressionstest pro
+behobenem Audit-Befund. Node.js 24 wurde für die dokumentierten Prüfungen
+verwendet; zum Spielen ist Node.js nicht erforderlich.
 
 Im Projektverzeichnis ausführen:
 
 ```powershell
-node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs
+# Alle Node-Tests (113 Tests)
+node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
+  tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs
 
 node --check script.js
 node --check aufgaben-bereiche.js
@@ -284,6 +303,22 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
   stundenlanger realer Sitzungen oder einer Wiederherstellung nach Stromausfall.
 
 ## Versionshistorie
+
+### 1.0.1 — Korrekturen nach dem Code-Audit
+
+Behebt die 15 Befunde aus [reports/code-audit.md](reports/code-audit.md);
+Einzelheiten und Testbilanz stehen im [Fix-Bericht](reports/fix-report.md).
+Kurzfassung:
+
+- Wiederholungsrunden vergeben höchstens einen Stern je zwei Aufgaben.
+- Vor dem Abgeben einer überwiegend leeren Runde und vor dem Verwerfen der
+  Runde des Vortags fragt das Spiel nach.
+- Ein außerhalb des Spiels geleerter Speicher sperrt das Schreiben nicht mehr;
+  gültiges JSON ohne bekannte Felder wird nicht mehr überschrieben.
+- Anzeige- und Textfehler behoben (Rest/Lücke in der Übe-Liste, fehlende Sterne,
+  Bonusrunde auf der Startseite, Kalender, Tageskontingent, Merkzettel).
+- Zeitangaben sind auch ohne Trennzeichen eingebbar; ein zweites Bewerten einer
+  bereits abgeschlossenen Tagesrunde ist ausgeschlossen.
 
 ### 1.0.0 — erste stabile Fassung
 

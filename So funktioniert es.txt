@@ -124,6 +124,8 @@ Ablauf
    gezeigt, Richtige grün und falsche rot. Bei den falschen steht die
    richtige Lösung daneben, und unten steht "Das kannst du noch üben".
    Ausbessern geht jetzt nicht mehr. In der Bonuswelt gibt es kein Rot.
+   Sind noch mehr als die Hälfte der Aufgaben offen, fragt das Programm
+   vorher "Runde schon abgeben?" - dort kann man auch "Weiter rechnen".
 4. Zum Feiern kommt automatisch das "Kino": ein Video aus der Welt,
    die gerade geübt wurde (von YouTube gestreamt). Mit "Nächstes Video"
    sucht Emma sich ein neues aus, mit "Fernseher aus" geht der Kino zu.
@@ -135,6 +137,14 @@ Sterne: 5 Sterne ab 90 % richtig, 4 ab 80 %, 3 ab 60 %, 2 ab 40 %,
 1 Stern gibt es immer - auch wenn noch nicht alles klappt.
 Bei 5 Sternen gibt es Sternenregen und die Maskottchen machen Purzelbaum.
 Die Sterne bleiben über Tage erhalten.
+
+Eine Wiederholungsrunde ("Nur diese Aufgaben noch einmal üben") zählt
+nach demselben Anteil, gibt aber höchstens einen Stern je zwei Aufgaben
+der Runde. Wer eine einzelne Aufgabe nachholt, bekommt dafür also einen
+Stern - nicht die Höchstzahl einer ganzen Runde.
+
+Ist am nächsten Tag noch eine angefangene Runde von gestern gespeichert,
+fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
 
 
 Mein Fortschritt
@@ -191,7 +201,7 @@ Geld und Uhrzeit eingeben
 Geld: Hier gibt es zwei Felder – links die Euro, rechts die Cent.
 Beispiel für 16 € 50: links 16 rein, rechts 50. Ein leeres Feld zählt
 als 0, ein "5" im Cent-Feld sind 5 Cent (nicht 50).
-Uhrzeit: "9:25", "9.25" oder "9 Uhr 25" wird alles verstanden.
+Uhrzeit: "9:25", "9.25", "9 Uhr 25" oder kurz "925" wird alles verstanden.
 
 
 Etwas ändern

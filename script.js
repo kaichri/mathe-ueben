@@ -13,6 +13,8 @@ const SPIELERIN = "Emma";
 const EINSTELLUNGEN = {
   divisionMitRestAktiv: true, // true = 4 Divisionen mit Rest, false = ohne Rest
   geschichtenAnzahl: 5,
+  // Ist mehr als dieser Anteil der Tagesaufgaben noch offen, fragt "Fertig" vorher nach.
+  abgabeRueckfrageAbOffen: 0.5,
   merkzettelGroesse: 12,      // so viele letzte Geschichte-Merkmale merkt sich das Programm
   knobelMerken: 9,            // so viele letzte Knobelaufgaben merkt es sich
   bonusSterneProTag: 3,       // so viele Bonussterne gibt es höchstens pro Tag
@@ -94,6 +96,18 @@ const speicher = (function () {
       meldung = "Ein Teil deiner gespeicherten Daten konnte nicht gelesen werden. Die alten Daten bleiben geschützt. Bitte sichere sie mit Mama oder Papa.";
     }
     if (!objekt(geladen)) { problem(); return {}; }
+    /* Ein gültiges JSON-Objekt ohne ein einziges bekanntes Feld ist kein
+       Spielstand (z. B. "runde" statt "runden"): nicht als leerer Stand
+       behandeln, sondern wie beschädigte Daten schützen. */
+    const BEKANNTE_FELDER = ["version", "sterneGesamt", "modus", "runden", "zuletzt",
+      "knobelZuletzt", "tagesSet", "vortagSchluessel", "bonussterne", "bonusGesamt",
+      "geschenke", "bereichPunkte", "sound", "bonusTag", "bonusWelten"];
+    if (!BEKANNTE_FELDER.some(function (name) {
+      return Object.prototype.hasOwnProperty.call(geladen, name);
+    })) {
+      problem();
+      return {};
+    }
     if (geladen.version !== undefined && ![1, 2].includes(geladen.version)) { problem(); }
     const neu = Object.assign(Object.create(null), geladen);
     function datum(wert) {
@@ -267,8 +281,14 @@ const speicher = (function () {
     try {
       const stand = JSON.stringify(daten);
       if (stand !== letzterStand) {
-        // Keine neueren Daten eines anderen Fensters durch unseren alten Stand ersetzen.
-        if (window.localStorage.getItem(SPEICHER_NAME) !== letzterStand) {
+        const vorhanden = window.localStorage.getItem(SPEICHER_NAME);
+        if (vorhanden === null || vorhanden === "") {
+          /* Außerhalb dieses Fensters wurde der Speicher geleert (Browserdaten
+             gelöscht, Erweiterung, Speicherbereinigung). Das ist kein Konflikt mit
+             einem zweiten Spielfenster: mit dem Sitzungsstand neu aufsetzen. */
+          letzterStand = null;
+        } else if (vorhanden !== letzterStand) {
+          // Keine neueren Daten eines anderen Fensters durch unseren alten Stand ersetzen.
           gesperrt = true;
           meldung = "In einem anderen Fenster wurde weitergespielt. Dessen Daten bleiben geschützt. Sichere deine Antworten hier und öffne das Spiel danach neu.";
           aktualisiereSpeicherHinweis();
@@ -404,6 +424,13 @@ function parseZeit(roh) {
     }
     return null;
   }
+  treffer = text.match(/^(\d{1,2})(\d{2})$/);
+  if (treffer) {
+    // Kompakteingabe ohne Trennzeichen: "925" heißt 9:25, "1025" heißt 10:25.
+    const stunde = Number(treffer[1]);
+    const minute = Number(treffer[2]);
+    return stunde <= 23 && minute <= 59 ? { stunde: stunde, minute: minute } : null;
+  }
   treffer = text.match(/^(\d{1,2})\s*uhr$/);
   if (treffer) {
     const stunde = Number(treffer[1]);
@@ -430,6 +457,7 @@ let letzteZusammenfassung = null;
 let abschnittZeiger = 0;      // welcher Bereich gerade gezeigt wird
 let abschnittsModusAktiv = false; // true = ein Bereich nach dem anderen
 let fertigAnsicht = false;    // die Runde ist geprüft und kann nicht mehr geändert werden
+let abgabeBestaetigt = false; // die Rückfrage vor dem Abgeben wurde bestätigt
 let bereichsKnoten = [];      // DOM-Knoten der Bereiche der aktuellen Runde
 let kartenEingaben = new Map(); // Kartenkennung -> alle Eingabefelder der Karte (Reihenfolge)
 
@@ -698,7 +726,11 @@ function sichereTagesAntworten(aufgeschoben) {
 
 function baueBonusRunde(welt) {
   const offen = bonusPlaetzeHeute();
-  const anzahl = Math.min(Math.max(1, offen), 3);
+  if (offen <= 0) {
+    // Tageskontingent erschöpft: keine belohnungslose Bonusrunde bauen.
+    return null;
+  }
+  const anzahl = Math.min(offen, 3);
   const aufgaben = window.AUFGABEN.erzeugeBonus(anzahl, welt, speicher.daten().knobelZuletzt);
   // merken, welche Knobelaufgaben Emma gerade bekam – die kommen so schnell nicht wieder
   const daten = speicher.daten();
@@ -735,6 +767,7 @@ function zeigeRunde(neueRunde) {
   eingabeZuFeld = new Map();
   kartenEingaben = new Map();
   fertigAnsicht = false;
+  abgabeBestaetigt = false;
   abschnittsModusAktiv = (runde.bereichsArt === "tages" || runde.bereichsArt === "uebungen");
   abschnittZeiger = 0;
   const behaelter = document.getElementById("bereiche");
@@ -858,7 +891,8 @@ function aktualisiereKnopfLeiste() {
     zurueck.hidden = true;
     pruefen.hidden = false;
     pruefen.textContent = "Prüfen";
-    neu.hidden = false;
+    // Ohne offene Bonussternen bringt eine weitere Bonusrunde keinen Stern.
+    neu.hidden = bonusPlaetzeHeute() <= 0;
     neu.textContent = "Neue Aufgaben";
   }
 }
@@ -897,7 +931,8 @@ function neuesEingabefeld(feld, karte) {
   }
   const feldknoten = element("input", "eingabe");
   feldknoten.type = "text";
-  feldknoten.inputMode = feld.typ === "zeit" ? "numeric" : "numeric";
+  // Zeitangaben brauchen ein Trennzeichen (":", ".", ",") – keine reine Zifferntastatur.
+  feldknoten.inputMode = feld.typ === "zeit" ? "text" : "numeric";
   feldknoten.autocomplete = "off";
   feldknoten.spellcheck = false;
   feldknoten.dataset.kartenId = karte.ident;
@@ -1096,6 +1131,23 @@ function baueGeschichte(karte) {
 
 /* ------------- Fortschritt ------------- */
 
+/* Ist die Karte vollständig ausgefüllt? Bei Geld genügt eines der beiden
+   Teilfelder, sonst müssen alle Felder (auch die Umkehraufgabe) gefüllt sein. */
+function karteIstAusgefuellt(karte) {
+  return karte.felder.every(function (feld) {
+    const feldknoten = eingabeZuFeld.get(feld);
+    if (!feldknoten) {
+      return false;
+    }
+    if (feld.typ === "geld") {
+      return Array.prototype.some.call(feldknoten.querySelectorAll(".geld-teil"), function (teil) {
+        return teil.value.trim() !== "";
+      });
+    }
+    return feldknoten.value.trim() !== "";
+  });
+}
+
 function aktualisiereFortschritt() {
   if (!runde) {
     return;
@@ -1103,24 +1155,7 @@ function aktualisiereFortschritt() {
   const bereich = (abschnittsModusAktiv && !fertigAnsicht)
     ? runde.bereiche[abschnittZeiger] : null;
   const karten = bereich ? bereich.aufgaben : runde.karten;
-  let ausgefuellt = 0;
-  karten.forEach(function (karte) {
-    const alleFelderDa = karte.felder.every(function (feld) {
-      const feldknoten = eingabeZuFeld.get(feld);
-      if (!feldknoten) {
-        return false;
-      }
-      if (feld.typ === "geld") {
-        return Array.prototype.some.call(feldknoten.querySelectorAll(".geld-teil"), function (teil) {
-          return teil.value.trim() !== "";
-        });
-      }
-      return feldknoten.value.trim() !== "";
-    });
-    if (alleFelderDa) {
-      ausgefuellt += 1;
-    }
-  });
+  const ausgefuellt = karten.filter(karteIstAusgefuellt).length;
   const abschnittsInfo = bereich
     ? "Abschnitt " + (abschnittZeiger + 1) + " von " + runde.bereiche.length +
       " · " + bereich.titel + " – "
@@ -1162,6 +1197,36 @@ function pruefeRunde() {
     pruefeBonusRunde();
     return;
   }
+  /* Eine bereits abgeschlossene Tagesrunde darf niemals ein zweites Mal
+     bewertet werden – auch dann nicht, wenn sie erneut angezeigt wurde. */
+  if (istTagesRunde()) {
+    const gespeichertesSet = speicher.daten().tagesSet;
+    if (gespeichertesSet && gespeichertesSet.fertig) {
+      return;
+    }
+  }
+  /* Fast leere Runden nicht ohne Rückfrage endgültig abgeben. */
+  if (istTagesRunde() && !abgabeBestaetigt) {
+    const gesamtKarten = runde.karten.length;
+    const offen = runde.karten.filter(function (karte) {
+      return !karteIstAusgefuellt(karte);
+    }).length;
+    if (gesamtKarten > 0 && offen / gesamtKarten > EINSTELLUNGEN.abgabeRueckfrageAbOffen) {
+      zeigeFrage({
+        titel: "Runde schon abgeben?",
+        text: "Du hast noch " + offen + " von " + gesamtKarten + " Aufgaben offen. " +
+          "Wenn du jetzt abgibst, kannst du sie heute nicht mehr ausfüllen. " +
+          "Deine Sterne und Gutscheine bleiben natürlich erhalten.",
+        ja: "Ja, abgeben",
+        nein: "Weiter rechnen",
+        dann: function () {
+          abgabeBestaetigt = true;
+          pruefeRunde();
+        }
+      });
+      return;
+    }
+  }
 
   let richtig = 0;
   const falschKarten = [];
@@ -1202,7 +1267,7 @@ function pruefeRunde() {
   });
 
   const gesamt = runde.karten.length;
-  const sterne = sterneFuerAnteil(richtig / gesamt);
+  const sterne = sterneFuerRunde(richtig, gesamt, runde.bereichsArt);
   const lob = lobFuerAnteil(richtig / gesamt);
 
   speichernRunde(richtig, gesamt, sterne, bereichErgebnis, 0, false);
@@ -1344,6 +1409,8 @@ function pruefeBonusRunde() {
   kasten.scrollIntoView({ block: "start" });
 
   aktualisiereBonusweltKnoepfe();
+  // "Neue Aufgaben" verschwindet, sobald das Tageskontingent erschöpft ist.
+  aktualisiereKnopfLeiste();
   meldeRueckmeldung(vergeben + " neue Bonussterne. " + bonusTagesText());
 
   if (daten.bonussterne >= EINSTELLUNGEN.bonusSternAlle &&
@@ -1358,7 +1425,7 @@ function bonusTagesText() {
   const offen = EINSTELLUNGEN.bonusSterneProTag - verteilt;
   if (offen <= 0) {
     return "Heute sind alle " + EINSTELLUNGEN.bonusSterneProTag +
-      " Bonussterne verteilt. Morgen warten 3 neue auf dich! 🌟";
+      " Bonussterne verteilt. Morgen warten " + EINSTELLUNGEN.bonusSterneProTag + " neue auf dich! 🌟";
   }
   return "Heute sind noch " + offen + " von " + EINSTELLUNGEN.bonusSterneProTag +
     " Bonussternen zu holen (über alle Welten zusammen).";
@@ -1366,16 +1433,32 @@ function bonusTagesText() {
 
 /* Zeigt die richtige Lösung neben einer falsch gerechneten Aufgabe an. */
 function loesungsText(karte, feld) {
-  if (feld.darstellung) {
-    return feld.darstellung.replace("=", "").trim() + " = " + feld.anzeige;
-  }
   if (feld.beschriftung === "Rest") {
     return "Rest " + feld.anzeige;
   }
+  if (feld.darstellung) {
+    return feld.darstellung.replace("=", "").trim() + " = " + feld.anzeige;
+  }
   if (feld.beschriftung) {
-    return feld.beschriftung + " " + feld.anzeige;
+    return feld.beschriftung.trim() + " " + feld.anzeige;
   }
   return feld.anzeige;
+}
+
+/* Zeile(n) für die Liste „Das kannst du noch üben“. Bei Divisionsrest und
+   Lückenaufgaben muss die Lösung als Rest bzw. als Lücke erscheinen, nicht als
+   zweites Ergebnis derselben Rechnung. */
+function fehlerZeilen(karte) {
+  if (karte.layout === "text") {
+    return [karte.text];
+  }
+  if (karte.layout === "rest" && karte.felder.length === 2) {
+    return [karte.darstellung.replace("=", "").trim() + " = " +
+      karte.felder[0].anzeige + " Rest " + karte.felder[1].anzeige];
+  }
+  return karte.felder.map(function (feld) {
+    return loesungsText(karte, feld);
+  });
 }
 
 function sterneFuerAnteil(anteil) {
@@ -1384,6 +1467,19 @@ function sterneFuerAnteil(anteil) {
   if (anteil >= 0.6) { return 3; }
   if (anteil >= 0.4) { return 2; }
   return 1;
+}
+
+/* Sterne für eine ganze Runde. Wiederholungsrunden („Nur diese Aufgaben noch
+   einmal üben“) bestehen oft aus sehr wenigen Karten. Damit eine einzelne
+   richtige Wiederholungsaufgabe nicht so viel wert ist wie eine perfekte Runde
+   mit 50 Aufgaben, gibt es dort höchstens einen Stern je zwei Aufgaben der
+   Runde – bei einer einzigen Aufgabe also genau einen Stern. */
+function sterneFuerRunde(richtig, gesamt, bereichsArt) {
+  const basis = sterneFuerAnteil(gesamt > 0 ? richtig / gesamt : 0);
+  if (bereichsArt !== "uebungen") {
+    return basis;
+  }
+  return Math.min(basis, Math.max(1, Math.ceil(gesamt / 2)));
 }
 
 function lobFuerAnteil(anteil) {
@@ -1440,7 +1536,9 @@ function merkeGeschichten(karten) {
   const ids = karten
     .filter(function (karte) { return karte.vorlage; })
     .map(function (karte) { return karte.vorlage; });
-  daten.zuletzt = ids.concat(daten.zuletzt).slice(0, EINSTELLUNGEN.merkzettelGroesse);
+  // Duplikate entfernen: eine Wiederholungsrunde enthält dieselben Vorlagen erneut.
+  daten.zuletzt = Array.from(new Set(ids.concat(daten.zuletzt)))
+    .slice(0, EINSTELLUNGEN.merkzettelGroesse);
   speicher.speichere();
 }
 
@@ -1475,7 +1573,8 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
     const fehlen = Math.max(1, Math.ceil(gesamt / 2) - richtig);
     kasten.appendChild(element("p", "bonus-hinweis",
       "Tipp: Wenn du in " + WELT_NAMEN[modus] + " mindestens die Hälfte schaffst, " +
-      "öffnet sich die Bonuswelt. Noch " + fehlen + " richtige Aufgaben – du schaffst das!"));
+      "öffnet sich die Bonuswelt. Noch " + fehlen +
+      (fehlen === 1 ? " richtige Aufgabe" : " richtige Aufgaben") + " – du schaffst das!"));
   }
 
   if (EINSTELLUNGEN.spaessig) {
@@ -1492,14 +1591,7 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
     liste.appendChild(element("h3", null, "Das kannst du noch üben"));
     const ul = element("ul");
     falschKarten.slice(0, 14).forEach(function (karte) {
-      const zeilen = [];
-      if (karte.layout === "text") {
-        zeilen.push(karte.text);
-      } else {
-        karte.felder.forEach(function (feld) {
-          zeilen.push((feld.darstellung || karte.darstellung) + " " + feld.anzeige);
-        });
-      }
+      const zeilen = fehlerZeilen(karte);
       const aufzaehlung = element("li");
       aufzaehlung.appendChild(element("span", null, zeilen.join("   ")));
       ul.appendChild(aufzaehlung);
@@ -1570,8 +1662,31 @@ function dialogOeffnen(id) {
     knoten.inert = true;
     return { knoten: knoten, vorher: vorher };
   });
-  dialogFokus(id === "versuchUeberlagerung"
-    ? document.getElementById("versuchAbbrechenKnopf") : dialogFelder(dialog)[0] || dialog);
+  const startFokus = {
+    versuchUeberlagerung: "versuchAbbrechenKnopf",
+    frageUeberlagerung: "frageNeinKnopf"
+  }[id];
+  dialogFokus(startFokus
+    ? document.getElementById(startFokus) : dialogFelder(dialog)[0] || dialog);
+}
+
+/* Allgemeine Ja/Nein-Rückfrage: wird vor dem Abgeben einer fast leeren Runde
+   und beim Tageswechsel mit noch offenen Antworten verwendet. */
+let frageAngelegenheit = null;
+
+function zeigeFrage(optionen) {
+  const angaben = optionen || {};
+  document.getElementById("frageTitel").textContent = angaben.titel || "Bist du sicher?";
+  document.getElementById("frageText").textContent = angaben.text || "";
+  document.getElementById("frageJaKnopf").textContent = angaben.ja || "Ja";
+  document.getElementById("frageNeinKnopf").textContent = angaben.nein || "Abbrechen";
+  frageAngelegenheit = angaben.dann || null;
+  dialogOeffnen("frageUeberlagerung");
+}
+
+function frageSchliessen() {
+  dialogSchliessen("frageUeberlagerung");
+  frageAngelegenheit = null;
 }
 
 function dialogSchliessen(id) {
@@ -1594,6 +1709,7 @@ document.addEventListener("keydown", function (ereignis) {
     const id = aktiverDialog.id;
     dialogSchliessen(id);
     if (id === "versuchUeberlagerung") { versuchAngelegenheit = null; }
+    if (id === "frageUeberlagerung") { frageAngelegenheit = null; }
   } else if (ereignis.key === "Tab") {
     ereignis.preventDefault();
     const felder = dialogFelder(aktiverDialog);
@@ -1824,7 +1940,7 @@ function zeigeSterneInhalt() {
       zeile.appendChild(element("span", null, (eintrag.richtig === undefined ? "–" : eintrag.richtig) +
         " von " + (eintrag.gesamt === undefined ? "–" : eintrag.gesamt)));
       zeile.appendChild(element("span", null, eintrag.bonus ? "🌟 " + (eintrag.bonusRichtig || 0)
-        : "★ " + eintrag.sterne));
+        : "★ " + (eintrag.sterne === undefined ? "–" : eintrag.sterne)));
       karten.appendChild(zeile);
     });
     inhalt.appendChild(karten);
@@ -1964,10 +2080,14 @@ function baueKalender(daten) {
   const karte = element("div", "sterne-karte");
   karte.appendChild(element("h3", null, "An welchen Tagen hast du geübt?"));
 
+  /* Pro Tag: höchste Sternzahl (für die Färbung) und ob überhaupt geübt wurde.
+     Bonusrunden haben sterne = 0, ein reiner Knobeltag ist aber geübt. */
   const tage = {};
+  const geuebtAm = {};
   daten.runden.forEach(function (eintrag) {
     if (eintrag.datum) {
       tage[eintrag.datum] = Math.max(tage[eintrag.datum] || 0, eintrag.sterne || 0);
+      geuebtAm[eintrag.datum] = true;
     }
   });
 
@@ -1977,12 +2097,16 @@ function baueKalender(daten) {
   let anzahlGeuebt = 0;
   for (let rückwaerts = 27; rückwaerts >= 0; rückwaerts--) {
     const schlüssel = verschiebeKalendertag(heute, -rückwaerts);
-    const sterne = tage[schlüssel];
-    const punkt = element("div", "kalender-punkt" + (sterne ? " geuebt n" + sterne : ""),
+    const sterne = tage[schlüssel] || 0;
+    const istGeuebt = geuebtAm[schlüssel] === true;
+    const punkt = element("div", "kalender-punkt" +
+        (istGeuebt ? " geuebt" + (sterne > 0 ? " n" + sterne : "") : ""),
         String(Number(schlüssel.slice(-2))));
-    punkt.title = sterne ? datumText(schlüssel) + ": " + sterne + " Sterne" : datumText(schlüssel) + ": nicht geübt";
+    punkt.title = istGeuebt
+      ? datumText(schlüssel) + ": " + (sterne > 0 ? sterne + " Sterne" : "Bonusrunde geübt")
+      : datumText(schlüssel) + ": nicht geübt";
     raster.appendChild(punkt);
-    if (sterne) {
+    if (istGeuebt) {
       anzahlGeuebt += 1;
     }
   }
@@ -2002,7 +2126,9 @@ function baueKalender(daten) {
       verschiebung += 1;
     }
   }
-  karte.appendChild(element("p", "rand", anzahlGeuebt + " Tage geübt in den letzten 4 Wochen" +
+  karte.appendChild(element("p", "rand",
+    (anzahlGeuebt === 1 ? "1 Tag" : anzahlGeuebt + " Tage") +
+    " geübt in den letzten 4 Wochen" +
     (streak >= 2 ? " – davon " + streak + " Tage hintereinander! Stark!" : ".")));
   return karte;
 }
@@ -2549,7 +2675,8 @@ function aktualisiereBonusweltKnoepfe() {
     knopf.disabled = !frei;
     let text;
     if (offen <= 0) {
-      text = "Heute ist dein Bonus-kontingent geschafft – morgen warten 3 neue! 🌟";
+      text = "Heute ist dein Bonuskontingent geschafft – morgen warten " +
+        EINSTELLUNGEN.bonusSterneProTag + " neue! 🌟";
     } else if (weltHeuteFreigeschaltet(welt)) {
       text = "Offen! Noch " + offen + " von " + EINSTELLUNGEN.bonusSterneProTag +
         " Bonussternen heute zu holen.";
@@ -2576,9 +2703,15 @@ function startBonusWelt(welt) {
       WELT_NAMEN[welt] + " mindestens die Hälfte einer Runde schaffst. Du schaffst das!");
     return;
   }
+  const neueRunde = baueBonusRunde(welt);
+  if (!neueRunde) {
+    window.alert("Heute sind schon alle " + EINSTELLUNGEN.bonusSterneProTag +
+      " Bonussterne verteilt. Morgen geht es weiter! 🌟");
+    return;
+  }
   modus = welt;
   document.body.dataset.thema = welt;
-  zeigeRunde(baueBonusRunde(welt));
+  zeigeRunde(neueRunde);
 }
 
 function zeigeStartErgebnis() {
@@ -2601,9 +2734,19 @@ function zeigeStartErgebnis() {
     return;
   }
   kasten.hidden = false;
-  kasten.appendChild(element("p", "ergebnis-zeile",
-    "Letzte Runde: " + letzteZusammenfassung.richtig + " von " + letzteZusammenfassung.gesamt + " richtig"));
-  kasten.appendChild(element("p", "sterne-reihe", sterneZeichen(letzteZusammenfassung.sterne)));
+  if (letzteZusammenfassung.bonusRunde) {
+    /* Bonusrunden vergeben keine regulären Sterne – nicht "0 Sterne" melden. */
+    kasten.appendChild(element("p", "ergebnis-zeile",
+      "Letzte Bonusrunde: " + letzteZusammenfassung.richtig + " von " +
+      letzteZusammenfassung.gesamt + " geknobelt"));
+    kasten.appendChild(element("p", "sterne-reihe",
+      "🌟 " + letzteZusammenfassung.richtig +
+      (letzteZusammenfassung.richtig === 1 ? " Bonusstern" : " Bonussterne")));
+  } else {
+    kasten.appendChild(element("p", "ergebnis-zeile",
+      "Letzte Runde: " + letzteZusammenfassung.richtig + " von " + letzteZusammenfassung.gesamt + " richtig"));
+    kasten.appendChild(element("p", "sterne-reihe", sterneZeichen(letzteZusammenfassung.sterne)));
+  }
   kasten.appendChild(element("p", "ergebnis-lob", "Insgesamt hast du schon " + gesamtSterne() +
     " Sterne und 🌟 " + speicher.daten().bonussterne + " Bonussterne."));
 }
@@ -2627,11 +2770,33 @@ document.querySelectorAll(".bonus-welt-knopf").forEach(function (knopf) {
 
 document.getElementById("losKnopf").addEventListener("click", function () {
   const set = speicher.daten().tagesSet;
-  if (set && set.datum === heutigesDatum() && set.fertig) {
+  const heute = heutigesDatum();
+  if (set && set.datum === heute && set.fertig) {
     zeigeNeuerVersuchFrage(function () {
       zeigeRunde(neuesTagesSet());
     });
     return;
+  }
+  /* Eine angefangene Runde von gestern kann nicht fortgesetzt werden. Vor dem
+     Verwerfen der Antworten einmal nachfragen, damit nichts unbemerkt verloren geht. */
+  if (set && set.datum !== heute && !set.fertig) {
+    const beantwortet = Object.keys(set.antworten || {}).length;
+    if (beantwortet > 0) {
+      zeigeFrage({
+        titel: "Aufgaben von gestern",
+        text: "Deine Runde von gestern ist noch offen (" + beantwortet + " von " +
+          (set.runde && set.runde.bereiche
+            ? set.runde.bereiche.reduce(function (n, b) { return n + b.aufgaben.length; }, 0)
+            : 50) + " Aufgaben beantwortet). Sie kann nicht fortgesetzt werden. " +
+          "Möchtest du mit neuen Aufgaben für heute starten?",
+        ja: "Neue Aufgaben starten",
+        nein: "Abbrechen",
+        dann: function () {
+          zeigeRunde(starteTagesRunde());
+        }
+      });
+      return;
+    }
   }
   zeigeRunde(starteTagesRunde());
 });
@@ -2658,7 +2823,12 @@ document.getElementById("neuKnopf").addEventListener("click", function (ereignis
       zeigeRunde(neuesTagesSet());
     });
   } else if (runde && runde.bereichsArt === "bonus") {
-    zeigeRunde(baueBonusRunde(runde.welt));
+    const neueBonusRunde = baueBonusRunde(runde.welt);
+    if (neueBonusRunde) {
+      zeigeRunde(neueBonusRunde);
+    } else {
+      meldeRueckmeldung(bonusTagesText());
+    }
   }
 });
 
@@ -2676,6 +2846,19 @@ document.getElementById("versuchBestaetigenKnopf").addEventListener("click", fun
   dialogSchliessen("versuchUeberlagerung");
   const dann = versuchAngelegenheit;
   versuchAngelegenheit = null;
+  if (dann) {
+    dann();
+  }
+});
+
+/* Rückfrage vor dem Abgeben bzw. beim Tageswechsel. */
+document.getElementById("frageNeinKnopf").addEventListener("click", frageSchliessen);
+document.getElementById("frageJaKnopf").addEventListener("click", function (ereignis) {
+  // Der zweite Klick eines Doppelklicks darf die Aktion nicht wiederholen.
+  if (ereignis && ereignis.detail > 1) { return; }
+  const dann = frageAngelegenheit;
+  dialogSchliessen("frageUeberlagerung");
+  frageAngelegenheit = null;
   if (dann) {
     dann();
   }

@@ -274,6 +274,18 @@
   </div>
 </div>
 
+<!-- --------------- Rückfrage vor dem Abgeben bzw. beim Tageswechsel (Pop-up) --------------- -->
+<div class="ueberlagerung" id="frageUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="frageTitel" aria-describedby="frageText" tabindex="-1" hidden>
+  <div class="geschenk-kasten versuch-kasten">
+    <h2 class="geschenk-ueberschrift" id="frageTitel">Bist du sicher?</h2>
+    <p class="versuch-text" id="frageText"></p>
+    <div class="versuch-knoepfe">
+      <button class="knopf primaer" id="frageJaKnopf" type="button">Ja</button>
+      <button class="knopf schlicht" id="frageNeinKnopf" type="button">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Sterne-/Herzenregen -->
 <div class="regen" id="regen" hidden aria-hidden="true"></div>
 
