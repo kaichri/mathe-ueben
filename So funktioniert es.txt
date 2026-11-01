@@ -1,0 +1,241 @@
+MATHE ÜBEN FÜR EMMA
+===================
+
+So öffnen
+---------
+Doppelklick auf die Verknüpfung "Mathe üben" auf dem Desktop.
+Falls es die Verknüpfung nicht gibt: in diesem Ordner die Datei
+index.html doppelklicken (am besten mit Edge oder Chrome).
+Das Programm braucht kein Internet - nur die Feier-Videos aus dem
+"Kino" werden von YouTube gestreamt und brauchen dann kurz Internet.
+
+
+Was drin ist
+------------
+Pro Tag gibt es ein festes Set aus 50 Aufgaben. Gerechnet wird Abschnitt
+für Abschnitt (erst Addition, dann Subtraktion usw.):
+
+  10 Aufgaben  Addition       (mit Übertrag, auch 3 Zahlen hintereinander)
+  10 Aufgaben  Subtraktion    (mit Borgen, auch Ketten wie 63 - 27 + 15)
+  10 Aufgaben  Multiplikation (Einmaleins, Zehnermaleins, halbschriftlich wie 24 x 3)
+  10 Aufgaben  Division       (davon 4 mit Rest, z. B. 54 ÷ 7 = 7 Rest 5)
+   5 Aufgaben  Zahlenrätsel   (z. B. □ + 27 = 85)
+   5 Aufgaben  Rechengeschichten (davon 2 mit Euro/Cent oder Uhr/Minuten)
+
+Niveau: 3. Klasse Volksschule, alles im Raum 100, keine negativen Zahlen.
+
+Es gibt weit mehr Aufgaben- und Geschichtenvorlagen, als an einem Tag
+gebraucht werden, und das Programm merkt sich die letzten Geschichten:
+dadurch wiederholt sich auch beim täglichen Üben nur selten etwas.
+
+Bei den Rechengeschichten kann Emma oben eine von drei Welten wählen:
+  "Bluey"             - Bluey, Bingo, Muffin, Socks, Bandit, Chilli, Rusty,
+                        Chloe, Winton, Mackenzie, Snickers u. a.
+  "Gabbys Puppenhaus" - Gabby, Pandy, Kuchi, Meerkatze, Kitty Fee, Carlita,
+                        Ratkatz, Marty, DJ Katzenminze u. a.
+  "Doozies Hundehaus" - Doozie (Gabbys Schwester), Puggie, Sahnepfötchen,
+                        Bastelpfötchen, Pogi, Crouton, Seaquin, DreamPup u. a.
+                        (Besuch aus dem Puppenhaus ist dort auch dabei.)
+Die Welten entscheiden nur über die Figuren im Text - die Aufgaben selbst
+sind pro Tag für alle Welten gleich.
+
+
+Das Tages-Quiz (ein Aufgaben-Set pro Tag)
+-----------------------------------------
+* Das erste "Los geht's!" an einem Tag erzeugt DAS eine Set. Der Knopf heißt
+  dann "Weiterspielen!", bis Emma die Runde mit "Fertig" abschließt.
+* Nur ein Abschnitt ist sichtbar. "Weiter" und "Zurück" blättern - unterwegs
+  wird NICHTS bewertet, es wird auch nichts grün oder rot. Oben zeigt eine
+  kleine Leiste den aktuellen Abschnitt; ein Klick springt direkt hin.
+* Jeder Tipp wird sofort gespeichert (bei jedem Tastendruck und beim
+  Weiterklicken). Seite zu, Computer aus - beim nächsten Öffnen stehen die
+  Antworten und der gleiche Abschnitt wieder da.
+* Erst "Fertig" (im letzten Abschnitt) zeigt alles: alle Bereiche, grün und
+  rot, die richtigen Lösungen bei den Fehlern, Sterne und das Kino.
+  Danach kann nichts mehr ausgebessert werden - auch nicht nach einem
+  Neustart an diesem Tag.
+* Der Knopf "Neuer Versuch" (erscheint nach dem Fertig) erzeugt nach einer
+  Rückfrage ein brandneues Set für denselben Tag - die alten Antworten gehen
+  dabei verloren, aber verdiente Sterne, Bonussterne und jede offene
+  Bonuswelt bleiben. Mit dem neuen Set kann man neue Sterne verdienen;
+  die 3 Bonussterne pro Tag bleiben trotzdem der Höchstwert.
+* Am nächsten Tag gibt es automatisch ein neues Set. Die Aufgaben des alten
+  Tags werden beim Bauen ausgeschlossen, kommen also nicht sofort wieder.
+
+
+Die Bonuswelten (Knobeln mit Bonussternen)
+------------------------------------------
+Unter den drei Welt-Knöpfen sind drei weitere Knöpfe:
+"Bonuswelt Bluey", "Bonuswelt Gabby" und "Bonuswelt Doozie".
+Die sind erst grau und werden golden, wenn Emma sich frei gerechnet hat:
+
+  * Sie hat eine reguläre Runde in DIESE Welt gespielt und mindestens
+    die Hälfte (25 von 50) richtig - dann öffnet sich die Bonuswelt
+    dieser Welt für den ganzen Tag. Auch wenn sie später eine
+    schlechtere Runde hat, bleibt sie offen.
+  * In der Bonuswelt gibt es Knobelaufgaben (z. B. "Das ist genau die
+    Hälfte von dem, was Mackenzie hat - wie viele hat Mackenzie?",
+    Zahlenreihen, Rückwärtsrätsel, Alter-Vergleiche, Zaun-Aufgaben u. v. m.
+    mit Figuren aus der jeweiligen Welt). Auch hier merkt sich das
+    Programm die letzten Rätsel, damit nicht bald dasselbe kommt.
+    Hier wird nichts rot - es heißt höchstens "Knobel weiter!".
+  * Höchstens 3 Bonussterne 🌟 gibt es pro Tag über ALLE Welten
+    zusammen. Sind die 3 schon geholt, werden alle Bonusknöpfe für den
+    Tag wieder grau und zeigen: "Morgen warten 3 neue."
+  * Teilweiser Ertrag bleibt: hat sie heute schon 2 Sterne geholt,
+    bekommt sie in der nächsten Bonuswelt nur noch 1 Aufgabe - und
+    danach ist Pause für heute.
+
+Für jede richtige Knobelaufgabe gibt es einen Bonusstern 🌟 (oben in der
+goldenen Anzeige). Bei fünf Bonussternen öffnet sich ein Fenster, und
+Emma sucht sich SELBST ihr Geschenk aus (auch "Wunsch frei"). Fünf
+Bonussterne werden abgezogen, der Rest bleibt erhalten.
+
+Gutschein umtauschen: Unter "Mein Fortschritt" -> Gutscheine kann Emma
+jeden Gutschein innerhalb einer Woche EINMAL umtauschen. Der alte
+Gutschein bleibt dabei stehen (durchgestrichen, mit dem Vermerk
+"umgetauscht am ...") und der neue kommt dazu - nichts verschwindet.
+Älter als eine Woche gilt der Gutschein so, wie er ist. Mama kann über
+die Schaltfläche "Neuen Gutschein einlösen (für Mama)" jederzeit auch
+mal ohne Bonussterne etwas verschenken.
+
+In script.js lässt sich das bei EINSTELLUNGEN verstellen:
+   bonusSterneProTag: 3   - wie viele Bonussterne es höchstens pro Tag gibt
+   bonusAbAnteil: 0.5     - ab welchem Anteil eine Bonuswelt aufgeht
+   bonusSternAlle: 5      - wie viele Bonussterne ein Geschenk kosten
+   merkzettelGroesse: 12  - wie viele letzte Geschichten gemerkt werden
+   knobelMerken: 9        - wie viele letzte Knobelaufgaben gemerkt werden
+
+Die Gutscheine selbst stehen in script.js bei
+   const GESCHENKE = [ ... ]
+und können jederzeit umgeschrieben werden.
+
+
+Ablauf
+------
+1. Welt wählen und "Los geht's!" drücken. Falls heute schon angefangen: der
+   Knopf heißt "Weiterspielen!" - gleiche Aufgaben, gleiche Antworten.
+2. Immer einen Abschnitt rechnen. Zum nächsten Feld kommt man mit Tab oder
+   Enter – oder mit den Cursortasten: hoch/runter springt immer ins
+   Nachbarfeld, links/rechts nur, wenn der Cursor am Feldanfang bzw. -ende
+   steht. Antworten werden dabei automatisch gespeichert. Mit "Weiter" geht
+   es zum nächsten Abschnitt – ohne jede Bewertung, nichts wird grün oder rot.
+3. Im letzten Abschnitt "Fertig" drücken: erst jetzt werden alle Bereiche
+   gezeigt, Richtige grün und falsche rot. Bei den falschen steht die
+   richtige Lösung daneben, und unten steht "Das kannst du noch üben".
+   Ausbessern geht jetzt nicht mehr. In der Bonuswelt gibt es kein Rot.
+4. Zum Feiern kommt automatisch das "Kino": ein Video aus der Welt,
+   die gerade geübt wurde (von YouTube gestreamt). Mit "Nächstes Video"
+   sucht Emma sich ein neues aus, mit "Fernseher aus" geht der Kino zu.
+5. "Nur diese Aufgaben noch einmal üben" wiederholt nur die Fehler,
+   "Neuer Versuch" (nach der Rückfrage) lädt ein komplett neues Set für
+   denselben Tag.
+
+Sterne: 5 Sterne ab 90 % richtig, 4 ab 80 %, 3 ab 60 %, 2 ab 40 %,
+1 Stern gibt es immer - auch wenn noch nicht alles klappt.
+Bei 5 Sternen gibt es Sternenregen und die Maskottchen machen Purzelbaum.
+Die Sterne bleiben über Tage erhalten.
+
+
+Mein Fortschritt
+----------------
+Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
+öffnet "Mein Fortschritt" mit drei Reitern:
+
+  Sterne     - alle Sterne, Meilensteine, Bonussterne und die letzten Runden
+  Statistik  - Runden-, Kalender- und Bereichs-Auswertung. Nichts wird
+               überschrieben: jede Runde wird angehängt gespeichert.
+               Mit "Statistik herunterladen" (Knopf erscheint nur in diesem Reiter)
+                entsteht immer eine neue CSV-
+               Datei mit Zeitstempel (z. B. mathe-statistik-2026-10-28-1530.csv),
+               die sich in Excel öffnen lässt. Darin stehen auch die Bonus-
+               runden (BONUSRUNDE) und alle Gutscheine mit Umtausch-Vermerk.
+  Gutscheine - alle abgeholten Gutscheine, mit Umtausch-Knopf (siehe oben).
+
+
+Kino: die Feier-Videos
+----------------------
+Die Videos werden von YouTube gestreamt (dafür kurz Internet nötig).
+Welche Videos laufen, entscheidet die Liste in der Datei videos.js:
+   { welt: "bluey", titel: "Der letzte Luftballon", video: "Kennung" }
+Neues Video hinzufuegen: auf YouTube das Video oeffnen, die Kennung aus
+der Adresse kopieren (der Teil nach "watch?v=") und so einen Eintrag in
+videos.js dazwischenschreiben. welt kann "bluey", "gabby" oder "doozie"
+sein. Nach dem Fertig wird zufällig ein Video aus der passenden Welt
+ausgewaehlt - mit "Nächstes Video" gibt es ein neues.
+Falls das Video im Kino-Bild mal nicht anlaufen will, hilft der Link
+"▶ Auf YouTube ansehen" direkt unter dem Video: Er öffnet das Video in
+einem neuen Browser-Tab.
+
+
+Musik
+-----
+Oben ist der Musik-Knopf (Notensymbol). Er stellt das Theme-Lieder leise
+im Hintergrund an oder aus; die Einstellung bleibt gemerkt. Im "Kino"
+laufen die Lieder nicht mehr als Datei, sondern als YouTube-Video
+(siehe oben). Die Hintergrund-Lieder liegen im Ordner "musik"
+(blau.mp3 und puppenhaus.mp3). Für Doozies Hundehaus kann ein eigenes
+Lied als musik/doozie.mp3 dazugelegt werden - bis dahin läuft dort das
+Puppenhaus-Lied. Falls Musikdateien fehlen, singt das Programm selbst
+eine kleine Melodie - kaputt geht also nichts.
+
+
+Division mit Rest eingeben
+--------------------------
+Bei diesen Aufgaben gibt es zwei Felder: erst das Ergebnis, dann der Rest.
+Beispiel: 54 ÷ 7 = [7] Rest [5]
+
+
+Geld und Uhrzeit eingeben
+-------------------------
+Geld: Hier gibt es zwei Felder – links die Euro, rechts die Cent.
+Beispiel für 16 € 50: links 16 rein, rechts 50. Ein leeres Feld zählt
+als 0, ein "5" im Cent-Feld sind 5 Cent (nicht 50).
+Uhrzeit: "9:25", "9.25" oder "9 Uhr 25" wird alles verstanden.
+
+
+Etwas ändern
+------------
+Den Vornamen ändern: in der Datei script.js ganz oben bei
+   const SPIELERIN = "Emma";
+den neuen Namen eintragen (Anführungszeichen lassen!).
+
+Division ohne Rest: in script.js bei
+   divisionMitRestAktiv: false
+stellen.
+
+Bonuswelt-Regeln ändern: siehe oben bei "Die Bonuswelten"
+(bonusSterneProTag, bonusAbAnteil, bonusSternAlle).
+
+Musik leiser/lauter: in script.js bei
+   musikLautstaerke: 0.16
+(z. B. 0.30 für lauter, 0.05 für sehr leise).
+
+Späßige Animationen aus: in script.js bei
+   spaessig: false
+stellen (dann gibt es kein Hüpfen, Purzelbaum und keinen Sternenregen).
+
+Maus-Spur aus: in script.js bei
+   zeigerSpur: false
+stellen (dann folgen keine Pfoten, Glitzersterne oder Tennisbälle mehr
+der Maus). Die Spur geht übrigens von selbst aus, wenn im Windows als
+Bewegungen reduziert eingestellt sind.
+
+Schrift größer: in der Datei style.css oben bei
+   body { font-size: 19px; }
+z. B. 22px einsetzen.
+
+
+Sterne bleiben gespeichert
+--------------------------
+Sterne, Bonussterne, Gutscheine und die Statistik werden im
+Browser gespeichert (localStorage). Das klappt in Edge und Chrome.
+Wenn die Werte nach dem Neustart weg sind: im Browser prüfen, ob
+"Websites Daten speichern" erlaubt ist, und die Seite immer mit dem-
+selben Browser öffnen.
+
+
+Ausdrucken
+----------
+Mit Strg + P lässt sich eine Runde auch auf Papier rechnen; Knöpfe, Musik
+und Video werden beim Drucken automatisch weggelassen.

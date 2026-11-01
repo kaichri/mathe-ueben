@@ -1,0 +1,56 @@
+# Dependencies and generated output
+node_modules/
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+dist/
+build/
+
+# Temporary files, logs and editor/OS state
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+.cache/
+.tmp/
+tmp/
+temp/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local
+*.local.*
+config.local.*
+.npmrc
+.netrc
+_netrc
+.git-credentials
+.ssh/
+.aws/
+.azure/
+.codex/
+.agents/
+credentials.json
+secrets.json
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Personal game-data exports (the game stores progress in the browser)
+mathe-sicherung-*.json
+mathe-statistik-*.csv

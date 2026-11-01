@@ -1,0 +1,1144 @@
+/* =========================================================
+   Mathe üben für Emma – Aussehen
+   Drei Themen-Farbpaletten, große Zahlen, ruhige Flächen.
+   ========================================================= */
+
+:root {
+  --schrift: "Segoe UI", "Trebuchet MS", Tahoma, sans-serif;
+  --runden: 18px;
+  --linien: #d8d2c6;
+  --text: #2b2b33;
+  --text-mild: #6b675f;
+  --weiss: #ffffff;
+  --gut: #1d7a4d;
+  --gut-flaeche: #e3f6ea;
+  --schlecht: #b4232a;
+  --schlecht-flaeche: #fdeaea;
+}
+
+/* --- Themenpaletten --- */
+body[data-thema="gemischt"] {
+  --hintergrund: #fdf7ec;
+  --akzent: #2f7d95;
+  --akzent-dunkel: #1f5b6d;
+  --akzent-hell: #dcedf3;
+  --knopf: #2f7d95;
+  --bereich-add: #e8f1f6;
+  --bereich-sub: #f6ecdf;
+  --bereich-mul: #eaf3e6;
+  --bereich-div: #f3e9f2;
+  --bereich-raetsel: #f6f0dc;
+  --bereich-geschichte: #fdf1e4;
+}
+body[data-thema="bluey"] {
+  --hintergrund: #eef6fb;
+  --akzent: #1c6f9c;
+  --akzent-dunkel: #12506f;
+  --akzent-hell: #d3e7f3;
+  --knopf: #1c6f9c;
+  --bereich-add: #dcecfa;
+  --bereich-sub: #e2f0f7;
+  --bereich-mul: #d9e9f5;
+  --bereich-div: #e6f2f8;
+  --bereich-raetsel: #d3e5f2;
+  --bereich-geschichte: #eaf4fb;
+}
+body[data-thema="gabby"] {
+  --hintergrund: #fdf0f5;
+  --akzent: #b2376f;
+  --akzent-dunkel: #8c2755;
+  --akzent-hell: #f8dbe7;
+  --knopf: #b2376f;
+  --bereich-add: #fbe4ee;
+  --bereich-sub: #fceada;
+  --bereich-mul: #f4e2f3;
+  --bereich-div: #e7f0fb;
+  --bereich-raetsel: #fdf0dc;
+  --bereich-geschichte: #fde9f0;
+}
+body[data-thema="doozie"] {
+  --hintergrund: #f6f1e7;
+  --akzent: #b0642b;
+  --akzent-dunkel: #7d4517;
+  --akzent-hell: #f3e2cd;
+  --knopf: #b0642b;
+  --bereich-add: #f7e9d6;
+  --bereich-sub: #e9f0e2;
+  --bereich-mul: #f3e5dd;
+  --bereich-div: #e3edf4;
+  --bereich-raetsel: #f6efda;
+  --bereich-geschichte: #f9ecdb;
+}
+
+* { box-sizing: border-box; }
+
+.nur-screenreader {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+body {
+  margin: 0;
+  background: var(--hintergrund);
+  color: var(--text);
+  font-family: var(--schrift);
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+/* ---------------- Kopfzeile ---------------- */
+
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  background: var(--weiss);
+  border-bottom: 4px solid var(--akzent);
+}
+
+.kopf h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: .3px;
+}
+
+.kopf .fuer {
+  font-weight: 400;
+  color: var(--akzent-dunkel);
+}
+
+.kopf-zeile {
+  margin: 2px 0 0;
+  color: var(--text-mild);
+  font-size: 16px;
+}
+
+.sterne-anzeige {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--akzent-dunkel);
+  background: var(--akzent-hell);
+  border: 2px solid var(--akzent);
+  border-radius: 999px;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+
+.sterne-anzeige:hover { background: var(--weiss); }
+
+.sterne-anzeige .symbol {
+  width: 26px;
+  height: 26px;
+  color: var(--akzent);
+}
+
+/* ---------------- Seiten ---------------- */
+
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px 22px 90px;
+}
+
+.begruessung {
+  font-size: 34px;
+  margin: 6px 0 10px;
+  color: var(--akzent-dunkel);
+}
+
+.start-info {
+  max-width: 60ch;
+  color: var(--text-mild);
+  margin: 0 0 26px;
+}
+
+.feldueberschrift {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+
+/* --- Themenwahl --- */
+
+.themen-auswahl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.themen-knopf {
+  font: inherit;
+  text-align: left;
+  background: var(--weiss);
+  color: var(--text);
+  border: 3px solid var(--linien);
+  border-radius: var(--runden);
+  padding: 16px 18px;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-column-gap: 12px;
+  align-items: center;
+}
+
+.themen-knopf .symbol { grid-row: span 2; width: 52px; height: 52px; }
+.themen-knopf .thema-titel { font-size: 21px; font-weight: 700; }
+.themen-knopf .thema-text { font-size: 15px; color: var(--text-mild); }
+
+.themen-knopf[aria-pressed="true"] {
+  border-color: var(--akzent);
+  background: var(--akzent-hell);
+  box-shadow: 0 2px 0 var(--akzent);
+}
+
+/* ---------------- Bereichs-Navigation (ein Abschnitt nach dem anderen) ---------------- */
+
+.abschnitts-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0 16px;
+}
+
+.abschnitts-punkt {
+  font: inherit;
+  font-size: 16px;
+  color: var(--akzent-dunkel);
+  background: var(--weiss);
+  border: 2px solid var(--akzent);
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+}
+
+.abschnitts-punkt:hover { background: var(--akzent-hell); }
+
+.abschnitts-punkt.aktuell {
+  color: #ffffff;
+  background: var(--knopf);
+  border-color: var(--akzent-dunkel);
+  font-weight: 700;
+}
+
+/* Nach dem Fertig sind alle Felder gesperrt – aber die Farben bleiben sichtbar. */
+.eingabe:disabled { cursor: not-allowed; opacity: 0.85; }
+
+/* ---------------- "Neuer Versuch" nachfragen ---------------- */
+
+.versuch-kasten { max-width: 560px; }
+
+.versuch-text { font-size: 19px; line-height: 1.5; margin: 0 0 6px; }
+
+.versuch-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* --- Symbole --- */
+
+/* Was versteckt ist, soll wirklich versteckt bleiben. */
+[hidden] { display: none !important; }
+
+.symbol { fill: currentColor; display: block; }
+
+.symbolvorrat { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------------- Knöpfe ---------------- */
+
+.knopf {
+  font: inherit;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--akzent-dunkel);
+  background: var(--weiss);
+  border: 3px solid var(--akzent);
+  border-radius: 14px;
+  padding: 12px 22px;
+  cursor: pointer;
+}
+
+.knopf:hover { background: var(--akzent-hell); }
+
+.knopf.primaer {
+  color: #ffffff;
+  background: var(--knopf);
+  border-color: var(--akzent-dunkel);
+}
+
+.knopf.primaer:hover { background: var(--akzent-dunkel); }
+
+.knopf.riesig {
+  font-size: 28px;
+  padding: 18px 40px;
+  border-radius: 999px;
+}
+
+.knopf.schlicht {
+  border-color: var(--linien);
+  color: var(--text-mild);
+  font-weight: 400;
+  font-size: 18px;
+}
+
+/* ---------------- Aufgabenbereiche ---------------- */
+
+.bereich {
+  background: var(--bereich-flaeche, var(--weiss));
+  border: 2px solid var(--linien);
+  border-radius: var(--runden);
+  padding: 18px 20px 22px;
+  margin: 0 0 24px;
+}
+
+.bereich-add { --bereich-flaeche: var(--bereich-add); }
+.bereich-sub { --bereich-flaeche: var(--bereich-sub); }
+.bereich-mul { --bereich-flaeche: var(--bereich-mul); }
+.bereich-div { --bereich-flaeche: var(--bereich-div); }
+.bereich-raetsel { --bereich-flaeche: var(--bereich-raetsel); }
+.bereich-geschichte { --bereich-flaeche: var(--bereich-geschichte); }
+
+.bereich-kopf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 6px;
+}
+
+.bereich-kopf .symbol {
+  width: 30px;
+  height: 30px;
+  color: var(--akzent);
+  flex: none;
+}
+
+.bereich-kopf h2 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.bereich-kopf .zaehler {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--text-mild);
+  white-space: nowrap;
+}
+
+.bereich-untertitel {
+  margin: 0 0 16px;
+  color: var(--text-mild);
+  font-size: 17px;
+}
+
+.aufgaben-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.aufgabe {
+  background: var(--weiss);
+  border: 2px solid var(--linien);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rechnung {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rechnung .rand {
+  color: var(--text-mild);
+  font-size: 17px;
+  font-weight: 400;
+}
+
+.rechnung .ausdruck { white-space: nowrap; }
+
+.rechnung .ausdruck.lang { font-size: 25px; }
+
+.rechnung.rest-zeile { align-items: center; }
+
+.eingabe {
+  width: 96px;
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  background: #fffdf8;
+  border: 3px solid var(--linien);
+  border-radius: 10px;
+  padding: 6px 4px;
+}
+
+.eingabe:focus {
+  outline: none;
+  border-color: var(--akzent);
+  box-shadow: 0 0 0 3px var(--akzent-hell);
+}
+
+.eingabe.breit { width: 148px; font-size: 24px; }
+.eingabe.mittel { width: 112px; }
+
+/* Geldeingabe: zwei kleine Felder – [Euro] € [Cent] Cent */
+.geld-eingabe {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eingabe.geld-teil { width: 78px; font-size: 26px; }
+.eingabe.geld-teil[data-geld-rolle="euro"] { width: 88px; }
+
+.geld-zeichen {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--akzent);
+}
+
+.umkehr {
+  border-top: 1px dashed var(--linien);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.umkehr .rand {
+  display: block;
+  font-size: 14px;
+  color: var(--text-mild);
+  font-weight: 400;
+}
+
+/* --- Rechengeschichten --- */
+
+.geschichte {
+  background: var(--weiss);
+  border: 2px solid var(--linien);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.geschichte-text {
+  margin: 0 0 10px;
+  font-size: 20px;
+  max-width: 74ch;
+}
+
+.geschichte-zeile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.geschichte-zeile .rand { color: var(--text-mild); font-size: 16px; }
+
+/* --- Rückmeldung --- */
+
+.aufgabe.richtig, .geschichte.richtig {
+  border-color: var(--gut);
+  background: var(--gut-flaeche);
+}
+
+.aufgabe.falsch, .geschichte.falsch {
+  border-color: var(--schlecht);
+  background: var(--schlecht-flaeche);
+}
+
+.loesung {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--schlecht);
+  font-variant-numeric: tabular-nums;
+}
+
+.markierung {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.kontrolle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.aufgabe.richtig .markierung,
+.geschichte.richtig .markierung { color: var(--gut); }
+
+.aufgabe.falsch .markierung,
+.geschichte.falsch .markierung { color: var(--schlecht); }
+
+/* ---------------- Werkzeugleiste ---------------- */
+
+.werkzeug-leiste {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--hintergrund);
+  border-top: 3px solid var(--akzent);
+  padding: 12px 0 6px;
+  margin-top: 10px;
+}
+
+.fortschritt {
+  color: var(--text-mild);
+  font-size: 17px;
+  margin-right: auto;
+}
+
+/* ---------------- Ergebnis ---------------- */
+
+.ergebnis-kasten {
+  background: var(--weiss);
+  border: 4px solid var(--akzent);
+  border-radius: var(--runden);
+  padding: 20px 22px;
+  margin: 0 0 24px;
+}
+
+.ergebnis-zeile {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.ergebnis-lob {
+  font-size: 22px;
+  color: var(--akzent-dunkel);
+  margin: 0 0 14px;
+}
+
+.sterne-reihe {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 0 0 14px;
+}
+
+.uebe-liste {
+  border-top: 2px dashed var(--linien);
+  padding-top: 12px;
+  margin: 0 0 14px;
+}
+
+.uebe-liste h3 { margin: 0 0 8px; font-size: 21px; }
+
+.uebe-liste ul { margin: 0; padding-left: 22px; }
+
+.uebe-liste li {
+  font-variant-numeric: tabular-nums;
+  font-size: 19px;
+  margin-bottom: 4px;
+}
+
+.uebe-liste .richtig-dabci { color: var(--gut); font-weight: 700; }
+
+/* ---------------- Sternenseite ---------------- */
+
+.sterne-karte {
+  background: var(--weiss);
+  border: 2px solid var(--linien);
+  border-radius: var(--runden);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+
+.sterne-summe {
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.sterne-zeile {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid var(--linien);
+  padding: 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.meilenstein {
+  background: var(--akzent-hell);
+  border: 2px solid var(--akzent);
+  border-radius: var(--runden);
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  font-size: 21px;
+}
+
+.meilenstein.leer { opacity: .55; }
+
+/* ---------------- Fußzeile ---------------- */
+
+.fusszeile {
+  text-align: center;
+  color: var(--text-mild);
+  font-size: 15px;
+  padding: 10px 0 24px;
+}
+
+/* ---------------- Für den Ausdruck ---------------- */
+
+@media print {
+  body { background: #ffffff; font-size: 14px; }
+  .werkzeug-leiste, .sterne-anzeige, .fusszeile, .start-info,
+  .kopf-knoepfe, .kino, .regen, .ueberlagerung, .maskottchen-reihe, .zeiger-spur-feld { display: none; }
+  .bereich { break-inside: avoid; border-color: #999999; }
+  .eingabe { border-color: #666666; }
+}
+
+/* =========================================================
+   Musik-, Statistik- und Bonus-Knöpfe in der Kopfzeile
+   ========================================================= */
+
+.kopf-knoepfe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kopf-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--akzent-dunkel);
+  background: var(--akzent-hell);
+  border: 2px solid var(--akzent);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.kopf-knopf:hover { background: var(--weiss); }
+
+.kopf-knopf .symbol { width: 22px; height: 22px; color: var(--akzent); }
+
+.kopf-knopf.musik-aus { opacity: .55; }
+
+.bonus-knopf {
+  background: #fff6dd;
+  border-color: #d8a723;
+  color: #7a5c11;
+}
+
+.bonus-zeichen { font-size: 19px; }
+
+/* =========================================================
+   Maskottchen (selbst gezeichnet, zum Anklicken)
+   ========================================================= */
+
+.begruessung-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.maskottchen-reihe { display: flex; gap: 8px; }
+
+.maskottchen {
+  width: 76px;
+  height: 76px;
+  border: none;
+  background: none;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 18px;
+}
+
+.maskottchen:hover { background: var(--akzent-hell); }
+.maskottchen .symbol { width: 100%; height: 100%; }
+
+.maskottchen.huepfen { animation: huepfen .6s ease; }
+
+.ergebnis-maskottchen {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 6px 0 2px;
+}
+
+.maskottchen-gross { width: 64px; height: 64px; }
+
+.maskottchen-gross.purzelbaum { animation: purzelbaum 1.2s ease; }
+
+@keyframes huepfen {
+  0% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-15px) rotate(-7deg); }
+  60% { transform: translateY(0) rotate(5deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes purzelbaum {
+  0% { transform: rotate(0deg) translateY(0); }
+  45% { transform: rotate(360deg) translateY(-20px); }
+  100% { transform: rotate(720deg) translateY(0); }
+}
+
+/* =========================================================
+   Bonus-Bereich und Bonus-Rückmeldung
+   ========================================================= */
+
+.bereich-bonus {
+  --bereich-flaeche: var(--bereich-bonus, #fdf6de);
+  border-color: #e4c76a;
+}
+
+.bereich-bonus .bereich-kopf .symbol { color: #b8860b; }
+
+.geschichte.knobel {
+  border-style: dashed;
+  border-color: #e4c76a;
+  background: #fffdf2;
+}
+
+.geschichte.bonus-offen {
+  border-color: #e4c76a;
+  background: #fffdf2;
+}
+
+.geschichte.bonus-offen .markierung { color: #8a6a10; }
+
+.eingabe.knobel-offen {
+  border-color: #d8a723;
+  background: #fff8e2;
+}
+
+.bonus-hinweis {
+  font-size: 20px;
+  font-weight: 700;
+  color: #7a5c11;
+  margin: 0 0 10px;
+}
+
+.bonus-balken {
+  height: 18px;
+  background: #f1e8cf;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 8px 0 6px;
+}
+
+.bonus-fuellung { height: 100%; background: #e7b62c; }
+
+/* =========================================================
+   Geschenk-Auswahl (Pop-up)
+   ========================================================= */
+
+.ueberlagerung {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 28, 40, .55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.geschenk-kasten {
+  background: var(--weiss);
+  border: 4px solid #d8a723;
+  border-radius: 22px;
+  padding: 24px;
+  max-width: 920px;
+  width: 100%;
+  max-height: 92vh;
+  overflow: auto;
+}
+
+.geschenk-ueberschrift { margin: 0 0 18px; font-size: 26px; color: #7a5c11; }
+
+.geschenke-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.geschenk-karte {
+  font: inherit;
+  text-align: center;
+  background: #fffaf0;
+  border: 3px solid #e4c76a;
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.geschenk-karte:hover {
+  background: #fff2cf;
+  transform: translateY(-3px);
+}
+
+.geschenk-karte .symbol { width: 46px; height: 46px; }
+.geschenk-text { font-size: 18px; font-weight: 700; }
+.geschenk-waehlen { font-size: 15px; color: #7a5c11; font-weight: 700; }
+
+.geschenk-hinweis {
+  background: #fff6dd;
+  border: 2px dashed #d8a723;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 19px;
+}
+
+/* =========================================================
+   Kino (Theme-Video nach dem Prüfen)
+   ========================================================= */
+
+.kino {
+  background: #243447;
+  border: 6px solid #46607c;
+  border-radius: 22px;
+  padding: 14px 16px 16px;
+  margin: 0 0 24px;
+}
+
+.kino-leiste {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.kino-titel { color: #ffd868; font-size: 22px; font-weight: 700; }
+
+.kino iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 430px;
+  border: none;
+  border-radius: 12px;
+  background: #000;
+  display: block;
+}
+
+.kino-hinweis { color: #cfe0f2; margin: 10px 0 0; font-size: 16px; }
+
+.kino-notlink {
+  display: inline-block;
+  margin-top: 8px;
+  color: #ffd868;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.knopf.klein { font-size: 16px; padding: 8px 14px; }
+
+.kino .knopf.schlicht { color: #cfe0f2; border-color: #46607c; background: transparent; }
+.kino .knopf.schlicht:hover { background: #46607c; color: #ffffff; }
+
+/* =========================================================
+   Sternen- und Herzenregen
+   ========================================================= */
+
+.regen {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  overflow: hidden;
+}
+
+.regen-troepfchen {
+  position: absolute;
+  top: -6vh;
+  color: #e7b62c;
+  animation-name: herunterfallen;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes herunterfallen {
+  to { transform: translateY(114vh) rotate(360deg); opacity: .85; }
+}
+
+/* =========================================================
+   Maus-Spur (kleine Welt-Symbole folgen dem Zeiger)
+   ========================================================= */
+
+.zeiger-spur-feld {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40; /* über der Seite, aber unter den Pop-ups */
+  overflow: hidden;
+}
+
+.zeiger-teilchen {
+  position: fixed;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0;
+  animation: zeiger-treiben .95s ease-out;
+}
+
+@keyframes zeiger-treiben {
+  0%   { opacity: .95; translate: 0 0; scale: 1.1; }
+  100% { opacity: 0; translate: 0 -26px; scale: .55; }
+}
+
+/* =========================================================
+   Statistikseite
+   ========================================================= */
+
+.statistik-knoepfe { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+
+.kalender {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.kalender-punkt {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #f2efe6;
+  font-size: 14px;
+  color: var(--text-mild);
+}
+
+.kalender-punkt.geuebt { background: var(--akzent-hell); color: var(--akzent-dunkel); font-weight: 700; }
+.kalender-punkt.geuebt.n3 { background: #d9eede; }
+.kalender-punkt.geuebt.n4 { background: #bfe6cd; }
+.kalender-punkt.geuebt.n5 { background: #8fd8a9; color: #14532d; }
+
+.verlauf {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 130px;
+  margin-top: 8px;
+}
+
+.verlauf-saule {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 18px;
+}
+
+.verlauf-balken { background: var(--akzent); border-radius: 6px 6px 0 0; }
+
+.verlauf-label {
+  font-size: 12px;
+  color: var(--text-mild);
+  text-align: center;
+  margin-top: 3px;
+}
+
+.bereich-zeile {
+  display: grid;
+  grid-template-columns: 150px 1fr 54px;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.bereich-balken {
+  height: 14px;
+  background: #eee7d8;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bereich-fuellung { height: 100%; background: var(--gut); }
+
+/* =========================================================
+   Bonuswelten auf der Startseite
+   ========================================================= */
+
+.bonus-wahl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.bonus-welt-knopf {
+  font: inherit;
+  text-align: center;
+  border-radius: 18px;
+  border: 3px dashed #c9c2b2;
+  background: #f1eee6;
+  color: #6b6558;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: not-allowed;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.bonus-welt-knopf .bonus-welt-zeichen { width: 48px; height: 48px; filter: grayscale(1); opacity: .55; }
+.bonus-welt-knopf .bonus-welt-titel { font-size: 20px; font-weight: 800; }
+.bonus-welt-knopf .bonus-welt-status { font-size: 15px; line-height: 1.35; }
+
+/* wenn Emma sich die Bonuswelt verdient hat: bunt und golden */
+.bonus-welt-knopf.frei {
+  border-style: solid;
+  border-color: #d8a723;
+  background: #fff6dd;
+  color: #5c4409;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(184, 134, 11, .35);
+}
+
+.bonus-welt-knopf.frei .bonus-welt-zeichen { filter: none; opacity: 1; }
+
+.bonus-welt-knopf.frei:hover {
+  background: #ffedbd;
+  transform: translateY(-3px);
+}
+
+.bonus-start-hinweis {
+  background: #fff6dd;
+  border: 3px dashed #d8a723;
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #7a5c11;
+  margin: 0 0 20px;
+}
+
+/* =========================================================
+   Fortschrittsbereich: Reiter (Sterne / Statistik / Gutscheine)
+   ========================================================= */
+
+.reiter-zeile {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.reiter {
+  font: inherit;
+  font-size: 19px;
+  font-weight: 700;
+  border: 3px solid var(--akzent);
+  background: var(--weiss);
+  color: var(--akzent-dunkel);
+  border-radius: 999px;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+
+.reiter:hover { background: var(--akzent-hell); }
+
+.reiter.aktiv {
+  background: var(--akzent);
+  color: #fff;
+}
+
+/* =========================================================
+   Gutscheine mit Umtausch
+   ========================================================= */
+
+.gutschein-karte {
+  background: #fffaf0;
+  border: 3px solid #e4c76a;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.gutschein-karte.getauscht {
+  border-style: dashed;
+  border-color: #c9c2b2;
+  background: #f4f1ea;
+  color: #6b6558;
+}
+
+.gutschein-karte.getauscht .gutschein-text { text-decoration: line-through; }
+
+.gutschein-kopf {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.gutschein-datum { font-weight: 700; color: var(--text-mild); font-size: 16px; }
+
+.gutschein-status { font-size: 15px; color: #7a5c11; font-weight: 700; }
+
+.gutschein-text { font-size: 20px; font-weight: 700; margin: 4px 0 10px; }
+
+/* ---------------- Kleine Bildschirme ---------------- */
+
+@media (max-width: 640px) {
+  body { font-size: 18px; }
+  .kopf h1 { font-size: 24px; }
+  .rechnung { font-size: 26px; }
+  .eingabe { width: 82px; font-size: 24px; }
+  .eingabe.geld-teil { width: 62px; font-size: 22px; }
+  .geld-zeichen { font-size: 17px; }
+  .aufgaben-raster { grid-template-columns: 1fr 1fr; }
+  .maskottchen { width: 56px; height: 56px; }
+  .kalender-punkt { font-size: 12px; }
+  .bereich-zeile { grid-template-columns: 110px 1fr 48px; }
+  .kino-titel { font-size: 18px; }
+}
+
+/* ---------------- Weniger Bewegung --- für empfindliche Kinder ---------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mathe üben für Emma</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e7b62c' stroke='%237a5c11' stroke-width='1.2' d='M12 3.5l2.5 5.6 6.1.6-4.6 4 1.3 6L12 16.6 6.7 19.7 8 13.7l-4.6-4 6.1-.6z'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-thema="bluey">
+
+<svg class="symbolvorrat" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <symbol id="stern" viewBox="0 0 24 24">
+      <path d="M12 3.5l2.5 5.6 6.1.6-4.6 4 1.3 6L12 16.6 6.7 19.7 8 13.7l-4.6-4 6.1-.6z"/>
+    </symbol>
+    <symbol id="wuerfel" viewBox="0 0 24 24">
+      <rect x="4" y="4" width="16" height="16" rx="3"/>
+      <circle cx="9" cy="9" r="1.4" fill="#fff"/><circle cx="15" cy="15" r="1.4" fill="#fff"/>
+      <circle cx="15" cy="9" r="1.4" fill="#fff"/><circle cx="9" cy="15" r="1.4" fill="#fff"/>
+    </symbol>
+    <symbol id="note" viewBox="0 0 24 24">
+      <path d="M9 18V6l10-2.4V15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
+      <circle cx="6.6" cy="18" r="2.6" fill="currentColor"/>
+      <circle cx="16.6" cy="15.4" r="2.6" fill="currentColor"/>
+    </symbol>
+    <symbol id="diagramm" viewBox="0 0 24 24">
+      <rect x="4" y="12" width="4" height="8" rx="1"/>
+      <rect x="10" y="7" width="4" height="13" rx="1"/>
+      <rect x="16" y="3.5" width="4" height="16.5" rx="1"/>
+    </symbol>
+    <!-- Selbst gezeichnete Maskottchen (farbig, Decorations) -->
+    <symbol id="hund" viewBox="0 0 64 64">
+      <ellipse cx="14" cy="21" rx="6.5" ry="10.5" fill="#3a6f96"/>
+      <ellipse cx="50" cy="21" rx="6.5" ry="10.5" fill="#3a6f96"/>
+      <circle cx="32" cy="34" r="19" fill="#4e8fce"/>
+      <ellipse cx="24.5" cy="30.5" rx="2.9" ry="3.1" fill="#20415c"/>
+      <ellipse cx="39.5" cy="30.5" rx="2.9" ry="3.1" fill="#20415c"/>
+      <path d="M32 39c-5.6 0-9.4 3.4-9.4 7.2 0 3 4.2 4.2 9.4 4.2s9.4-1.2 9.4-4.2c0-3.8-3.8-7.2-9.4-7.2z" fill="#d3e6f4"/>
+      <ellipse cx="32" cy="42.4" rx="3.4" ry="2.6" fill="#20415c"/>
+      <path d="M32 45v2.2M29.6 48c.8.7 4 .7 4.8 0" fill="none" stroke="#20415c" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="bingo" viewBox="0 0 64 64">
+      <ellipse cx="14" cy="21" rx="6.5" ry="10.5" fill="#c9772f"/>
+      <ellipse cx="50" cy="21" rx="6.5" ry="10.5" fill="#c9772f"/>
+      <circle cx="32" cy="34" r="19" fill="#e2883d"/>
+      <ellipse cx="24.5" cy="30.5" rx="2.9" ry="3.1" fill="#7a4b22"/>
+      <ellipse cx="39.5" cy="30.5" rx="2.9" ry="3.1" fill="#7a4b22"/>
+      <path d="M32 39c-5.6 0-9.4 3.4-9.4 7.2 0 3 4.2 4.2 9.4 4.2s9.4-1.2 9.4-4.2c0-3.8-3.8-7.2-9.4-7.2z" fill="#f9e6cd"/>
+      <ellipse cx="32" cy="42.4" rx="3.4" ry="2.6" fill="#7a4b22"/>
+      <path d="M32 45v2.2M29.6 48c.8.7 4 .7 4.8 0" fill="none" stroke="#7a4b22" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="gabbykopf" viewBox="0 0 64 64">
+      <ellipse cx="12" cy="41" rx="5" ry="8" fill="#6e4a2c"/>
+      <ellipse cx="52" cy="41" rx="5" ry="8" fill="#6e4a2c"/>
+      <circle cx="32" cy="38" r="17" fill="#f6cfa8"/>
+      <path d="M15 36c1-10 8-15 17-15s16 5 17 15c-4-6-9-9-17-9s-13 3-17 9z" fill="#6e4a2c"/>
+      <path d="M14.5 31c1-11 9-17 17.5-17s16.5 6 17.5 17c-6-7-11-10-17.5-10s-11.5 3-17.5 10z" fill="#ef5da8"/>
+      <rect x="30.8" y="8" width="2.4" height="6" rx="1" fill="#f0d774"/>
+      <circle cx="32" cy="7" r="3" fill="#f0d774"/>
+      <ellipse cx="25.5" cy="40" rx="2.6" ry="2.9" fill="#3d2a1a"/>
+      <ellipse cx="38.5" cy="40" rx="2.6" ry="2.9" fill="#3d2a1a"/>
+      <circle cx="19" cy="46" r="2.6" fill="#f0a0a0" opacity=".75"/>
+      <circle cx="45" cy="46" r="2.6" fill="#f0a0a0" opacity=".75"/>
+      <path d="M26 49c2.4 2.4 9.6 2.4 12 0" fill="none" stroke="#3d2a1a" stroke-width="1.8" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="dooziekopf" viewBox="0 0 64 64">
+      <ellipse cx="13" cy="34" rx="7.5" ry="12" fill="#8a5a2c"/>
+      <ellipse cx="51" cy="34" rx="7.5" ry="12" fill="#8a5a2c"/>
+      <circle cx="32" cy="35" r="18" fill="#c98a4b"/>
+      <path d="M26 18l6-4v8z" fill="#ef5da8"/>
+      <path d="M38 18l-6-4v8z" fill="#ef5da8"/>
+      <circle cx="32" cy="16" r="2.6" fill="#d64550"/>
+      <ellipse cx="32" cy="44" rx="10" ry="8" fill="#f6e3c8"/>
+      <ellipse cx="25" cy="33" rx="2.8" ry="3" fill="#3d2a1a"/>
+      <ellipse cx="39" cy="33" rx="2.8" ry="3" fill="#3d2a1a"/>
+      <ellipse cx="32" cy="41.5" rx="3.2" ry="2.4" fill="#3d2a1a"/>
+      <path d="M32 43.9v2M29.8 46.7c.8.7 3.6.7 4.4 0" fill="none" stroke="#3d2a1a" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="pogi" viewBox="0 0 64 64">
+      <path d="M14 25l7 13-12 1z" fill="#d9c39a"/>
+      <path d="M50 25l-7 13 12 1z" fill="#d9c39a"/>
+      <path d="M22 19c2-3 4-4 6-4-1 2-1 3 0 4 1-2 3-4 5-4-1 2-1 3 0 4 2-2 4-3 6-2-3 1-4 3-4 5-4-1-9-1-13-3z" fill="#f2e3c9"/>
+      <circle cx="32" cy="36" r="17" fill="#f2e3c9"/>
+      <path d="M27 20l5-3v6z" fill="#ef5da8"/>
+      <path d="M37 20l-5-3v6z" fill="#ef5da8"/>
+      <circle cx="32" cy="18.5" r="2.2" fill="#d64550"/>
+      <circle cx="25.5" cy="34" r="3.2" fill="#3d2a1a"/>
+      <circle cx="38.5" cy="34" r="3.2" fill="#3d2a1a"/>
+      <circle cx="26.6" cy="32.8" r="1.1" fill="#fff"/>
+      <circle cx="39.6" cy="32.8" r="1.1" fill="#fff"/>
+      <ellipse cx="32" cy="42" rx="2.8" ry="2.1" fill="#3d2a1a"/>
+      <path d="M32 44v1.8M30 46.6c.8.6 3.2.6 4 0" fill="none" stroke="#3d2a1a" stroke-width="1.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="panda" viewBox="0 0 64 64">
+      <circle cx="16" cy="19" r="6.5" fill="#3a3a3a"/>
+      <circle cx="48" cy="19" r="6.5" fill="#3a3a3a"/>
+      <circle cx="32" cy="37" r="19" fill="#f4efe4"/>
+      <ellipse cx="24" cy="34" rx="5.6" ry="6.6" fill="#3a3a3a"/>
+      <ellipse cx="40" cy="34" rx="5.6" ry="6.6" fill="#3a3a3a"/>
+      <circle cx="24.6" cy="33" r="1.9" fill="#f4efe4"/>
+      <circle cx="39.4" cy="33" r="1.9" fill="#f4efe4"/>
+      <path d="M29.5 43.5h5l-2.5 2.8z" fill="#3a3a3a"/>
+      <path d="M17 15c3-6.5 8-9.5 15-9.5S44 8.5 47 15c-4.2-3-8.7-4.4-15-4.4S21.2 12 17 15z" fill="#d64550"/>
+      <circle cx="32" cy="3.6" r="2.8" fill="#f0d774"/>
+    </symbol>
+    <symbol id="geschenk" viewBox="0 0 24 24">
+      <rect x="4" y="9.5" width="16" height="10.5" rx="1.5" fill="#d64550"/>
+      <rect x="2.8" y="6.4" width="18.4" height="4.2" rx="1.6" fill="#e97a86"/>
+      <rect x="10.9" y="6.4" width="2.2" height="13.6" fill="#f0d774"/>
+      <path d="M12 6.4C9.4 3.2 5.8 3.8 6.5 6.4M12 6.4c2.6-3.2 6.2-2.6 5.5 0" fill="none" stroke="#f0d774" stroke-width="1.7"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="kopf">
+  <div class="kopf-text">
+    <h1>Mathe üben <span class="fuer">für <span id="kopfName">Emma</span></span></h1>
+    <p class="kopf-zeile" id="kopfZeile">3. Klasse &middot; Raum 100</p>
+  </div>
+  <div class="kopf-knoepfe">
+    <button class="kopf-knopf" id="musikKnopf" type="button" aria-pressed="true" title="Musik an oder aus">
+      <svg class="symbol" aria-hidden="true"><use href="#note"/></svg>
+      <span id="musikZustand">Musik an</span>
+    </button>
+    <button class="kopf-knopf" id="statistikKnopf" type="button" title="Statistik ansehen">
+      <svg class="symbol" aria-hidden="true"><use href="#diagramm"/></svg>
+      <span>Statistik</span>
+    </button>
+    <button class="kopf-knopf bonus-knopf" id="bonusKnopf" type="button" title="Bonussterne ansehen">
+      <span class="bonus-zeichen" aria-hidden="true">🌟</span>
+      <span id="bonusSterne">0</span>
+    </button>
+    <button class="sterne-anzeige" id="sterneKnopf" type="button" title="Mein Fortschritt ansehen">
+      <svg class="symbol" aria-hidden="true"><use href="#stern"/></svg>
+      <span id="sterneGesamt">0</span>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <aside class="ergebnis-kasten" id="speicherHinweis" hidden aria-label="Daten speichern">
+    <p id="speicherMeldung" role="alert"></p>
+    <button class="knopf" id="sicherungKnopf" type="button">Daten sichern</button>
+  </aside>
+  <p class="nur-screenreader" id="rueckmeldung" role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <!-- --------------- Startseite --------------- -->
+  <section class="bildschirm" id="startBildschirm">
+    <div class="begruessung-zeile">
+      <h2 class="begruessung">Hallo <span id="startName">Emma</span>!</h2>
+      <div class="maskottchen-reihe" id="maskottchenReihe"></div>
+    </div>
+    <p class="start-info">
+      Pro Tag gibt es ein festes Aufgaben-Set: <strong>10</strong> Mal Addition, <strong>10</strong> Mal Subtraktion,
+      <strong>10</strong> Mal Multiplikation, <strong>10</strong> Mal Division, <strong>5</strong> Zahlenrätsel
+      und <strong>5</strong> Rechengeschichten &ndash; zusammen <strong>50</strong> Aufgaben.
+      Wenn du in einer Welt mindestens die Hälfte schaffst, öffnet sich die
+      <strong>Bonuswelt</strong> mit Knobelaufgaben &ndash; dafür gibt es
+      <strong>Bonussterne 🌟</strong> (höchstens 3 pro Tag).
+      Fünf Bonussterne sind ein Geschenk!
+    </p>
+
+    <p class="feldueberschrift">Womit möchtest du üben?</p>
+    <div class="themen-auswahl" id="themenAuswahl" role="group" aria-label="Thema wählen">
+      <button class="themen-knopf" type="button" data-modus="bluey" aria-pressed="true">
+        <svg class="symbol" aria-hidden="true"><use href="#hund"/></svg>
+        <span class="thema-titel">Bluey</span>
+        <span class="thema-text">Mit Bluey, Bingo, Muffin, Socks, Bandit, Chilli, Rusty, Chloe, Winton, Mackenzie, Snickers und allen Freunden</span>
+      </button>
+      <button class="themen-knopf" type="button" data-modus="gabby" aria-pressed="false">
+        <svg class="symbol" aria-hidden="true"><use href="#gabbykopf"/></svg>
+        <span class="thema-titel">Gabbys Puppenhaus</span>
+        <span class="thema-text">Mit Gabby, Pandy, Kuchi, Meerkatze, Kitty Fee, Carlita, Ratkatz, Marty und DJ Katzenminze</span>
+      </button>
+      <button class="themen-knopf" type="button" data-modus="doozie" aria-pressed="false">
+        <svg class="symbol" aria-hidden="true"><use href="#dooziekopf"/></svg>
+        <span class="thema-titel">Doozies Hundehaus</span>
+        <span class="thema-text">Mit Doozie (Gabbys Schwester), Puggie, Sahnepfötchen, Bastelpfötchen, Pogi, Crouton, Seaquin und den Doozie-Hunden</span>
+      </button>
+    </div>
+
+    <p class="feldueberschrift">Und danach: die Bonuswelten 🌟</p>
+    <div class="bonus-wahl" role="group" aria-label="Bonuswelten">
+      <button class="bonus-welt-knopf zu" type="button" data-welt="bluey" disabled>
+        <svg class="symbol bonus-welt-zeichen" aria-hidden="true"><use href="#hund"/></svg>
+        <span class="bonus-welt-titel">Bonuswelt Bluey 🌟</span>
+        <span class="bonus-welt-status">Noch zu.</span>
+      </button>
+      <button class="bonus-welt-knopf zu" type="button" data-welt="gabby" disabled>
+        <svg class="symbol bonus-welt-zeichen" aria-hidden="true"><use href="#gabbykopf"/></svg>
+        <span class="bonus-welt-titel">Bonuswelt Gabby 🌟</span>
+        <span class="bonus-welt-status">Noch zu.</span>
+      </button>
+      <button class="bonus-welt-knopf zu" type="button" data-welt="doozie" disabled>
+        <svg class="symbol bonus-welt-zeichen" aria-hidden="true"><use href="#dooziekopf"/></svg>
+        <span class="bonus-welt-titel">Bonuswelt Doozie 🌟</span>
+        <span class="bonus-welt-status">Noch zu.</span>
+      </button>
+    </div>
+
+    <button class="knopf primaer riesig" id="losKnopf" type="button">Los geht's!</button>
+
+    <div class="ergebnis-kasten" id="startErgebnis" hidden></div>
+  </section>
+
+  <!-- --------------- Übungsseite --------------- -->
+  <section class="bildschirm" id="uebungsBildschirm" hidden>
+    <nav class="abschnitts-nav" id="abschnittsNav" hidden aria-label="Zu einem Bereich springen"></nav>
+    <div id="bereiche"></div>
+
+    <div class="ergebnis-kasten" id="ergebnisKasten" hidden></div>
+
+    <div class="kino" id="kinoKasten" hidden>
+      <div class="kino-leiste">
+        <span class="kino-titel" id="kinoTitel">Zeit zum Feiern!</span>
+        <span class="kino-aktionen">
+          <button class="knopf klein" id="kinoWeiterKnopf" type="button">Nächstes Video</button>
+          <button class="knopf schlicht klein" id="kinoAusKnopf" type="button">Fernseher aus</button>
+        </span>
+      </div>
+      <iframe id="kinoRahmen" title="Feier-Video" allow="autoplay; fullscreen; encrypted-media"></iframe>
+      <a class="kino-notlink" id="kinoLink" href="#" target="_blank" rel="noopener" hidden>▶ Auf YouTube ansehen</a>
+      <p class="kino-hinweis" id="kinoHinweis" hidden></p>
+    </div>
+
+    <div class="werkzeug-leiste">
+      <span class="fortschritt" id="fortschritt">0 von 50 Aufgaben ausgefüllt</span>
+      <button class="knopf schlicht" id="zurueckKnopf" type="button" hidden>◀ Zurück</button>
+      <button class="knopf primaer" id="pruefenKnopf" type="button">Prüfen</button>
+      <button class="knopf" id="neuKnopf" type="button" hidden>Neuer Versuch</button>
+      <button class="knopf schlicht" id="abbruchKnopf" type="button">Zur Startseite</button>
+    </div>
+  </section>
+
+  <!-- --------------- Fortschrittsbereich (Sterne / Statistik / Gutscheine) --------------- -->
+  <section class="bildschirm" id="fortschrittBildschirm" hidden>
+    <h2 class="begruessung">Mein Fortschritt</h2>
+    <div class="reiter-zeile" id="fortschrittReiter" role="group" aria-label="Bereich wählen"></div>
+    <div id="sterneInhalt" hidden></div>
+    <div id="statistikInhalt" hidden></div>
+    <div id="geschenkeInhalt" hidden></div>
+    <div class="statistik-knoepfe">
+      <button class="knopf primaer" id="csvKnopf" type="button" hidden>Statistik herunterladen</button>
+      <button class="knopf" id="fortschrittZurueckKnopf" type="button">Zurück</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- --------------- Geschenk-Auswahl (Pop-up) --------------- -->
+<div class="ueberlagerung" id="geschenkUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="geschenkTitel" tabindex="-1" hidden>
+  <div class="geschenk-kasten">
+    <h2 class="geschenk-ueberschrift" id="geschenkTitel">🎉 Fünf Bonussterne! Such dir etwas aus!</h2>
+    <div class="geschenke-raster" id="geschenkeRaster"></div>
+    <button class="knopf schlicht" id="geschenkWegKnopf" type="button">Lieber später aussuchen</button>
+  </div>
+</div>
+
+<!-- --------------- "Neuer Versuch" nachfragen (Pop-up) --------------- -->
+<div class="ueberlagerung" id="versuchUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="versuchTitel" aria-describedby="versuchText" tabindex="-1" hidden>
+  <div class="geschenk-kasten versuch-kasten">
+    <h2 class="geschenk-ueberschrift" id="versuchTitel">Neue Fragen für heute?</h2>
+    <p class="versuch-text" id="versuchText">
+      Mit einem neuen Versuch bekommst du <strong>ganz neue Aufgaben</strong> –
+      deine bisherigen Antworten von heute gehen dabei verloren.
+      Deine Sterne, Bonussterne und jede offene Bonuswelt bleiben erhalten.
+    </p>
+    <div class="versuch-knoepfe">
+      <button class="knopf primaer" id="versuchBestaetigenKnopf" type="button">Ja, neue Fragen!</button>
+      <button class="knopf schlicht" id="versuchAbbrechenKnopf" type="button">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sterne-/Herzenregen -->
+<div class="regen" id="regen" hidden aria-hidden="true"></div>
+
+<footer class="fusszeile">
+  <span>Für Emma gemacht &middot; funktioniert ohne Internet (nur die Feier-Videos brauchen Internet)</span>
+</footer>
+
+<script src="aufgaben-bereiche.js"></script>
+<script src="geschichten.js"></script>
+<script src="videos.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
