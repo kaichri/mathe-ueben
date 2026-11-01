@@ -169,12 +169,18 @@ async function layout(page){return page.evaluate(()=>{
     await check(engine,'wrong answers and repetition',async()=>{
       await page.evaluate(()=>zeigeRunde(neuesTagesSet()));await fillCorrect(page,49);
       await page.locator('.abschnitts-punkt').last().click();await page.locator('#pruefenKnopf').click();
+      // Eine Aufgabe ist offen: die Rückfrage muss erscheinen und bestätigt werden.
+      assert.equal(await page.evaluate(()=>document.getElementById('frageUeberlagerung').hidden),false);
+      assert.match(await page.locator('#frageText').innerText(),/1 von 50/);
+      await page.locator('#frageJaKnopf').click();
       await page.locator('#kinoAusKnopf').click();
       await page.getByRole('button',{name:'Nur diese Aufgaben noch einmal üben'}).click();
       assert.equal(await page.evaluate(()=>runde.bereichsArt),'uebungen');
       assert.equal(await page.evaluate(()=>runde.karten.length),1);
       await fillCorrect(page,1);await page.locator('#pruefenKnopf').click();
       assert.match(await page.locator('#ergebnisKasten').innerText(),/1 von 1/);
+      // Wiederholungsrunde: eine richtige Aufgabe = genau ein Stern.
+      assert.match(await page.locator('#ergebnisKasten').innerText(),/1 Stern/);
       await page.locator('#kinoAusKnopf').click();
     });
 

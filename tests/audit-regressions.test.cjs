@@ -1,9 +1,13 @@
 "use strict";
 /* =========================================================================
-   Regressionstests für die 15 Befunde aus reports/code-audit.md.
+   Regressionstests für die Befunde aus reports/code-audit.md sowie für die
+   beiden angepassten Spielregeln:
 
-   Jeder Test prüft das KORRIGIERTE Verhalten. Vor der Korrektur schlugen
-   diese Fälle fehl (damals als tests/audit-repros.test.cjs geführt).
+   REGEL-1  Wiederholungsrunden: 1 Stern je richtig gelöster Aufgabe, 0 Sterne
+            für falsche, keine Obergrenze. Reguläre Tagesrunden unverändert.
+   REGEL-2  Abschließen nur nach Bestätigung, sobald mindestens eine Aufgabe
+            unbeantwortet ist (50/50 schließt direkt ab).
+
    Erwartung: alle Tests grün.
    ========================================================================= */
 
@@ -29,55 +33,236 @@ function frageDialogOffen(g) {
   return dialogOffen(g, "frageUeberlagerung");
 }
 /* Runde abschließen und eine eventuelle Rückfrage bestätigen. */
-function abgeben(g) {
-  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+function abgeben(g, anzahlKlicks) {
+  const klicks = anzahlKlicks || 6;
+  for (let i = 0; i < klicks; i++) g.nodes.get("pruefenKnopf").emit("click");
   if (frageDialogOffen(g)) g.nodes.get("frageJaKnopf").emit("click");
 }
 
-/* ---------------------------------------------------------------- BEFUND-1 */
-test("BEFUND-1: Wiederholungssterne richten sich nach der Aufgabenzahl", () => {
+/* Baut eine Wiederholungsrunde mit lauter gleichartigen Additionsaufgaben
+   (Lösung 7), damit die Sterneregel unabhängig vom Tagesquiz prüfbar ist. */
+function baueWiederholung(g, anzahl) {
+  g.run(`const karten = Array.from({length: ${anzahl}}, (_, i) => ({
+      ident: 'u' + i, bereich: 'add', layout: 'einfach', darstellung: '3 + 4 =',
+      schluessel: 'u' + i,
+      felder: [{korrekt: 7, anzeige: '7', typ: 'zahl', beschriftung: '', darstellung: '', einheit: ''}]
+    }));
+    const rr = baueRunde([{ bereich: 'wiederholung', titel: 'Noch einmal üben', untertitel: '', aufgaben: karten }]);
+    rr.bereichsArt = 'uebungen';
+    zeigeRunde(rr);`);
+}
+function loeseWiederholung(g, anzahlRichtige, anzahlKarten) {
+  g.run(`runde.karten.forEach((karte, i) => {
+      const knoten = eingabeZuFeld.get(karte.felder[0]);
+      knoten.value = i < ${anzahlRichtige} ? '7' : '';
+    });`);
+}
+
+/* ================================================================ REGEL-1 */
+
+test("REGEL-1: 5 Aufgaben, 3 richtig = genau 3 Sterne", () => {
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 5);
+  loeseWiederholung(g, 3, 5);
+  abgeben(g, 1);
+  assert.equal(g.data().runden.at(-1).sterne, 3);
+  assert.equal(g.data().runden.at(-1).richtig, 3);
+  assert.equal(g.data().runden.at(-1).gesamt, 5);
+  assert.equal(g.run("gesamtSterne()"), 3);
+});
+
+test("REGEL-1: jede richtige Aufgabe zählt einzeln, falsche zählen nicht", () => {
+  for (const [richtig, gesamt] of [[0, 4], [1, 4], [2, 4], [3, 4], [4, 4], [1, 10], [7, 10], [10, 10]]) {
+    const g = game({}, { now: JETZT });
+    baueWiederholung(g, gesamt);
+    loeseWiederholung(g, richtig, gesamt);
+    abgeben(g, 1);
+    assert.equal(g.data().runden.at(-1).sterne, richtig,
+      `${richtig} von ${gesamt} richtig muss ${richtig} Sterne ergeben`);
+    assert.equal(g.run("gesamtSterne()"), richtig);
+  }
+});
+
+test("REGEL-1: keine Obergrenze von 5 Sternen pro Wiederholungsrunde", () => {
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 12);
+  loeseWiederholung(g, 12, 12);
+  abgeben(g, 1);
+  assert.equal(g.data().runden.at(-1).sterne, 12, "12 richtige Aufgaben müssen 12 Sterne ergeben");
+  assert.equal(g.run("gesamtSterne()"), 12);
+  const text = g.nodes.get("ergebnisKasten").textContent;
+  assert.match(text, /12 Sterne/, "Die Zusammenfassung muss die genaue Sternzahl nennen");
+});
+
+test("REGEL-1: 50 richtige Wiederholungsaufgaben ergeben 50 Sterne", () => {
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 50);
+  loeseWiederholung(g, 50, 50);
+  abgeben(g, 1);
+  assert.equal(g.data().runden.at(-1).sterne, 50);
+  assert.equal(g.run("gesamtSterne()"), 50);
+});
+
+test("REGEL-1: die alte Regel 'ein Stern je zwei Aufgaben' gilt nicht mehr", () => {
+  // Nach der alten Regel hätte eine Runde mit 4 richtigen von 4 höchstens 2 Sterne ergeben.
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 4);
+  loeseWiederholung(g, 4, 4);
+  abgeben(g, 1);
+  assert.equal(g.data().runden.at(-1).sterne, 4);
+});
+
+test("REGEL-1: reguläre Tagesrunden bleiben unverändert (1 bis 5 Sterne)", () => {
+  for (const [richtig, sterne] of [[50, 5], [45, 5], [44, 4], [40, 4], [30, 3], [20, 2], [19, 1], [0, 1]]) {
+    const g = game({}, { now: JETZT });
+    g.run("zeigeRunde(neuesTagesSet())");
+    g.fill(richtig);
+    abgeben(g);
+    assert.equal(g.data().runden.at(-1).sterne, sterne,
+      `Tagesrunde mit ${richtig} von 50 richtig muss ${sterne} Sterne ergeben`);
+  }
+});
+
+test("REGEL-1: Wiederholungssterne werden nicht doppelt vergeben", () => {
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 5);
+  loeseWiederholung(g, 3, 5);
+  abgeben(g, 1);
+  assert.equal(g.run("gesamtSterne()"), 3);
+  const zeilen = g.data().runden.length;
+  assert.equal(g.run("runde.abgeschlossen"), true, "Die Runde muss als abgeschlossen markiert sein");
+  // Auch wenn die Oberfläche den Zustand verlöre, darf nicht erneut belohnt werden.
+  g.run("fertigAnsicht = false");
+  g.run("pruefeRunde()");
+  assert.equal(g.run("gesamtSterne()"), 3, "Erneutes Abschließen vergibt Sterne doppelt");
+  assert.equal(g.data().runden.length, zeilen);
+});
+
+test("REGEL-1: gespeicherte Runden mit mehr als 5 Sternen bleiben gültig", () => {
+  // Eine Wiederholungsrunde kann seit der Regeländerung mehr als 5 Sterne haben.
+  const gespeichert = {
+    sterneGesamt: 40,
+    runden: [{ richtig: 12, gesamt: 12, sterne: 12, datum: "2026-10-30" },
+      { richtig: 50, gesamt: 50, sterne: 5, datum: "2026-10-31" }]
+  };
+  const g = game(gespeichert, { now: JETZT });
+  assert.equal(g.run("speicher.meldung()"), "", "Mehr als 5 Sterne dürfen nicht als beschädigt gelten");
+  assert.equal(g.data().runden.length, 2);
+  assert.equal(g.data().runden[0].sterne, 12);
+  assert.equal(g.run("gesamtSterne()"), 40);
+  assert.equal(g.nodes.get("speicherHinweis").hidden, true);
+});
+
+/* ================================================================ REGEL-2 */
+
+test("REGEL-2: 50 von 50 beantwortet schließt ohne Dialog ab", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(50);
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), false, "Bei vollständig beantworteter Runde darf kein Dialog erscheinen");
+  assert.equal(g.run("fertigAnsicht"), true);
+  assert.equal(g.data().runden.length, 1);
+});
+
+test("REGEL-2: 49 von 50 beantwortet fragt immer nach", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(49);
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+
+  assert.equal(frageDialogOffen(g), true, "Bei einer offenen Aufgabe muss der Dialog erscheinen");
+  assert.equal(g.run("fertigAnsicht"), false, "Ohne Bestätigung darf nichts abgeschlossen werden");
+  assert.equal(g.data().runden.length, 0);
+  assert.match(g.nodes.get("frageText").textContent, /1 von 50/,
+    "Der Dialog muss die Zahl der offenen Aufgaben nennen");
+  assert.match(g.nodes.get("frageText").textContent, /1 von 50 Aufgaben offen/);
+  assert.equal(g.nodes.get("frageJaKnopf").textContent, "Trotzdem abgeben");
+  assert.equal(g.nodes.get("frageNeinKnopf").textContent, "Weiter üben");
+  assert.equal(g.document.activeElement, g.nodes.get("frageNeinKnopf"),
+    "Der Standardfokus muss auf 'Weiter üben' liegen");
+});
+
+test("REGEL-2: ohne Antwort erscheint der Dialog mit der richtigen Anzahl", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), true);
+  assert.match(g.nodes.get("frageText").textContent, /50 von 50 Aufgaben offen/);
+  assert.equal(g.data().runden.length, 0);
+});
+
+test("REGEL-2: Escape bricht den Abschluss ab", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(49);
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), true);
+  g.key("Escape");
+  assert.equal(frageDialogOffen(g), false, "Escape muss den Dialog schließen");
+  assert.equal(g.run("fertigAnsicht"), false);
+  assert.equal(g.data().runden.length, 0, "Nach Escape darf nicht bewertet worden sein");
+  assert.equal(g.run("abgabeBestaetigt"), false);
+});
+
+test("REGEL-2: 'Weiter üben' bricht ab, danach kann weitergearbeitet werden", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(48);
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  g.nodes.get("frageNeinKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), false);
+  assert.equal(g.run("fertigAnsicht"), false);
+  const feld = g.run("kartenEingaben.get(runde.karten[48].ident)[0]");
+  feld.value = "1";
+  assert.equal(feld.disabled, false, "Die Felder müssen weiter bedienbar sein");
+  // Jetzt noch eine Aufgabe offen -> erneuter Versuch fragt wieder
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), true);
+  assert.match(g.nodes.get("frageText").textContent, /1 von 50/);
+});
+
+test("REGEL-2: 'Trotzdem abgeben' schließt ab und sperrt die Felder", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(49);
+  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  g.nodes.get("frageJaKnopf").emit("click");
+  assert.equal(g.run("fertigAnsicht"), true);
+  assert.equal(g.data().runden.length, 1);
+  assert.equal(g.run("kartenEingaben.get(runde.karten[0].ident)[0].disabled"), true);
+});
+
+test("REGEL-2: auch eine Wiederholungsrunde fragt bei offenen Aufgaben nach", () => {
+  const g = game({}, { now: JETZT });
+  baueWiederholung(g, 5);
+  loeseWiederholung(g, 3, 5);
+  g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(frageDialogOffen(g), true, "Auch die Wiederholungsrunde muss nachfragen");
+  assert.match(g.nodes.get("frageText").textContent, /2 von 5 Aufgaben offen/);
+  g.nodes.get("frageJaKnopf").emit("click");
+  assert.equal(g.data().runden.at(-1).sterne, 3);
+});
+
+/* ---------------------------------------------------------------- BEFUND-1 */
+test("BEFUND-1: eine einzelne richtige Wiederholungsaufgabe ergibt genau 1 Stern", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(49);
+  abgeben(g);
   assert.equal(g.run("gesamtSterne()"), 5, "Ausgangslage: 49 von 50 ergibt 5 Sterne");
   const knopf = wiederholungsKnopf(g);
   assert(knopf, "Wiederholungsknopf fehlt");
   knopf.emit("click");
   assert.equal(g.run("runde.karten.length"), 1);
   g.fill(1);
-  for (let i = 0; i < 3; i++) g.nodes.get("pruefenKnopf").emit("click");
-  assert.equal(g.data().runden.at(-1).sterne, 1,
-    "Eine einzelne richtige Wiederholungsaufgabe muss genau einen Stern geben");
+  abgeben(g, 3);
+  assert.equal(g.data().runden.at(-1).sterne, 1);
   assert.equal(g.run("gesamtSterne()"), 6);
 });
 
-test("BEFUND-1: größere Wiederholungsrunden bleiben verhältnismäßig", () => {
-  // 4 Aufgaben richtig -> höchstens 2 Sterne
-  const g = game({}, { now: JETZT });
-  g.run("zeigeRunde(neuesTagesSet())");
-  g.fill(46);
-  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
-  wiederholungsKnopf(g).emit("click");
-  assert.equal(g.run("runde.karten.length"), 4);
-  g.fill(4);
-  for (let i = 0; i < 3; i++) g.nodes.get("pruefenKnopf").emit("click");
-  assert.equal(g.data().runden.at(-1).sterne, 2);
-
-  // 10 Aufgaben richtig -> wieder die volle Spanne bis 5 Sterne
-  const g2 = game({}, { now: JETZT });
-  g2.run("zeigeRunde(neuesTagesSet())");
-  g2.fill(40);
-  for (let i = 0; i < 6; i++) g2.nodes.get("pruefenKnopf").emit("click");
-  wiederholungsKnopf(g2).emit("click");
-  assert.equal(g2.run("runde.karten.length"), 10);
-  g2.fill(10);
-  for (let i = 0; i < 3; i++) g2.nodes.get("pruefenKnopf").emit("click");
-  assert.equal(g2.data().runden.at(-1).sterne, 5);
-});
-
 /* ---------------------------------------------------------------- BEFUND-2 */
-test("BEFUND-2: fast leere Runde wird nur nach Rückfrage abgegeben", () => {
+test("BEFUND-2: Abgeben ohne Bestätigung ist nicht möglich", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   const erstesFeld = g.run("kartenEingaben.get(runde.karten[0].ident)[0]");
@@ -86,29 +271,24 @@ test("BEFUND-2: fast leere Runde wird nur nach Rückfrage abgegeben", () => {
   g.nodes.get("pruefenKnopf").emit("click");
 
   assert.equal(frageDialogOffen(g), true, "Es muss eine Rückfrage erscheinen");
-  assert.equal(g.run("fertigAnsicht"), false, "Vor der Bestätigung darf nichts bewertet werden");
+  assert.equal(g.run("fertigAnsicht"), false);
   assert.equal(g.data().runden.length, 0);
   assert.equal(erstesFeld.disabled, false, "Die Felder bleiben bis zur Bestätigung offen");
-  assert.match(g.nodes.get("frageText").textContent, /49 von 50/);
 
-  // Abbrechen: nichts passiert
-  g.nodes.get("frageNeinKnopf").emit("click");
-  assert.equal(frageDialogOffen(g), false);
-  assert.equal(g.run("fertigAnsicht"), false);
-  assert.equal(g.run("abgabeBestaetigt"), false);
-
-  // Erneut abgeben und bestätigen
+  // Solange der Dialog offen ist, ist der Hintergrund gesperrt.
   g.nodes.get("pruefenKnopf").emit("click");
+  assert.equal(g.data().runden.length, 0);
+
   g.nodes.get("frageJaKnopf").emit("click");
   assert.equal(g.run("fertigAnsicht"), true);
   assert.equal(g.data().runden.length, 1);
   assert.equal(erstesFeld.disabled, true);
 });
 
-test("BEFUND-2: eine weitgehend ausgefüllte Runde wird nicht behelligt", () => {
+test("BEFUND-2: eine vollständige Runde wird nicht behelligt", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
-  g.fill(49); // nur eine Aufgabe offen
+  g.fill(50);
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
   assert.equal(frageDialogOffen(g), false);
   assert.equal(g.run("fertigAnsicht"), true);
@@ -159,7 +339,7 @@ test("BEFUND-4: Fehlerliste weist Rest und Lücke korrekt aus", () => {
     const rr = baueRunde([{ bereich: 'wiederholung', titel: 'Noch einmal üben', untertitel: '', aufgaben: karten }]);
     rr.bereichsArt = 'uebungen';
     zeigeRunde(rr);`);
-  g.run("pruefeRunde()");
+  abgeben(g, 1);
   const text = g.nodes.get("ergebnisKasten").textContent.replace(/\s+/g, " ");
   assert.doesNotMatch(text, /54 \u00F7 7 = 5/, "Der Rest darf nicht als zweites Ergebnis erscheinen");
   assert.match(text, /54 \u00F7 7 = 7 Rest 5/);
@@ -227,12 +407,12 @@ test("BEFUND-9: der Geschichten-Merkzettel bleibt duplikatfrei", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(g.run("runde.karten.length") - 1);
-  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  abgeben(g);
   const vorher = plain(g.data().zuletzt);
   wiederholungsKnopf(g).emit("click");
   assert(g.run("runde.karten.some(k => k.vorlage)"), "Wiederholung enthält keine Geschichte");
   g.fill(g.run("runde.karten.length"));
-  for (let i = 0; i < 3; i++) g.nodes.get("pruefenKnopf").emit("click");
+  abgeben(g, 3);
   const zuletzt = plain(g.data().zuletzt);
   assert.equal(new Set(zuletzt).size, zuletzt.length, "Merkzettel enthält Duplikate: " + JSON.stringify(zuletzt));
   assert.equal(zuletzt[0], vorher[vorher.length - 1], "Die wiederholte Geschichte steht jetzt vorn");
@@ -285,7 +465,6 @@ test("BEFUND-12: Zeitangaben sind auch ohne Trennzeichen eingebbar", () => {
   assert.deepEqual(plain(g.run("parseZeit('9:25')")), { stunde: 9, minute: 25 });
   assert.equal(g.run("parseZeit('2560')"), null, "Ungültige Kompaktangabe muss abgelehnt werden");
   assert.equal(g.run("parseZeit('25')"), null);
-  // und die Bewertung akzeptiert die Kompaktform
   assert.equal(g.run(`feldIstRichtig({typ: 'zeit', zeit: {stunde: 9, minute: 25}}, '925')`), true);
 });
 

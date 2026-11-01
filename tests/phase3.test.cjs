@@ -307,6 +307,9 @@ test("confirm/cancel and gift dismissal restore focus without navigating behind 
 test("results have a polite live region and announce real scoring", () => {
   const g=game();assert.equal(g.nodes.get('rueckmeldung').getAttribute('aria-live'),'polite');
   g.run("zeigeRunde(neuesTagesSet())");g.fill(25);g.run("pruefeRunde()");
+  // 25 von 50 beantwortet: die Rückfrage vor dem Abschließen bestätigen.
+  assert.equal(g.nodes.get('frageUeberlagerung').hidden,false);
+  g.nodes.get('frageJaKnopf').emit('click');
   assert.match(g.nodes.get('rueckmeldung').textContent,/25 von 50/);
 });
 

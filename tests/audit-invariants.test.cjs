@@ -24,10 +24,12 @@ function neuLaden(g, jetzt) {
   return game({}, { now: jetzt || JETZT, raw: g.raw() });
 }
 
-/* Eine Runde vollständig durchklicken: Abschnitte vor, dann Fertig. */
+/* Eine Runde vollständig durchklicken: Abschnitte vor, dann Fertig. Sind noch
+   Aufgaben offen, erscheint die Rückfrage und wird bestätigt. */
 function spieleRunde(g, richtig) {
   g.fill(richtig);
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  if (!g.nodes.get("frageUeberlagerung").hidden) g.nodes.get("frageJaKnopf").emit("click");
 }
 
 function pruefeGrundInvarianten(g, kontext) {
@@ -186,9 +188,9 @@ test("AUDIT Zustand: Blättern durch alle Abschnitte bewertet nichts", () => {
 test("AUDIT Zustand: zweimal Fertig bewertet nur einmal", () => {
   const g = game();
   g.run("zeigeRunde(neuesTagesSet())");
-  g.fill(40);
-  for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
+  spieleRunde(g, 40);
   const nachher = g.run("gesamtSterne()");
+  assert.equal(g.run("fertigAnsicht"), true);
   g.nodes.get("pruefenKnopf").emit("click");
   g.nodes.get("pruefenKnopf").emit("click");
   assert.equal(g.run("gesamtSterne()"), nachher);

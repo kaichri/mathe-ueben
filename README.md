@@ -36,8 +36,9 @@ werden die ältesten Ausschlüsse gelockert.
 - Eine begonnene Tagesrunde behält ihre Aufgaben, Antworten und ursprüngliche
   Welt. Eine andere Auswahl auf der Startseite verändert diese Runde nicht.
 - „Weiter“, „Zurück“ und die Bereichsnavigation wechseln zwischen Abschnitten.
-  Erst „Fertig“ bewertet die gesamte Runde und sperrt die Antworten. Sind mehr
-  als die Hälfte der Aufgaben noch offen, fragt das Spiel vorher nach.
+  Erst „Fertig“ bewertet die gesamte Runde und sperrt die Antworten. Ist auch nur
+  eine Aufgabe unbeantwortet, fragt das Spiel vorher nach („Weiter üben“ /
+  „Trotzdem abgeben“); bei 50 von 50 Antworten schließt es direkt ab.
 - Fehlerhafte Aufgaben lassen sich anschließend in einer Wiederholungsrunde üben.
 - „Neuer Versuch“ erzeugt nach einer Rückfrage ein neues Set für denselben Tag.
   Die bisherigen Tagesantworten werden dabei ersetzt; verdiente Sterne,
@@ -59,10 +60,11 @@ Reguläre Runden vergeben ein bis fünf Sterne:
 | Ab 40 % | 2 |
 | Darunter | 1 |
 
-Wiederholungsrunden vergeben nach demselben Anteil, aber **höchstens einen Stern
-je zwei Aufgaben der Runde** (mindestens einen). Eine einzelne richtige
-Wiederholungsaufgabe ergibt damit genau einen Stern und nicht die Höchstzahl
-einer perfekten 50er-Runde.
+Wiederholungsrunden vergeben **einen Stern je richtig gelöster Aufgabe**;
+falsch beantwortete Aufgaben geben keinen Stern. Es gibt **keine Obergrenze**:
+fünf Aufgaben mit drei richtigen ergeben drei Sterne, zwölf richtige ergeben
+zwölf Sterne. Bereits gespeicherte Sterne und abgeschlossene Runden werden
+durch diese Regel nicht rückwirkend verändert.
 
 Eine abgeschlossene reguläre Tagesrunde mit **mindestens 25 von 50** richtigen
 Antworten öffnet die Bonuswelt ihrer Themenwelt für diesen Tag.
@@ -227,16 +229,17 @@ Versionsverwaltung ausgeschlossen.
 ### Regression und Syntax
 
 Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
-Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 44
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 58
 Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
-Orakeln, Invarianten für Zustand und Speicher sowie je ein Regressionstest pro
-behobenem Audit-Befund. Node.js 24 wurde für die dokumentierten Prüfungen
+Orakeln, Invarianten für Zustand und Speicher sowie Regressionstests für die
+Audit-Befunde und die beiden angepassten Spielregeln (Wiederholungssterne,
+Bestätigung beim Abschließen). Node.js 24 wurde für die dokumentierten Prüfungen
 verwendet; zum Spielen ist Node.js nicht erforderlich.
 
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (113 Tests)
+# Alle Node-Tests (127 Tests)
 node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
   tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs
 
@@ -304,6 +307,17 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
 
 ## Versionshistorie
 
+### 1.0.2 — angepasste Spielregeln
+
+- **Wiederholungsrunden:** genau ein Stern je richtig gelöster Aufgabe, falsche
+  Aufgaben geben keinen Stern; keine Obergrenze. Die frühere Regel „ein Stern je
+  zwei Aufgaben“ entfällt. Reguläre Tagesrunden bleiben unverändert, bereits
+  gespeicherte Sterne werden nicht rückwirkend verändert.
+- **Abschließen:** Sobald mindestens eine Aufgabe unbeantwortet ist, fragt das
+  Spiel vor dem endgültigen Abschluss nach („Weiter üben“ / „Trotzdem abgeben“,
+  Standardfokus auf „Weiter üben“, Escape bricht ab). Bei 50 von 50 Antworten
+  wird direkt abgeschlossen.
+
 ### 1.0.1 — Korrekturen nach dem Code-Audit
 
 Behebt die 15 Befunde aus [reports/code-audit.md](reports/code-audit.md);
@@ -311,8 +325,10 @@ Einzelheiten und Testbilanz stehen im [Fix-Bericht](reports/fix-report.md).
 Kurzfassung:
 
 - Wiederholungsrunden vergeben höchstens einen Stern je zwei Aufgaben.
-- Vor dem Abgeben einer überwiegend leeren Runde und vor dem Verwerfen der
+  *(in 1.0.2 ersetzt: ein Stern je richtig gelöster Aufgabe, ohne Obergrenze)*
+- Vor dem Abgeben einer Runde mit offenen Aufgaben und vor dem Verwerfen der
   Runde des Vortags fragt das Spiel nach.
+  *(in 1.0.2 verschärft: Rückfrage schon bei einer einzigen offenen Aufgabe)*
 - Ein außerhalb des Spiels geleerter Speicher sperrt das Schreiben nicht mehr;
   gültiges JSON ohne bekannte Felder wird nicht mehr überschrieben.
 - Anzeige- und Textfehler behoben (Rest/Lücke in der Übe-Liste, fehlende Sterne,

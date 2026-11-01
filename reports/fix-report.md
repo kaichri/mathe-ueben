@@ -1,5 +1,14 @@
 # Fix-Bericht: Behebung der 15 Audit-Befunde
 
+> **Nachtrag (1. November 2026, Version 1.0.2):** Die beiden in diesem Bericht
+> eingeführten Regeln wurden auf Wunsch angepasst. Es gilt jetzt:
+> **ein Stern je richtig gelöster Wiederholungsaufgabe ohne Obergrenze** (statt
+> „ein Stern je zwei Aufgaben“) und die **Rückfrage schon bei einer einzigen
+> offenen Aufgabe** (statt bei mehr als der Hälfte). Siehe README,
+> Versionshistorie 1.0.2, und die Tests `REGEL-1`/`REGEL-2` in
+> `tests/audit-regressions.test.cjs`. Der Bericht beschreibt ansonsten
+> weiterhin den Stand von 1.0.1.
+
 **Datum:** 1. November 2026 · **Zeitzone:** Europe/Vienna
 **Grundlage:** [reports/code-audit.md](code-audit.md) (Commit `7c46ebacf69f2f8efcd58ed60fd617b161743882`)
 **Ergebnis:** alle **15 Befunde behoben** (3 Medium, 12 Low), **0 offene Fehler**.

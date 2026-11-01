@@ -230,6 +230,9 @@ test("statistics, video and unlocking follow the resumed round's original world"
   const g = game(); g.run("zeigeRunde(neuesTagesSet())");
   g.run("setzeModus('gabby'); zeigeRunde(starteTagesRunde())"); g.fill(25);
   g.run("pruefeRunde()");
+  // 25 von 50 beantwortet: die Rückfrage vor dem Abschließen bestätigen.
+  assert.equal(g.nodes.get("frageUeberlagerung").hidden, false);
+  g.nodes.get("frageJaKnopf").emit("click");
   assert.equal(g.data().runden[0].modus, "bluey");
   assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), true);
   assert.equal(g.run("weltHeuteFreigeschaltet('gabby')"), false);

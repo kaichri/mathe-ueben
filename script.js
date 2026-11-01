@@ -13,8 +13,6 @@ const SPIELERIN = "Emma";
 const EINSTELLUNGEN = {
   divisionMitRestAktiv: true, // true = 4 Divisionen mit Rest, false = ohne Rest
   geschichtenAnzahl: 5,
-  // Ist mehr als dieser Anteil der Tagesaufgaben noch offen, fragt "Fertig" vorher nach.
-  abgabeRueckfrageAbOffen: 0.5,
   merkzettelGroesse: 12,      // so viele letzte Geschichte-Merkmale merkt sich das Programm
   knobelMerken: 9,            // so viele letzte Knobelaufgaben merkt es sich
   bonusSterneProTag: 3,       // so viele Bonussterne gibt es höchstens pro Tag
@@ -138,7 +136,7 @@ const speicher = (function () {
         ["sterne", "richtig", "gesamt", "bonusRichtig"].every(function (name) {
         return r[name] === undefined || zahl(r[name]);
         }) && (r.bonus === undefined || typeof r.bonus === "boolean") &&
-        (r.sterne === undefined || r.sterne <= 5) &&
+        // Wiederholungsrunden vergeben einen Stern je richtiger Aufgabe – ohne Obergrenze.
         (r.datum === undefined || r.datum === "" || datum(r.datum)) &&
         (r.richtig === undefined || r.gesamt === undefined || r.richtig <= r.gesamt) &&
         (r.bereiche === undefined || punkte(r.bereiche));
@@ -1199,26 +1197,30 @@ function pruefeRunde() {
   }
   /* Eine bereits abgeschlossene Tagesrunde darf niemals ein zweites Mal
      bewertet werden – auch dann nicht, wenn sie erneut angezeigt wurde. */
+  if (runde.abgeschlossen) {
+    return;
+  }
   if (istTagesRunde()) {
     const gespeichertesSet = speicher.daten().tagesSet;
     if (gespeichertesSet && gespeichertesSet.fertig) {
       return;
     }
   }
-  /* Fast leere Runden nicht ohne Rückfrage endgültig abgeben. */
-  if (istTagesRunde() && !abgabeBestaetigt) {
+  /* Sobald auch nur eine Aufgabe unbeantwortet ist, darf die Runde nicht ohne
+     ausdrückliche Bestätigung abgeschlossen werden. */
+  if (!abgabeBestaetigt) {
     const gesamtKarten = runde.karten.length;
     const offen = runde.karten.filter(function (karte) {
       return !karteIstAusgefuellt(karte);
     }).length;
-    if (gesamtKarten > 0 && offen / gesamtKarten > EINSTELLUNGEN.abgabeRueckfrageAbOffen) {
+    if (gesamtKarten > 0 && offen > 0) {
       zeigeFrage({
-        titel: "Runde schon abgeben?",
+        titel: "Runde abschließen?",
         text: "Du hast noch " + offen + " von " + gesamtKarten + " Aufgaben offen. " +
-          "Wenn du jetzt abgibst, kannst du sie heute nicht mehr ausfüllen. " +
+          "Wenn du jetzt abschließt, kannst du sie nicht mehr ausfüllen. " +
           "Deine Sterne und Gutscheine bleiben natürlich erhalten.",
-        ja: "Ja, abgeben",
-        nein: "Weiter rechnen",
+        ja: "Trotzdem abgeben",
+        nein: "Weiter üben",
         dann: function () {
           abgabeBestaetigt = true;
           pruefeRunde();
@@ -1282,6 +1284,7 @@ function pruefeRunde() {
     speicher.speichere();
   }
   fertigAnsicht = true;
+  runde.abgeschlossen = true;
   sperreEingaben();
   aktualisiereAbschnittsNav();
   aktualisiereKnopfLeiste();
@@ -1300,7 +1303,7 @@ function pruefeRunde() {
   if (sterne >= 4) {
     musik.fanfare(sterne);
   }
-  if (sterne === 5 && EINSTELLUNGEN.spaessig) {
+  if (sterne >= 5 && EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
   zeigeKino();
@@ -1469,17 +1472,17 @@ function sterneFuerAnteil(anteil) {
   return 1;
 }
 
-/* Sterne für eine ganze Runde. Wiederholungsrunden („Nur diese Aufgaben noch
-   einmal üben“) bestehen oft aus sehr wenigen Karten. Damit eine einzelne
-   richtige Wiederholungsaufgabe nicht so viel wert ist wie eine perfekte Runde
-   mit 50 Aufgaben, gibt es dort höchstens einen Stern je zwei Aufgaben der
-   Runde – bei einer einzigen Aufgabe also genau einen Stern. */
+/* Sterne für eine ganze Runde.
+   - Reguläre Tagesrunden: 1 bis 5 Sterne nach dem Anteil richtiger Antworten.
+   - Wiederholungsrunden („Nur diese Aufgaben noch einmal üben“): genau ein Stern
+     je richtig gelöster Aufgabe, falsche Aufgaben geben keinen Stern. Es gibt
+     bewusst keine Obergrenze – 5 Aufgaben mit 3 richtigen ergeben 3 Sterne,
+     12 richtige ergeben 12 Sterne. */
 function sterneFuerRunde(richtig, gesamt, bereichsArt) {
-  const basis = sterneFuerAnteil(gesamt > 0 ? richtig / gesamt : 0);
-  if (bereichsArt !== "uebungen") {
-    return basis;
+  if (bereichsArt === "uebungen") {
+    return Math.max(0, richtig);
   }
-  return Math.min(basis, Math.max(1, Math.ceil(gesamt / 2)));
+  return sterneFuerAnteil(gesamt > 0 ? richtig / gesamt : 0);
 }
 
 function lobFuerAnteil(anteil) {
@@ -1543,7 +1546,8 @@ function merkeGeschichten(karten) {
 }
 
 function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinweise) {
-  meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig. " + sterne + " Sterne.");
+  meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig. " + sterne +
+    (sterne === 1 ? " Stern." : " Sterne."));
   letzteZusammenfassung = {
     richtig: richtig,
     gesamt: gesamt,
@@ -1580,7 +1584,7 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   if (EINSTELLUNGEN.spaessig) {
     const ecke = element("div", "ergebnis-maskottchen");
     mascottchenAuswahl().forEach(function (figur) {
-      const bild = symbol(figur, "maskottchen-gross" + (sterne === 5 ? " purzelbaum" : ""));
+      const bild = symbol(figur, "maskottchen-gross" + (sterne >= 5 ? " purzelbaum" : ""));
       ecke.appendChild(bild);
     });
     kasten.appendChild(ecke);
@@ -1621,11 +1625,14 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
 }
 
 function sterneZeichen(anzahl) {
+  /* Höchstens fünf Sternsymbole – die genaue Zahl steht immer daneben.
+     Wiederholungsrunden können mehr als fünf Sterne ergeben. */
+  const gefuellt = Math.min(anzahl, 5);
   let text = "";
-  for (let i = 0; i < anzahl; i++) {
+  for (let i = 0; i < gefuellt; i++) {
     text += "★";
   }
-  for (let i = anzahl; i < 5; i++) {
+  for (let i = gefuellt; i < 5; i++) {
     text += "☆";
   }
   return text + "  " + anzahl + (anzahl === 1 ? " Stern" : " Sterne");

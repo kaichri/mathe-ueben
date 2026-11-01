@@ -124,8 +124,10 @@ Ablauf
    gezeigt, Richtige grün und falsche rot. Bei den falschen steht die
    richtige Lösung daneben, und unten steht "Das kannst du noch üben".
    Ausbessern geht jetzt nicht mehr. In der Bonuswelt gibt es kein Rot.
-   Sind noch mehr als die Hälfte der Aufgaben offen, fragt das Programm
-   vorher "Runde schon abgeben?" - dort kann man auch "Weiter rechnen".
+   Ist noch mindestens eine Aufgabe offen, fragt das Programm vorher
+   "Runde abschließen?": "Weiter üben" (der Standard) oder "Trotzdem
+   abgeben". Escape bricht den Abschluss ab. Sind alle 50 Aufgaben
+   beantwortet, wird ohne Rückfrage abgeschlossen.
 4. Zum Feiern kommt automatisch das "Kino": ein Video aus der Welt,
    die gerade geübt wurde (von YouTube gestreamt). Mit "Nächstes Video"
    sucht Emma sich ein neues aus, mit "Fernseher aus" geht der Kino zu.
@@ -133,15 +135,16 @@ Ablauf
    "Neuer Versuch" (nach der Rückfrage) lädt ein komplett neues Set für
    denselben Tag.
 
-Sterne: 5 Sterne ab 90 % richtig, 4 ab 80 %, 3 ab 60 %, 2 ab 40 %,
-1 Stern gibt es immer - auch wenn noch nicht alles klappt.
-Bei 5 Sternen gibt es Sternenregen und die Maskottchen machen Purzelbaum.
-Die Sterne bleiben über Tage erhalten.
+Sterne (reguläre Tagesrunde): 5 Sterne ab 90 % richtig, 4 ab 80 %,
+3 ab 60 %, 2 ab 40 %, 1 Stern gibt es immer - auch wenn noch nicht alles
+klappt. Bei 5 Sternen gibt es Sternenregen und die Maskottchen machen
+Purzelbaum. Die Sterne bleiben über Tage erhalten.
 
-Eine Wiederholungsrunde ("Nur diese Aufgaben noch einmal üben") zählt
-nach demselben Anteil, gibt aber höchstens einen Stern je zwei Aufgaben
-der Runde. Wer eine einzelne Aufgabe nachholt, bekommt dafür also einen
-Stern - nicht die Höchstzahl einer ganzen Runde.
+Sterne (Wiederholungsrunde): "Nur diese Aufgaben noch einmal üben" gibt
+für JEDE richtig gelöste Aufgabe genau einen Stern, für falsche Aufgaben
+keinen. Es gibt keine Obergrenze: 5 Aufgaben mit 3 richtigen sind 3
+Sterne, 12 richtige sind 12 Sterne. Bereits verdiente Sterne und alte
+Runden bleiben unverändert.
 
 Ist am nächsten Tag noch eine angefangene Runde von gestern gespeichert,
 fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
