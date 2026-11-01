@@ -601,7 +601,7 @@ main {
   font-size: 21px;
 }
 
-.meilenstein.leer { opacity: .55; }
+.meilenstein.leer { border-style: dashed; }
 
 /* ---------------- Fußzeile ---------------- */
 
@@ -652,7 +652,7 @@ main {
 
 .kopf-knopf .symbol { width: 22px; height: 22px; color: var(--akzent); }
 
-.kopf-knopf.musik-aus { opacity: .55; }
+.kopf-knopf.musik-aus .symbol { opacity: .55; }
 
 .bonus-knopf {
   background: #fff6dd;
@@ -1130,7 +1130,10 @@ main {
   .eingabe { width: 82px; font-size: 24px; }
   .eingabe.geld-teil { width: 62px; font-size: 22px; }
   .geld-zeichen { font-size: 17px; }
-  .aufgaben-raster { grid-template-columns: 1fr 1fr; }
+  .aufgaben-raster { grid-template-columns: minmax(0, 1fr); }
+  .bereich-kopf { flex-wrap: wrap; }
+  .verlauf { gap: 2px; }
+  .verlauf-saule { min-width: 0; }
   .maskottchen { width: 56px; height: 56px; }
   .kalender-punkt { font-size: 12px; }
   .bereich-zeile { grid-template-columns: 110px 1fr 48px; }

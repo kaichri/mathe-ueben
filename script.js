@@ -267,6 +267,13 @@ const speicher = (function () {
     try {
       const stand = JSON.stringify(daten);
       if (stand !== letzterStand) {
+        // Keine neueren Daten eines anderen Fensters durch unseren alten Stand ersetzen.
+        if (window.localStorage.getItem(SPEICHER_NAME) !== letzterStand) {
+          gesperrt = true;
+          meldung = "In einem anderen Fenster wurde weitergespielt. Dessen Daten bleiben geschützt. Sichere deine Antworten hier und öffne das Spiel danach neu.";
+          aktualisiereSpeicherHinweis();
+          return;
+        }
         window.localStorage.setItem(SPEICHER_NAME, stand);
         letzterStand = stand;
       }
@@ -2643,7 +2650,9 @@ document.getElementById("zurueckKnopf").addEventListener("click", function () {
   zeigeAbschnitt(abschnittZeiger - 1);
 });
 
-document.getElementById("neuKnopf").addEventListener("click", function () {
+document.getElementById("neuKnopf").addEventListener("click", function (ereignis) {
+  // Der zweite Klick auf „Fertig“ kann nach dem Umbau bereits hier landen.
+  if (ereignis && ereignis.detail > 1) { return; }
   if (istTagesRunde()) {
     zeigeNeuerVersuchFrage(function () {
       zeigeRunde(neuesTagesSet());
