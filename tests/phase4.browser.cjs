@@ -237,6 +237,79 @@ async function layout(page){return page.evaluate(()=>{
       return {runden:2,sterne:7,downloads};
     });
 
+    await check(engine,'Spielstand über GitHub synchronisieren',async()=>{
+      // Nachgebildete GitHub-Contents-API (kein echtes Repository).
+      const github={text:null,sha:null,nummer:1};
+      const cors={"access-control-allow-origin":"*",
+        "access-control-allow-methods":"GET, PUT, OPTIONS",
+        "access-control-allow-headers":"authorization, content-type, accept, x-github-api-version",
+        "access-control-max-age":"0"};
+      async function gitHub(route){
+        const req=route.request(), methode=req.method();
+        if(methode==='OPTIONS')return route.fulfill({status:204,headers:cors});
+        const auth=req.headers()['authorization']||'';
+        if(!/^Bearer \S+/.test(auth))return route.fulfill({status:401,headers:cors,contentType:'application/json',body:'{"message":"Bad credentials"}'});
+        if(methode==='GET'){
+          if(github.text===null)return route.fulfill({status:404,headers:cors,contentType:'application/json',body:'{}'});
+          return route.fulfill({status:200,headers:cors,contentType:'application/json',
+            body:JSON.stringify({content:Buffer.from(github.text,'utf8').toString('base64'),sha:github.sha})});
+        }
+        if(methode==='PUT'){
+          const koerper=JSON.parse(req.postData()||'{}');
+          if(github.text!==null && koerper.sha!==github.sha)return route.fulfill({status:409,headers:cors,contentType:'application/json',body:'{}'});
+          github.text=Buffer.from(koerper.content,'base64').toString('utf8');
+          github.sha='sha-'+(++github.nummer);
+          return route.fulfill({status:201,headers:cors,contentType:'application/json',body:JSON.stringify({content:{sha:github.sha}})});
+        }
+        return route.fulfill({status:405,headers:cors,body:''});
+      }
+      async function geraet(){
+        const ctx=await browser.newContext({acceptDownloads:true});
+        await ctx.route('https://api.github.com/**',gitHub);
+        await ctx.addInitScript(()=>{if(localStorage.getItem('mathe-ueben-fuer-emma')===null)localStorage.setItem('mathe-ueben-fuer-emma',JSON.stringify({sound:'aus'}));});
+        const p=await ctx.newPage();await p.goto(url);
+        return {ctx,p};
+      }
+
+      // Gerät A: Runde spielen und die Synchronisierung einrichten.
+      const A=await geraet();
+      await A.p.locator('#losKnopf').click();await fillCorrect(A.p,50);
+      await A.p.locator('.abschnitts-punkt').last().click();await A.p.locator('#pruefenKnopf').dblclick();
+      await A.p.locator('#kinoAusKnopf').click();
+      assert.equal(await A.p.evaluate(()=>speicher.daten().sterneGesamt),5);
+      await A.p.locator('#sterneKnopf').click();await A.p.locator('[data-reiter="daten"]').click();
+      assert(await A.p.locator('#syncRepo').count()===1,'Synchronisierungsfelder fehlen');
+      await A.p.locator('#syncRepo').fill('kaichri/mathe-sync');
+      await A.p.locator('#syncToken').fill('ghp_browsertest');
+      await A.p.locator('#syncSpeichernKnopf').click();
+      await A.p.waitForFunction(()=>/gespeichert|Abgeglichen/i.test(sync.status().text),null,{timeout:15000});
+      assert.notEqual(github.text,null,'Gerät A hat nichts geschrieben');
+      const vonA=JSON.parse(github.text);
+      assert.equal(vonA.sterneGesamt,5);
+      assert.equal(vonA.runden.length,1);
+      // Das Token darf nicht im Spielstand landen.
+      const spielstandA=await A.p.evaluate(()=>localStorage.getItem('mathe-ueben-fuer-emma'));
+      assert(!spielstandA.includes('ghp_browsertest'),'Token steht im Spielstand');
+      const einstA=await A.p.evaluate(()=>localStorage.getItem('mathe-ueben-sync'));
+      assert(einstA.includes('ghp_browsertest'),'Token fehlt in den Sync-Einstellungen');
+      await A.ctx.close();
+
+      // Gerät B: leer, gleiche Zugangsdaten -> Start gleicht ab und übernimmt.
+      const B=await geraet();
+      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),0);
+      await B.p.locator('#sterneKnopf').click();await B.p.locator('[data-reiter="daten"]').click();
+      await B.p.locator('#syncRepo').fill('kaichri/mathe-sync');
+      await B.p.locator('#syncToken').fill('ghp_browsertest');
+      await B.p.locator('#syncSpeichernKnopf').click().catch(()=>{});
+      await B.p.waitForTimeout(1500);
+      await B.p.reload();
+      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),5,'Gerät B hat den Stand nicht übernommen');
+      assert.equal(await B.p.evaluate(()=>speicher.daten().runden.length),1);
+      assert.equal(await B.p.evaluate(()=>speicher.meldung()),'');
+      await B.ctx.close();
+      return {vonA:vonA.sterneGesamt,beiB:5};
+    });
+
     await page.evaluate(()=>{const rows=speicher.daten().runden;if(rows.length) while(rows.length<14)rows.push({...rows[0]});});
     for(const [width,height] of [[375,812],[390,844],[768,1024],[1366,768],[1920,1080]]) {
       await page.setViewportSize({width,height});
@@ -247,6 +320,10 @@ async function layout(page){return page.evaluate(()=>{
       await check(engine,'responsive vouchers '+width,async()=>{const info=await layout(page);assert(info.documentWidth<=width+1 && !info.overflow.length,JSON.stringify(info));});
       await page.evaluate(()=>zeigeFortschritt('sterne'));
       await check(engine,'responsive stars '+width,async()=>{const info=await layout(page);assert(info.documentWidth<=width+1 && !info.overflow.length,JSON.stringify(info));});
+      // Spielstand-Reiter mit den Synchronisierungsfeldern
+      await page.evaluate(()=>zeigeFortschritt('daten'));
+      await check(engine,'responsive savegame '+width,async()=>{const info=await layout(page);assert(info.documentWidth<=width+1 && !info.overflow.length,JSON.stringify(info));});
+      await page.screenshot({path:path.join(output,engine+'-'+width+'-savegame.png')});
       await page.evaluate(()=>geschenkAuswahlOeffnen({art:'geschenk',tauschId:null}));
       await check(engine,'responsive gift selection '+width,async()=>{const info=await layout(page);assert(!info.overflow.length,JSON.stringify(info));});
       await page.keyboard.press('Escape');

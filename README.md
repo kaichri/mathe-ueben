@@ -85,6 +85,8 @@ ein Geschenk ohne Bonussterne; er besitzt keine Zugangssperre.
 ### Weitere Funktionen
 
 - Lebenszeitsterne, Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
+- Optionaler automatischer Abgleich über ein privates GitHub-Repository
+  (Zusammenführen statt Überschreiben).
 - Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als
   JSON-Datei (Umzug auf einen anderen PC, „Mein Fortschritt → Spielstand“).
 - Hintergrundmusik, synthetische Ersatzmelodie bei fehlenden Dateien und
@@ -146,7 +148,8 @@ mathe-ueben/
 │   ├── audit-invariants.test.cjs   Zustand, Speicher, Tageswechsel
 │   ├── audit-regressions.test.cjs  Regressionstests der Audit-Korrekturen
 │   ├── audit-spielstand.test.cjs   Sichern, Laden und Zusammenführen
-│   └── audit-merge.test.cjs        Regeln des Zusammenführens
+│   ├── audit-merge.test.cjs        Regeln des Zusammenführens
+│   └── audit-sync.test.cjs         GitHub-Abgleich (nachgebildete API)
 ├── PHASE1.md … PHASE4.md        Entwicklungs- und Prüfberichte
 ├── reports/
 │   ├── code-audit.md           Code-Audit mit 15 Befunden
@@ -171,6 +174,11 @@ unter anderem:
 - reguläre Lebenszeitsterne, Bonusguthaben und insgesamt verdiente Bonussterne;
 - Gutscheine einschließlich Umtauschvermerken;
 - Rundenhistorie, Bereichssummen, Tagesfreischaltungen und Einstellungen.
+
+Optional liegen die Zugangsdaten für die GitHub-Synchronisierung unter einem
+**eigenen Schlüssel** `mathe-ueben-sync` (Repository, Dateiname, Token). Dieser
+Eintrag ist **nicht** Teil des Spielstands und wird weder exportiert noch
+mitgesichert; „Synchronisierung entfernen“ löscht ihn.
 
 Die Rundenhistorie ist auf 1.000 Einträge begrenzt. Lebenszeitsterne und
 Bereichssummen werden davon unabhängig erhalten. Beim Laden älterer Spielstände
@@ -259,15 +267,67 @@ Datei ein zweites Mal ergänzt nichts mehr.
 **Grenzen:** Es ist kein echter Drei-Wege-Merge. Ein nach dem Auseinanderlaufen
 auf beiden Geräten *unterschiedlich* veränderter Tagesstand kann nicht vereinigt
 werden – hier gewinnt die abgeschlossene bzw. die neuere Runde. Das Bonusguthaben
-wird nicht addiert, damit keine Sterne doppelt entstehen. Für automatisches
-Abgleichen beim Start wäre weiterhin ein Server nötig.
+wird nicht addiert, damit keine Sterne doppelt entstehen.
+
+### Automatische Synchronisierung über GitHub (optional)
+
+Für häufige Gerätewechsel lässt sich der Abgleich automatisieren. Der Spielstand
+liegt dann als **eine JSON-Datei** in einem **eigenen, privaten Repository**;
+GitHub dient nur als Ablage (es wird kein Code dorthin geschrieben).
+
+**Einrichtung (einmal pro Gerät)**
+
+1. Privates Repository anlegen, z. B. `mathe-sync` (eine Datei `spielstand.json`
+   entsteht automatisch).
+2. Feingranulares Token anlegen: *Settings → Developer settings → Personal access
+   tokens → Fine-grained tokens*, **nur dieses Repository**, Recht
+   **Contents: Read and write**, mit Ablaufdatum.
+3. Im Spiel unter **„Mein Fortschritt“ → „Spielstand“** Repository
+   (`besitzer/name`) und Token eintragen, „Speichern & prüfen“ drücken. Beim
+   ersten Mal wird die Datei angelegt.
+
+**Wann geschrieben wird**
+
+| Auslöser | Verhalten |
+|---|---|
+| Start des Spiels | Datei lesen, mit dem lokalen Stand **zusammenführen**, bei Änderungen übernehmen und neu laden |
+| Abschluss einer Runde, Gutschein, neues Tagesset | sofort schreiben |
+| Verlassen/Ausblenden der Seite | sofort schreiben (best effort) |
+| Tippen während einer Runde | höchstens einmal pro Minute (`syncVerzoegerungMs`) |
+| „Jetzt synchronisieren“ | sofort lesen, zusammenführen, schreiben |
+
+Es wird **nie einfach überschrieben**: Vor jedem Schreiben wird der Serverstand
+gelesen und mit dem lokalen Stand vereinigt. Antwortet GitHub mit `409`
+(gleichzeitige Änderung), wird erneut gelesen, zusammengeführt und nochmals
+geschrieben (bis zu drei Versuche). Der Server enthält damit immer die
+Vereinigung; die laufende Sitzung wird dabei nicht verändert (das passiert erst
+beim nächsten Start).
+
+**Sicherheit und Grenzen**
+
+- Das Token wird **nur lokal** unter dem Schlüssel `mathe-ueben-sync` gespeichert –
+  nicht im Spielstand, nicht in Sicherungsdateien und nicht im Repository. Wer
+  Zugriff auf den PC hat, kann es lesen; deshalb minimaler Scope, Ablaufdatum und
+  bei Verlust sofort widerrufen.
+- Das Spiel bleibt offline nutzbar; Fehlversuche werden gemeldet und beim
+  nächsten Auslöser wiederholt.
+- Jede Synchronisierung erzeugt einen **Commit** im Repository. Deshalb der
+  Mindestabstand beim Tippen.
+- Der Aufruf von `api.github.com` aus dem Browser ist üblich, aber nicht
+  offiziell garantiert. Beim Öffnen per Doppelklick (`file://`) kann der Browser
+  die Anfrage blockieren; dann das Spiel über einen lokalen Server öffnen oder
+  beim manuellen Sichern/Laden bleiben.
+- GitHub ist kein zugesicherter Datenspeicher. Der Stand liegt zusätzlich immer
+  lokal; die manuellen Wege (Sichern/Laden/Zusammenführen) bleiben unverändert
+  verfügbar.
 
 Bei einer Speicher- oder Konfliktmeldung erscheint zusätzlich der Knopf
 **„Daten sichern“** mit derselben Datei. Bei verweigertem Lesezugriff kann der
 ursprüngliche Inhalt nicht exportiert werden.
 
-**Es gibt keine automatische Synchronisierung.** Zwei Geräte führen getrennte
-Spielstände; Laden ersetzt, Zusammenführen vereinigt. Persönliche JSON-Sicherungen und
+**Ohne Einrichtung arbeiten die Geräte getrennt.** Zwei Geräte führen eigene
+Spielstände; Laden ersetzt, Zusammenführen vereinigt, die optionale
+GitHub-Synchronisierung gleicht automatisch ab. Persönliche JSON-Sicherungen und
 CSV-Exporte werden durch `.gitignore` von der Versionsverwaltung ausgeschlossen.
 
 ### Statistik als CSV
@@ -283,21 +343,21 @@ Spielstand.
 ### Regression und Syntax
 
 Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
-Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 85
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 100
 Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
 Orakeln, Invarianten für Zustand und Speicher, Regressionstests für die
 Audit-Befunde und die beiden angepassten Spielregeln (Wiederholungssterne,
-Bestätigung beim Abschließen) sowie Tests für Sichern, Laden und Zusammenführen
-des Spielstands. Node.js 24 wurde für die dokumentierten Prüfungen
-verwendet; zum Spielen ist Node.js nicht erforderlich.
+Bestätigung beim Abschließen) sowie Tests für Sichern, Laden, Zusammenführen und
+den GitHub-Abgleich des Spielstands. Node.js 24 wurde für die dokumentierten
+Prüfungen verwendet; zum Spielen ist Node.js nicht erforderlich.
 
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (154 Tests)
+# Alle Node-Tests (169 Tests)
 node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
   tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs `
-  tests/audit-spielstand.test.cjs
+  tests/audit-spielstand.test.cjs tests/audit-merge.test.cjs tests/audit-sync.test.cjs
 
 node --check script.js
 node --check aufgaben-bereiche.js
@@ -334,7 +394,8 @@ Der in Phase 4 geprüfte Stand erreichte:
 | Prüfung | Ergebnis |
 |---|---|
 | Regressionstests | 69 bestanden: 14 + 25 + 25 + 5 |
-| Echte Chrome-/Edge-Prüfungen | 84 bestanden: je 42 |
+| Audit- und Regeltests | 100 bestanden (Mathematik, Invarianten, Befunde, Spielstand, Zusammenführen, GitHub-Abgleich) |
+| Echte Chrome-/Edge-Prüfungen | 90 bestanden: je 45 |
 | Geschichtenvorlagen | 47 geprüft |
 | Zulässige Zahlenkombinationen der Geschichten | 93.308 geprüft |
 | Zufällige Geschichtensets | 6.000 geprüft |
@@ -362,6 +423,19 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
   stundenlanger realer Sitzungen oder einer Wiederherstellung nach Stromausfall.
 
 ## Versionshistorie
+
+### 1.0.5 — automatische Synchronisierung über GitHub (optional)
+
+- Neuer Abschnitt im Reiter „Spielstand“: Repository (`besitzer/name`) und
+  feingranulares Token eintragen, „Speichern & prüfen“, „Jetzt synchronisieren“,
+  „Synchronisierung entfernen“.
+- **Start:** Datei holen, mit dem lokalen Stand zusammenführen, bei Änderungen
+  übernehmen und neu laden. **Schreiben:** sofort nach Abschluss/Gutschein/
+  neuem Tagesset und beim Verlassen, beim Tippen höchstens einmal pro Minute.
+- Vor jedem Schreiben wird der Serverstand erneut gelesen und vereinigt; `409`
+  wird durch erneutes Zusammenführen gelöst. Der Server verliert nie Daten.
+- Token nur lokal unter `mathe-ueben-sync`, nicht im Spielstand und nicht in
+  Sicherungsdateien. Ohne Einrichtung bleibt alles wie bisher.
 
 ### 1.0.4 — Spielstände zusammenführen („Merge light“)
 

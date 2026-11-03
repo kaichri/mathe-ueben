@@ -65,7 +65,10 @@ function game(saved = {}, options = {}) {
     return card ? n.dataset.kartenId === card[1] : false;
   }
   const nodes = new Map();
-  let stored = Object.hasOwn(options, 'raw') ? options.raw : JSON.stringify(Object.assign({ sound: "aus" }, saved));
+  const speicher = new Map();
+  const SPIELSTAND = 'mathe-ueben-fuer-emma';
+  speicher.set(SPIELSTAND, Object.hasOwn(options, 'raw') ? String(options.raw)
+    : JSON.stringify(Object.assign({ sound: "aus" }, saved)));
   let writes = 0;
   const document = {
     body: node("body"), createElement: node, createElementNS(ns, type) { return node(type); },
@@ -116,8 +119,12 @@ function game(saved = {}, options = {}) {
   const math = Object.create(Math);
   if (options.failMigration) { math.max = function () { math.max = Math.max; throw new Error('migration failed'); }; }
   let reloads = 0;
-  const context = vm.createContext({ Date: Clock, Math: math, document, window: {
-    localStorage: { getItem() { if (options.failRead) throw new Error('read denied'); return stored; }, setItem(key, value) { if (options.failWrite) throw new Error('quota'); stored = value; writes++; } },
+  const windowObjekt = {
+    localStorage: {
+      getItem(key) { if (options.failRead) throw new Error('read denied'); return speicher.has(key) ? speicher.get(key) : null; },
+      setItem(key, value) { if (options.failWrite) throw new Error('quota'); speicher.set(key, String(value)); writes++; },
+      removeItem(key) { speicher.delete(key); }
+    },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
     VIDEOS: ["bluey", "gabby", "doozie"].map(welt => ({welt, video: welt, titel: welt})),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
@@ -128,20 +135,24 @@ function game(saved = {}, options = {}) {
     clearInterval(id) { timers.delete(id); },
     setTimeout(fn, delay) { const id=++timerId; pending.set(id,{fn,delay}); return id; },
     clearTimeout(id) { pending.delete(id); }
-  }});
+  };
+  if (typeof options.fetch === "function") { windowObjekt.fetch = options.fetch; }
+  const context = vm.createContext({ Date: Clock, Math: math, document, window: windowObjekt });
   const run = code => vm.runInContext(code, context);
   run(fs.readFileSync(path.join(__dirname, "../script.js"), "utf8"));
   run("EINSTELLUNGEN.spaessig = false");
   return {
-    run, nodes, audios, timers, contexts, document, downloads, revoked, options,
-    raw:()=>stored,
+    run, nodes, audios, timers, contexts, document, downloads, revoked, options, window: windowObjekt,
+    raw:()=>speicher.get(SPIELSTAND),
     reloads: () => reloads,
+    syncDaten: () => speicher.get("mathe-ueben-sync"),
+    speicherSchluessel: () => [...speicher.keys()],
     flush() { const list=[...pending.values()]; pending.clear(); list.forEach(t=>t.fn()); },
     pagehide() { windowEvents.get('pagehide')?.(); },
     key(key, shiftKey=false) { return document.activeElement.emit('keydown', {key, shiftKey}); },
     visibility() { document.visibilityState='hidden'; emitDoc('visibilitychange'); },
     data: () => run("speicher.daten()"),
-    saved: () => JSON.parse(stored), writes: () => writes,
+    saved: () => JSON.parse(speicher.get(SPIELSTAND)), writes: () => writes,
     time(iso) { now = Date.parse(iso); }, click() { emitDoc('click'); },
     fill(count) {
       run(`runde.karten.forEach((karte, i) => {

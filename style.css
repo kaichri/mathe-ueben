@@ -1145,3 +1145,14 @@ main {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* =========================================================
+   Spielstand-Synchronisierung (GitHub)
+   ========================================================= */
+
+.sync-feld { margin: 0 0 10px; }
+.sync-feld label { display: block; font-weight: 700; margin-bottom: 4px; }
+.sync-feld .eingabe { width: 100%; max-width: 560px; }
+.sync-status { font-weight: 700; }
+.sync-status.ok { color: var(--akzent-dunkel); }
+.sync-status.fehler { color: #8a1c1c; }

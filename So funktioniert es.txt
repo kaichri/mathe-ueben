@@ -166,7 +166,8 @@ Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
   Gutscheine - alle abgeholten Gutscheine, mit Umtausch-Knopf (siehe oben).
   Spielstand - "Spielstand sichern (Datei)", "Spielstand laden (Datei)"
                und "Spielstand zusammenführen (Datei)" für den Umzug auf
-               einen anderen PC bzw. zum Vereinigen zweier Stände (siehe unten).
+               einen anderen PC bzw. zum Vereinigen zweier Stände; dazu die
+               optionale automatische GitHub-Synchronisierung (siehe unten).
 
 
 Auf einem anderen PC weiterspielen
@@ -210,11 +211,45 @@ Statt zu ersetzen kann man die Stände auch vereinigen:
 
   Dieselbe Datei ein zweites Mal zusammenzuführen ändert nichts mehr.
 
-Wichtig: Es gibt keine automatische Synchronisierung. Beide PCs haben
-getrennte Spielstände; "Laden" ersetzt, "Zusammenführen" vereinigt.
-Für automatisches Abgleichen beim Start wäre ein Server nötig; das Spiel
-hat keinen. Eine unbrauchbare oder fremde Datei wird abgelehnt, der
-bisherige Stand bleibt dann unverändert.
+Automatisch über GitHub abgleichen (optional, für häufige Wechsel)
+------------------------------------------------------------------
+Wer oft zwischen PCs wechselt, kann den Abgleich automatisieren. Der
+Spielstand liegt dann als eine Datei in einem eigenen, PRIVATEN
+GitHub-Repository. GitHub ist nur die Ablage - es wird kein Programm
+dorthin geschrieben.
+
+  Einrichten (einmal pro PC):
+  1. Bei GitHub ein privates Repository anlegen, z. B. "mathe-sync".
+  2. Ein feingranulares Token erstellen (Settings -> Developer settings
+     -> Personal access tokens -> Fine-grained tokens): nur dieses
+     Repository, nur das Recht "Contents: Read and write", mit
+     Ablaufdatum.
+  3. Im Spiel: "Mein Fortschritt" -> "Spielstand", Repository
+     (besitzer/name) und Token eintragen, "Speichern & prüfen".
+     Beim ersten Mal wird die Datei angelegt.
+
+  Wann geschrieben wird:
+  - beim Start wird gelesen und mit dem lokalen Stand ZUSAMMENGEFÜHRT
+    (nichts wird überschrieben), bei Änderungen neu geladen
+  - sofort nach dem Abschluss einer Runde, bei Gutscheinen und beim
+    Verlassen der Seite
+  - beim Tippen höchstens einmal pro Minute (jede Synchronisierung
+    erzeugt einen Commit im Repository)
+  - "Jetzt synchronisieren" jederzeit von Hand
+
+  Das Token wird nur auf diesem PC gespeichert (nicht im Spielstand und
+  nicht in Sicherungsdateien). Es ist ein Schreibschlüssel: nicht
+  weitergeben und bei Verlust in GitHub widerrufen.
+
+  Ohne Einrichtung bleibt alles wie bisher: beide PCs haben getrennte
+  Spielstände; "Laden" ersetzt, "Zusammenführen" vereinigt. Eine
+  unbrauchbare oder fremde Datei wird abgelehnt, der bisherige Stand
+  bleibt dann unverändert.
+
+Hinweis: Öffnet man das Spiel per Doppelklick (file://), kann der
+Browser die Verbindung zu GitHub blockieren. Dann entweder das Spiel
+über einen lokalen Server öffnen oder beim manuellen Sichern/Laden
+bleiben.
 
 
 Kino: die Feier-Videos

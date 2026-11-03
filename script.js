@@ -20,6 +20,7 @@ const EINSTELLUNGEN = {
   bonusSternAlle: 5,          // so viele Bonussterne braucht man für ein Geschenk
   hintergrundMusikAn: true,   // Standard, falls noch nichts gespeichert ist
   musikLautstaerke: 0.16,     // 0 = ganz leise, 1 = voll
+  syncVerzoegerungMs: 60000,  // beim Tippen höchstens einmal pro Minute zu GitHub
   spaessig: true,             // Maskottchen, Sprünge und Sternenregen an?
   zeigerSpur: true            // kleine Welt-Symbole folgen der Maus?
 };
@@ -411,6 +412,7 @@ const speicher = (function () {
       sterne: bereinigt.sterneGesamt - daten.sterneGesamt,
       geschenke: (bereinigt.geschenke || []).length - (daten.geschenke || []).length
     };
+    ergebnis.veraendert = stabilStringify(bereinigt) !== stabilStringify(daten);
     return ergebnis;
   }
 
@@ -420,9 +422,23 @@ const speicher = (function () {
     meldung: function () { return meldung; },
     pruefeImport: pruefeImport,
     zusammenfuehren: zusammenfuehren,
+    /* Übernimmt einen bereits geprüften Stand (nur für den Abgleich). */
+    uebernehmen: function (neueDaten) {
+      daten = neueDaten;
+      schreibe();
+    },
     sicherung: function () { return { format: "mathe-sicherung", daten: daten, originalSpeicher: originalRoh }; }
   };
 })();
+
+/* Vergleicht zwei Datenbäume unabhängig von der Schlüsselreihenfolge. */
+function stabilStringify(wert) {
+  if (wert === null || typeof wert !== "object") { return JSON.stringify(wert); }
+  if (Array.isArray(wert)) { return "[" + wert.map(stabilStringify).join(",") + "]"; }
+  return "{" + Object.keys(wert).sort().map(function (name) {
+    return JSON.stringify(name) + ":" + stabilStringify(wert[name]);
+  }).join(",") + "}";
+}
 
 /* =========================================================================
    Zusammenführen zweier Spielstände („Merge light“)
@@ -617,6 +633,383 @@ function verschmelzeSpielstande(lokal, fremd) {
     })
   };
 }
+
+/* =========================================================================
+   Automatische Synchronisierung über GitHub (optional, standardmäßig aus)
+
+   Der Spielstand liegt als eine JSON-Datei in einem (privaten) Repository.
+   Ablauf:
+   - Beim Start: Datei holen, mit dem lokalen Stand zusammenführen (Merge
+     light), bei Änderungen lokal übernehmen und neu starten.
+   - Beim Abschluss einer Runde, bei Gutscheinen und beim Verlassen sofort
+     schreiben; beim Tippen höchstens alle `syncVerzoegerungMs`.
+   - Vor jedem Schreiben wird der Serverstand erneut geholt und mit dem
+     lokalen Stand vereinigt. Dadurch kann kein Stand einen anderen
+     überschreiben; bei gleichzeitigen Änderungen (409) wird neu versucht.
+   - Das Token wird nur lokal unter einem eigenen Schlüssel gespeichert und
+     ist weder im Spielstand noch in Sicherungsdateien enthalten.
+   ========================================================================= */
+
+const SYNC_SCHLUESSEL = "mathe-ueben-sync";
+const SYNC_VORGABEN = { repo: "", datei: "spielstand.json", branch: "main", token: "", aktiv: true };
+
+function utf8ZuBytes(text) {
+  const bytes = [];
+  for (let i = 0; i < text.length; i++) {
+    let code = text.charCodeAt(i);
+    if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length) {
+      const naechstes = text.charCodeAt(i + 1);
+      if (naechstes >= 0xDC00 && naechstes <= 0xDFFF) {
+        code = 0x10000 + ((code - 0xD800) << 10) + (naechstes - 0xDC00);
+        i += 1;
+      }
+    }
+    if (code < 0x80) { bytes.push(code); }
+    else if (code < 0x800) { bytes.push(0xC0 | (code >> 6), 0x80 | (code & 0x3F)); }
+    else if (code < 0x10000) {
+      bytes.push(0xE0 | (code >> 12), 0x80 | ((code >> 6) & 0x3F), 0x80 | (code & 0x3F));
+    } else {
+      bytes.push(0xF0 | (code >> 18), 0x80 | ((code >> 12) & 0x3F),
+        0x80 | ((code >> 6) & 0x3F), 0x80 | (code & 0x3F));
+    }
+  }
+  return bytes;
+}
+
+function bytesZuUtf8(bytes) {
+  let text = "";
+  let i = 0;
+  while (i < bytes.length) {
+    const b = bytes[i++];
+    let code;
+    if (b < 0x80) { code = b; }
+    else if (b >= 0xC0 && b < 0xE0) { code = ((b & 0x1F) << 6) | (bytes[i++] & 0x3F); }
+    else if (b >= 0xE0 && b < 0xF0) {
+      code = ((b & 0x0F) << 12) | ((bytes[i++] & 0x3F) << 6) | (bytes[i++] & 0x3F);
+    } else {
+      code = ((b & 0x07) << 18) | ((bytes[i++] & 0x3F) << 12) |
+        ((bytes[i++] & 0x3F) << 6) | (bytes[i++] & 0x3F);
+    }
+    if (code > 0xFFFF) {
+      code -= 0x10000;
+      text += String.fromCharCode(0xD800 + (code >> 10), 0xDC00 + (code & 0x3FF));
+    } else {
+      text += String.fromCharCode(code);
+    }
+  }
+  return text;
+}
+
+function base64Kodiere(text) {
+  const bytes = utf8ZuBytes(String(text));
+  const zeichen = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let ergebnis = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i];
+    const b1 = bytes[i + 1];
+    const b2 = bytes[i + 2];
+    ergebnis += zeichen[b0 >> 2];
+    ergebnis += zeichen[((b0 & 3) << 4) | ((b1 === undefined ? 0 : b1) >> 4)];
+    ergebnis += b1 === undefined ? "=" : zeichen[((b1 & 15) << 2) | ((b2 === undefined ? 0 : b2) >> 6)];
+    ergebnis += b2 === undefined ? "=" : zeichen[b2 & 63];
+  }
+  return ergebnis;
+}
+
+function base64Dekodiere(text) {
+  const zeichen = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const sauber = String(text).replace(/[\s=]/g, "");
+  const bytes = [];
+  let puffer = 0;
+  let bits = 0;
+  for (let i = 0; i < sauber.length; i++) {
+    const wert = zeichen.indexOf(sauber[i]);
+    if (wert < 0) { continue; }
+    puffer = (puffer << 6) | wert;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((puffer >> bits) & 0xFF);
+    }
+  }
+  return bytesZuUtf8(bytes);
+}
+
+const sync = (function () {
+  let einstellungen = Object.assign({}, SYNC_VORGABEN);
+  let status = { text: "Nicht eingerichtet.", art: "info" };
+  let laeuft = false;
+  let timer = null;
+  let zuletztGepusht = null;
+  let geladen = false;
+
+  function setzeStatus(text, art) {
+    status = { text: text, art: art || "info" };
+    if (typeof aktualisiereSyncStatus === "function") { aktualisiereSyncStatus(); }
+  }
+
+  function lade() {
+    if (geladen) { return einstellungen; }
+    geladen = true;
+    try {
+      const roh = window.localStorage.getItem(SYNC_SCHLUESSEL);
+      if (roh) {
+        const gespeichert = JSON.parse(roh);
+        ["repo", "datei", "branch", "token"].forEach(function (name) {
+          if (typeof gespeichert[name] === "string") { einstellungen[name] = gespeichert[name]; }
+        });
+        if (typeof gespeichert.aktiv === "boolean") { einstellungen.aktiv = gespeichert.aktiv; }
+        if (!einstellungen.datei) { einstellungen.datei = SYNC_VORGABEN.datei; }
+        if (!einstellungen.branch) { einstellungen.branch = SYNC_VORGABEN.branch; }
+      }
+    } catch (fehler) {
+      einstellungen = Object.assign({}, SYNC_VORGABEN);
+    }
+    return einstellungen;
+  }
+
+  function speichere(neu) {
+    lade();
+    einstellungen = Object.assign({}, einstellungen, neu || {});
+    /* Repository muss "besitzer/name" sein, Dateiname ein relativer Pfad. */
+    if (!/^[\w.-]+\/[\w.-]+$/.test(String(einstellungen.repo || ""))) {
+      setzeStatus("Bitte das Repository als „besitzer/name“ eintragen.", "fehler");
+      return false;
+    }
+    const datei = String(einstellungen.datei || "");
+    if (!datei || datei.indexOf("..") >= 0 || datei.indexOf("//") >= 0 || datei[0] === "/") {
+      setzeStatus("Bitte einen gültigen Dateinamen angeben (z. B. spielstand.json).", "fehler");
+      return false;
+    }
+    try {
+      window.localStorage.setItem(SYNC_SCHLUESSEL, JSON.stringify(einstellungen));
+    } catch (fehler) {
+      setzeStatus("Die Zugangsdaten konnten nicht gespeichert werden.", "fehler");
+      return false;
+    }
+    zuletztGepusht = null;
+    return true;
+  }
+
+  function einstellungenAktuell() {
+    lade();
+    return Object.assign({}, einstellungen);
+  }
+
+  function istKonfiguriert() {
+    const e = einstellungenAktuell();
+    return !!(e.aktiv && e.repo && e.repo.indexOf("/") > 0 && e.token);
+  }
+
+  function apiAdresse() {
+    const e = einstellungenAktuell();
+    /* Pfad segmentweise kodieren, damit Unterordner möglich bleiben. */
+    const pfad = String(e.datei).split("/").map(encodeURIComponent).join("/");
+    return "https://api.github.com/repos/" + e.repo + "/contents/" + pfad;
+  }
+
+  function kopfzeilen() {
+    const e = einstellungenAktuell();
+    return {
+      "Authorization": "Bearer " + e.token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    };
+  }
+
+  function fetchBereit() {
+    return typeof window.fetch === "function";
+  }
+
+  async function holeStand() {
+    if (!fetchBereit()) { throw new Error("Dieser Browser kann nicht synchronisieren."); }
+    const e = einstellungenAktuell();
+    let antwort;
+    try {
+      antwort = await window.fetch(apiAdresse() + "?ref=" + encodeURIComponent(e.branch),
+        { headers: kopfzeilen(), cache: "no-store" });
+    } catch (fehler) {
+      throw new Error("Keine Verbindung zu GitHub (Internet oder Browserfreigabe prüfen).");
+    }
+    if (antwort.status === 404) { return { vorhanden: false, text: "", sha: null }; }
+    if (antwort.status === 401 || antwort.status === 403) {
+      throw new Error("GitHub lehnt den Zugang ab (Token, Repo oder Recht „Contents“ prüfen).");
+    }
+    if (!antwort.ok) { throw new Error("GitHub antwortet mit " + antwort.status + "."); }
+    const daten = await antwort.json();
+    return {
+      vorhanden: true,
+      text: base64Dekodiere(daten.content || ""),
+      sha: daten.sha || null
+    };
+  }
+
+  async function schreibeStand(text, sha) {
+    const e = einstellungenAktuell();
+    const koerper = {
+      message: "Spielstand " + heutigesDatum() + " " + new Date().toISOString(),
+      content: base64Kodiere(text),
+      branch: e.branch
+    };
+    if (sha) { koerper.sha = sha; }
+    let antwort;
+    try {
+      antwort = await window.fetch(apiAdresse(), {
+        method: "PUT",
+        headers: Object.assign({ "Content-Type": "application/json" }, kopfzeilen()),
+        body: JSON.stringify(koerper)
+      });
+    } catch (fehler) {
+      throw new Error("Keine Verbindung zu GitHub (Internet oder Browserfreigabe prüfen).");
+    }
+    if (antwort.status === 409) { return { konflikt: true }; }
+    if (antwort.status === 401 || antwort.status === 403) {
+      throw new Error("GitHub lehnt den Zugang ab (Token, Repo oder Recht „Contents“ prüfen).");
+    }
+    if (!antwort.ok) { throw new Error("Schreiben fehlgeschlagen (" + antwort.status + ")."); }
+    const daten = await antwort.json().catch(function () { return null; });
+    return { ok: true, sha: daten && daten.content ? daten.content.sha : null };
+  }
+
+  /* Holt den Serverstand und vereinigt ihn mit dem lokalen Stand.
+     Gibt zurück, ob sich dadurch lokal etwas geändert hat. */
+  async function ziehen() {
+    if (!istKonfiguriert()) { return { geaendert: false, uebersprungen: true }; }
+    const stand = await holeStand();
+    if (!stand.vorhanden) {
+      setzeStatus("Noch kein Spielstand im Repository – wird beim nächsten Schreiben angelegt.", "info");
+      return { geaendert: false, vorhanden: false };
+    }
+    const ergebnis = speicher.zusammenfuehren(stand.text);
+    if (!ergebnis.ok) {
+      throw new Error("Der Spielstand im Repository ist unlesbar: " + ergebnis.grund);
+    }
+    if (!ergebnis.veraendert) {
+      setzeStatus("Abgeglichen – lokal und Repository sind gleich.", "ok");
+      return { geaendert: false, vorhanden: true };
+    }
+    speicher.uebernehmen(ergebnis.daten);
+    setzeStatus("Spielstand vom Repository übernommen.", "ok");
+    return { geaendert: true, vorhanden: true, vorschau: ergebnis.vorschau };
+  }
+
+  /* Schreibt den lokalen Stand, nachdem er mit dem Serverstand vereinigt wurde.
+     Der Server verliert dadurch nie Daten; gleichzeitige Änderungen (409)
+     werden erneut zusammengeführt. */
+  async function schieben(optionen) {
+    const opts = optionen || {};
+    if (!istKonfiguriert()) { return { ok: false, uebersprungen: true }; }
+    if (laeuft) { return { ok: false, laeuft: true }; }
+    laeuft = true;
+    try {
+      const lokal = JSON.stringify(speicher.daten());
+      if (!opts.erzwingen && zuletztGepusht === stabilStringify(speicher.daten())) {
+        return { ok: true, unveraendert: true };
+      }
+      let letzterGrund = "";
+      for (let versuch = 0; versuch < 3; versuch++) {
+        const stand = await holeStand();
+        let zuSchreiben = lokal;
+        if (stand.vorhanden && stand.text) {
+          const ergebnis = speicher.zusammenfuehren(stand.text);
+          if (!ergebnis.ok) {
+            throw new Error("Der Spielstand im Repository ist unlesbar: " + ergebnis.grund);
+          }
+          /* Nur zum Schreiben zusammenführen; der lokale Sitzungsstand bleibt
+             unangetastet, damit eine laufende Runde nicht wechselt. */
+          zuSchreiben = JSON.stringify(ergebnis.daten);
+        }
+        const antwort = await schreibeStand(zuSchreiben, stand.sha);
+        if (antwort.konflikt) { letzterGrund = "gleichzeitige Änderung"; continue; }
+        zuletztGepusht = stabilStringify(speicher.daten());
+        setzeStatus("Gespeichert (" + new Date().toLocaleTimeString("de-DE",
+          { timeZone: "Europe/Vienna" }) + " Uhr).", "ok");
+        return { ok: true };
+      }
+      throw new Error("Schreiben nicht möglich (" + letzterGrund + ").");
+    } finally {
+      laeuft = false;
+    }
+  }
+
+  async function jetzt() {
+    if (!istKonfiguriert()) {
+      setzeStatus("Bitte Repository und Token eintragen.", "fehler");
+      return { ok: false };
+    }
+    setzeStatus("Gleiche ab …", "info");
+    try {
+      const gezogen = await ziehen();
+      if (gezogen.geaendert) {
+        setzeStatus("Spielstand übernommen – das Spiel wird neu gestartet.", "ok");
+        ladeSpielstandNeu();
+        return { ok: true, neustart: true, vorschau: gezogen.vorschau };
+      }
+      const geschoben = await schieben({ erzwingen: true });
+      if (geschoben.ok) { setzeStatus("Abgeglichen und gespeichert.", "ok"); }
+      return { ok: geschoben.ok !== false };
+    } catch (fehler) {
+      setzeStatus(fehler.message || String(fehler), "fehler");
+      return { ok: false, fehler: fehler.message || String(fehler) };
+    }
+  }
+
+  function planeSchieben(sofort) {
+    if (!istKonfiguriert()) { return; }
+    if (timer) { return; }
+    const wartezeit = sofort ? 0 : EINSTELLUNGEN.syncVerzoegerungMs;
+    timer = window.setTimeout(function () {
+      timer = null;
+      schieben().catch(function (fehler) {
+        setzeStatus(fehler.message || String(fehler), "fehler");
+      });
+    }, wartezeit);
+  }
+
+  /* Wird vom Spiel nach Änderungen aufgerufen. */
+  function nachAenderung(sofort) {
+    if (!istKonfiguriert()) { return; }
+    planeSchieben(sofort === true);
+  }
+
+  /* Beim Start: abgleichen; bei Änderungen neu laden, sonst lokal schreiben. */
+  async function starten() {
+    if (!istKonfiguriert()) { return; }
+    try {
+      const gezogen = await ziehen();
+      if (gezogen.geaendert) {
+        ladeSpielstandNeu();
+        return;
+      }
+      await schieben();
+    } catch (fehler) {
+      setzeStatus(fehler.message || String(fehler), "fehler");
+    }
+  }
+
+  function vergessen() {
+    try { window.localStorage.removeItem(SYNC_SCHLUESSEL); } catch (fehler) {}
+    einstellungen = Object.assign({}, SYNC_VORGABEN);
+    geladen = true;
+    zuletztGepusht = null;
+    if (timer) { window.clearTimeout(timer); timer = null; }
+    setzeStatus("Synchronisierung entfernt.", "info");
+  }
+
+  return {
+    istKonfiguriert: istKonfiguriert,
+    einstellungen: einstellungenAktuell,
+    speichere: speichere,
+    vergessen: vergessen,
+    ziehen: ziehen,
+    schieben: schieben,
+    jetzt: jetzt,
+    starten: starten,
+    nachAenderung: nachAenderung,
+    status: function () { return status; },
+    setzeStatus: setzeStatus
+  };
+})();
 
 function gesamtSterne() {
   return speicher.daten().sterneGesamt;
@@ -974,6 +1367,7 @@ function neuesTagesSet() {
     abschnitt: 0
   };
   speicher.speichere();
+  sync.nachAenderung(true);
   return rundeAusSet(daten.tagesSet);
 }
 
@@ -1030,6 +1424,8 @@ function sichereTagesAntworten(aufgeschoben) {
   });
   set.abschnitt = abschnittZeiger;
   speicher.speichere(aufgeschoben === true);
+  // Beim Tippen nur geplant (höchstens einmal pro Minute), nicht sofort.
+  sync.nachAenderung(false);
 }
 
 /* --- die Bonuswelt: nur Knobelaufgaben, nie mehr als die offenen Plätze --- */
@@ -1844,6 +2240,8 @@ function speichernRunde(richtig, gesamt, sterne, bereichErgebnis, bonusRichtig, 
   daten.modus = modus;
   speicher.speichere();
   aktualisiereSternenAnzeige();
+  // Abschluss einer Runde: sofort zum Repository spiegeln.
+  sync.nachAenderung(true);
 }
 
 function merkeGeschichten(karten) {
@@ -2099,6 +2497,7 @@ function geschenkGewaehlt(text, kosten) {
   speicher.speichere();
   dialogSchliessen("geschenkUeberlagerung");
   aktualisiereBonusAnzeige();
+  sync.nachAenderung(true);
 
   const kasten = document.getElementById("ergebnisKasten");
   if (!kasten.hidden) {
@@ -2149,6 +2548,7 @@ function tauschGutscheinEin(geschenkId, neueText) {
   daten.geschenke.push(neuer);
   speicher.speichere();
   dialogSchliessen("geschenkUeberlagerung");
+  sync.nachAenderung(true);
   if (EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
@@ -2481,12 +2881,106 @@ function zeigeSpielstandInhalt() {
     (daten.tagesSet ? " · Tagesrunde von " + datumText(daten.tagesSet.datum) : "")));
   inhalt.appendChild(stand);
 
+  /* Automatische Synchronisierung über GitHub */
+  const e = sync.einstellungen();
+  const syncKarte = element("div", "sterne-karte");
+  syncKarte.appendChild(element("h3", null, "🔗 Automatische Synchronisierung (GitHub)"));
+  syncKarte.appendChild(element("p", null,
+    "Optional: Der Spielstand wird dann beim Start mit einer Datei in einem eigenen, " +
+    "privaten GitHub-Repository zusammengeführt und beim Abschluss dorthin geschrieben. " +
+    "Dafür ist ein Token nötig, das nur auf diesem Gerät gespeichert wird."));
+  syncKarte.appendChild(element("p", "rand",
+    "Token in GitHub unter Settings → Developer settings → Personal access tokens → " +
+    "Fine-grained tokens anlegen: nur dieses Repository, nur „Contents: Read and write“, " +
+    "mit Ablaufdatum. Das Token ist ein Schreibschlüssel – nicht weitergeben."));
+
+  function syncFeld(bezeichnung, id, wert, typ, platzhalter) {
+    const zeile = element("div", "sync-feld");
+    const label = element("label", null, bezeichnung);
+    label.setAttribute("for", id);
+    const eingabe = element("input", "eingabe");
+    eingabe.type = typ || "text";
+    eingabe.id = id;
+    eingabe.autocomplete = "off";
+    eingabe.spellcheck = false;
+    if (wert) { eingabe.value = wert; }
+    if (platzhalter) { eingabe.placeholder = platzhalter; }
+    zeile.appendChild(label);
+    zeile.appendChild(eingabe);
+    return zeile;
+  }
+  syncKarte.appendChild(syncFeld("Repository (besitzer/name)", "syncRepo", e.repo, "text",
+    "z. B. kaichri/mathe-sync"));
+  syncKarte.appendChild(syncFeld("Datei im Repository", "syncDatei",
+    e.datei || "spielstand.json", "text", "spielstand.json"));
+  syncKarte.appendChild(syncFeld("Token (nur lokal gespeichert)", "syncToken", "",
+    "password", e.token ? "•••••••• (gespeichert)" : "github_pat_…"));
+
+  const syncKnoepfe = element("div", "statistik-knoepfe");
+  const syncSpeichern = element("button", "knopf primaer", "Speichern & prüfen");
+  syncSpeichern.type = "button";
+  syncSpeichern.id = "syncSpeichernKnopf";
+  syncSpeichern.addEventListener("click", function () {
+    const repo = String(document.getElementById("syncRepo").value || "").trim();
+    const datei = String(document.getElementById("syncDatei").value || "").trim() || "spielstand.json";
+    const tokenFeld = String(document.getElementById("syncToken").value || "").trim();
+    const token = tokenFeld || sync.einstellungen().token;
+    if (!/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+      sync.setzeStatus("Bitte das Repository als „besitzer/name“ eintragen.", "fehler");
+      return;
+    }
+    if (!token) {
+      sync.setzeStatus("Bitte ein Token eintragen.", "fehler");
+      return;
+    }
+    if (sync.speichere({ repo: repo, datei: datei, token: token, aktiv: true })) {
+      sync.setzeStatus("Zugangsdaten gespeichert – gleiche ab …", "info");
+      sync.jetzt();
+    }
+  });
+  const syncJetzt = element("button", "knopf", "Jetzt synchronisieren");
+  syncJetzt.type = "button";
+  syncJetzt.id = "syncJetztKnopf";
+  syncJetzt.addEventListener("click", function () { sync.jetzt(); });
+  const syncWeg = element("button", "knopf schlicht", "Synchronisierung entfernen");
+  syncWeg.type = "button";
+  syncWeg.id = "syncEntfernenKnopf";
+  syncWeg.addEventListener("click", function () {
+    sync.vergessen();
+    zeigeSpielstandInhalt();
+  });
+  syncKnoepfe.appendChild(syncSpeichern);
+  syncKnoepfe.appendChild(syncJetzt);
+  syncKnoepfe.appendChild(syncWeg);
+  syncKarte.appendChild(syncKnoepfe);
+
+  const syncStatus = element("p", "rand sync-status", sync.status().text);
+  syncStatus.id = "syncStatus";
+  syncStatus.setAttribute("role", "status");
+  syncStatus.setAttribute("aria-live", "polite");
+  syncKarte.appendChild(syncStatus);
+  syncKarte.appendChild(element("p", "rand",
+    "Hinweis: Jede Synchronisierung erzeugt einen Commit im Repository. Deshalb wird beim " +
+    "Tippen höchstens einmal pro Minute geschrieben, sofort dagegen beim Abschluss einer " +
+    "Runde, bei Gutscheinen und beim Verlassen der Seite."));
+  inhalt.appendChild(syncKarte);
+  aktualisiereSyncStatus();
+
   const meldung = element("p", "rand", "");
   meldung.id = "spielstandMeldung";
   meldung.setAttribute("role", "status");
   meldung.setAttribute("aria-live", "polite");
   inhalt.appendChild(meldung);
   spielstandMeldungKnoten = meldung;
+}
+
+/* Aktualisiert die Statuszeile im Spielstand-Reiter (falls sichtbar). */
+function aktualisiereSyncStatus() {
+  const knoten = document.getElementById("syncStatus");
+  if (!knoten) { return; }
+  const status = sync.status();
+  knoten.textContent = status.text;
+  knoten.className = "rand sync-status " + (status.art || "info");
 }
 
 function datumText(iso) {
@@ -3427,9 +3921,23 @@ document.getElementById("sicherungKnopf").addEventListener("click", function () 
   sichereDatenDownload();
 });
 if (typeof window.addEventListener === "function") {
-  window.addEventListener("pagehide", function () { sichereTagesAntworten(); speicher.speichere(); });
+  window.addEventListener("pagehide", function () {
+    sichereTagesAntworten();
+    speicher.speichere();
+    // Beim Verlassen noch ausstehende Änderungen zum Repository schicken.
+    if (sync.istKonfiguriert()) { sync.schieben().catch(function () {}); }
+  });
 }
 document.addEventListener("visibilitychange", function () {
-  if (document.visibilityState === "hidden") { sichereTagesAntworten(); speicher.speichere(); }
+  if (document.visibilityState === "hidden") {
+    sichereTagesAntworten();
+    speicher.speichere();
+    if (sync.istKonfiguriert()) { sync.schieben().catch(function () {}); }
+  }
 });
 aktualisiereSpeicherHinweis();
+
+/* Beim Start einmal mit dem Repository abgleichen (falls eingerichtet). */
+if (sync.istKonfiguriert()) {
+  sync.starten();
+}
