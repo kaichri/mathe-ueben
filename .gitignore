@@ -56,4 +56,5 @@ id_ed25519*
 mathe-sicherung-*.json
 mathe-spielstand-*.json
 mathe-vor-import-*.json
+mathe-vor-merge-*.json
 mathe-statistik-*.csv

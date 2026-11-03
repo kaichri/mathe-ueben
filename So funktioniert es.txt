@@ -164,8 +164,9 @@ Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
                die sich in Excel öffnen lässt. Darin stehen auch die Bonus-
                runden (BONUSRUNDE) und alle Gutscheine mit Umtausch-Vermerk.
   Gutscheine - alle abgeholten Gutscheine, mit Umtausch-Knopf (siehe oben).
-  Spielstand - "Spielstand sichern (Datei)" und "Spielstand laden (Datei)"
-               für den Umzug auf einen anderen PC (siehe unten).
+  Spielstand - "Spielstand sichern (Datei)", "Spielstand laden (Datei)"
+               und "Spielstand zusammenführen (Datei)" für den Umzug auf
+               einen anderen PC bzw. zum Vereinigen zweier Stände (siehe unten).
 
 
 Auf einem anderen PC weiterspielen
@@ -188,13 +189,32 @@ Der Spielstand liegt nur im Browser des jeweiligen PCs. Zum Übertragen:
      Sicherung nicht zu (z. B. Downloads blockiert), wird nichts
      importiert - der vorhandene Stand bleibt dann unverändert.
 
+Zwei Spielstände zusammenführen (wenn auf beiden PCs gespielt wurde)
+-------------------------------------------------------------------
+Statt zu ersetzen kann man die Stände auch vereinigen:
+
+  "Mein Fortschritt" -> "Spielstand" -> "Spielstand zusammenführen (Datei)"
+  und die Sicherungsdatei des anderen PCs auswählen.
+
+  Das Programm zeigt vorher, was dazukommt, z. B. "+2 Runden, +9 Sterne,
+  +0 Gutscheine", und fragt nach. Erst mit "Ja, zusammenführen" wird
+  geschrieben; der bisherige Stand wird vorher als
+  mathe-vor-merge-....json gesichert, danach startet das Spiel neu.
+
+  Regeln: Runden und Gutscheine werden vereinigt, doppelte zählen nur
+  einmal. Sterne und Bereichssummen werden aus den vereinigten Runden
+  berechnet - nichts geht verloren, nichts zählt doppelt. Bonussternen:
+  verdiente werden zusammengezählt, das Guthaben bleibt der höhere der
+  beiden Stände. Die Tagesrunde: eine abgeschlossene Runde gewinnt vor
+  einer offenen (damit nichts doppelt bewertet wird), sonst der neuere Tag.
+
+  Dieselbe Datei ein zweites Mal zusammenzuführen ändert nichts mehr.
+
 Wichtig: Es gibt keine automatische Synchronisierung. Beide PCs haben
-getrennte Spielstände, und ein Laden ersetzt den vorhandenen Stand
-(es wird nichts zusammengeführt). Wer auf beiden PCs parallel spielt,
-verliert beim nächsten Laden den anderen Stand. Für automatisches
-Abgleichen beim Start wäre ein Server nötig; das Spiel hat keinen.
-Eine unbrauchbare oder fremde Datei wird abgelehnt, der bisherige
-Stand bleibt dann unverändert.
+getrennte Spielstände; "Laden" ersetzt, "Zusammenführen" vereinigt.
+Für automatisches Abgleichen beim Start wäre ein Server nötig; das Spiel
+hat keinen. Eine unbrauchbare oder fremde Datei wird abgelehnt, der
+bisherige Stand bleibt dann unverändert.
 
 
 Kino: die Feier-Videos

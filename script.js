@@ -370,14 +370,253 @@ const speicher = (function () {
     return ergebnis;
   }
 
+  /* Führt den geprüften Fremdstand mit dem laufenden Stand zusammen.
+     „Merge light“: sichtbare Runden, Gutscheine und Memos werden vereinigt und
+     exakt gezählt; der nicht mehr sichtbare Rest (abgeschnittene Historie) wird
+     als Maximum übernommen, damit nichts doppelt entsteht. */
+  function zusammenfuehren(text) {
+    const ergebnis = { ok: false, grund: "", daten: null, vorschau: null, stand: "" };
+    const pruefung = pruefeImport(text);
+    if (!pruefung.ok) {
+      ergebnis.grund = pruefung.grund;
+      return ergebnis;
+    }
+    const verschmolzen = verschmelzeSpielstande(daten, pruefung.daten);
+    /* Das Ergebnis muss dieselbe Prüfung bestehen wie jeder Spielstand. */
+    const alteSperre = gesperrt;
+    const alteMeldung = meldung;
+    gesperrt = false;
+    meldung = "";
+    let bereinigt = null;
+    try {
+      bereinigt = bereinige(verschmolzen);
+    } catch (fehler) {
+      bereinigt = null;
+    }
+    const fehlgeschlagen = gesperrt || !bereinigt || Object.keys(bereinigt).length === 0;
+    const grund = fehlgeschlagen
+      ? (meldung || "Der zusammengeführte Spielstand ist ungültig.")
+      : "";
+    gesperrt = alteSperre;
+    meldung = alteMeldung;
+    if (fehlgeschlagen) {
+      ergebnis.grund = grund;
+      return ergebnis;
+    }
+    ergebnis.ok = true;
+    ergebnis.daten = bereinigt;
+    ergebnis.stand = pruefung.stand;
+    ergebnis.vorschau = {
+      runden: (bereinigt.runden || []).length - (daten.runden || []).length,
+      sterne: bereinigt.sterneGesamt - daten.sterneGesamt,
+      geschenke: (bereinigt.geschenke || []).length - (daten.geschenke || []).length
+    };
+    return ergebnis;
+  }
+
   return {
     daten: function () { return daten; },
     speichere: schreibe,
     meldung: function () { return meldung; },
     pruefeImport: pruefeImport,
+    zusammenfuehren: zusammenfuehren,
     sicherung: function () { return { format: "mathe-sicherung", daten: daten, originalSpeicher: originalRoh }; }
   };
 })();
+
+/* =========================================================================
+   Zusammenführen zweier Spielstände („Merge light“)
+
+   Regeln:
+   - Runden: Vereinigung ohne Doppelung (Schlüssel ist der Zeitstempel, sonst
+     Datum/Uhrzeit/Ergebnis), nach Zeit sortiert, neueste 1.000 bleiben.
+   - Lebenszeitsterne und Bereichssummen: die aus der Historie sichtbaren Werte
+     werden exakt addiert; der nicht mehr sichtbare Rest (abgeschnittene
+     Historie) wird als Maximum der beiden Stände übernommen. Dadurch entsteht
+     nichts doppelt und nichts geht verloren.
+   - Gutscheine: Vereinigung ohne Doppelung (erzeugte Kennung, sonst Inhalt).
+   - Bonus: verdiente Sterne wie oben über bonusRichtig; das Guthaben ist das
+     Maximum beider Stände (konservativ, es entstehen keine Sterne).
+   - Tagesrunde: abgeschlossene Runde vor offener (verhindert Doppelbewertung),
+     sonst mehr Antworten, sonst das neuere Datum.
+   - Merkzettel und Ausschlusslisten: Vereinigung, gekappt.
+   - Bonus-Tag: neueres Datum, bei gleichem Tag verteilt = Maximum.
+   ========================================================================= */
+
+function verschmelzeSpielstande(lokal, fremd) {
+  const A = (lokal && typeof lokal === "object") ? lokal : {};
+  const B = (fremd && typeof fremd === "object") ? fremd : {};
+  const liste = wert => (Array.isArray(wert) ? wert : []);
+
+  function zeitVon(eintrag) {
+    return String((eintrag && eintrag.zeit) ||
+      (eintrag && eintrag.datum ? eintrag.datum + "T" + (eintrag.uhrzeit || "00:00") : ""));
+  }
+  function rundenKennung(r) {
+    if (r && typeof r.zeit === "string" && r.zeit) { return "zeit:" + r.zeit; }
+    return "alt:" + [r && r.datum, r && r.uhrzeit, r && r.modus, r && r.richtig,
+      r && r.gesamt, r && r.bonus, r && r.bonusRichtig].join("|");
+  }
+  function gutscheinKennung(g) {
+    const id = g && g.id;
+    // Erzeugte Kennungen ("g...") sind eindeutig; alte "alt-N" hängen an der
+    // Reihenfolge und taugen nicht zum Vergleich.
+    if (typeof id === "string" && id.indexOf("alt-") !== 0) { return "id:" + id; }
+    return "inhalt:" + [g && g.text, g && g.datum, g && g.zeitpunkt, g && g.umgetauschtAm].join("|");
+  }
+  function vereinigeRunden(a, b) {
+    const karte = new Map();
+    liste(a).concat(liste(b)).forEach(function (r) {
+      if (!r || typeof r !== "object") { return; }
+      const k = rundenKennung(r);
+      const alt = karte.get(k);
+      if (!alt || (r.sterne || 0) > (alt.sterne || 0)) { karte.set(k, r); }
+    });
+    const alle = Array.from(karte.values());
+    alle.sort(function (x, y) {
+      const u = zeitVon(x), v = zeitVon(y);
+      return u < v ? -1 : u > v ? 1 : 0;
+    });
+    return alle;
+  }
+  function vereinigeGutscheine(a, b) {
+    const karte = new Map();
+    liste(a).concat(liste(b)).forEach(function (g) {
+      if (!g || typeof g !== "object") { return; }
+      const k = gutscheinKennung(g);
+      const alt = karte.get(k);
+      if (!alt) { karte.set(k, g); return; }
+      // Bei gleicher Kennung den Eintrag mit Umtauschvermerk behalten.
+      if (!alt.umgetauschtAm && g.umgetauschtAm) { karte.set(k, g); }
+    });
+    return Array.from(karte.values()).sort(function (x, y) {
+      const u = String((x && (x.zeitpunkt || x.datum)) || "");
+      const v = String((y && (y.zeitpunkt || y.datum)) || "");
+      return u < v ? -1 : u > v ? 1 : 0;
+    });
+  }
+  function summieren(zeilen, feld, bonus) {
+    return liste(zeilen).reduce(function (summe, r) {
+      if (!r || !!r.bonus !== !!bonus) { return summe; }
+      const wert = r[feld];
+      return summe + (Number.isSafeInteger(wert) && wert > 0 ? wert : 0);
+    }, 0);
+  }
+  function bereichsSumme(zeilen) {
+    const summe = {};
+    liste(zeilen).forEach(function (r) {
+      if (!r || !r.bereiche || typeof r.bereiche !== "object") { return; }
+      Object.keys(r.bereiche).forEach(function (name) {
+        const p = r.bereiche[name];
+        if (!p || !Number.isSafeInteger(p.richtig) || !Number.isSafeInteger(p.gesamt)) { return; }
+        const ziel = summe[name] || (summe[name] = { richtig: 0, gesamt: 0 });
+        ziel.richtig += p.richtig;
+        ziel.gesamt += p.gesamt;
+      });
+    });
+    return summe;
+  }
+  function lebenswert(gesamtA, sichtbarA, gesamtB, sichtbarB, sichtbarVereinigt) {
+    const unsichtbarA = Math.max(0, (gesamtA || 0) - sichtbarA);
+    const unsichtbarB = Math.max(0, (gesamtB || 0) - sichtbarB);
+    return Math.max(unsichtbarA, unsichtbarB) + sichtbarVereinigt;
+  }
+  function vereinigeTexte(a, b, max) {
+    const gesehen = new Set();
+    const ergebnis = [];
+    liste(b).concat(liste(a)).forEach(function (wert) {
+      if (typeof wert === "string" && !gesehen.has(wert)) {
+        gesehen.add(wert);
+        ergebnis.push(wert);
+      }
+    });
+    return ergebnis.slice(0, max);
+  }
+  function waehleTagesSet(a, b) {
+    if (!a) { return b || null; }
+    if (!b) { return a; }
+    if (a.datum !== b.datum) { return String(a.datum) > String(b.datum) ? a : b; }
+    // Gleicher Tag: die abgeschlossene Runde gewinnt, damit nichts doppelt bewertet wird.
+    if (!!a.fertig !== !!b.fertig) { return a.fertig ? a : b; }
+    const antworten = set => Object.keys((set && set.antworten) || {}).length;
+    return antworten(b) > antworten(a) ? b : a;
+  }
+
+  const rundenAlle = vereinigeRunden(A.runden, B.runden);
+  /* Die Summen werden aus der vollständigen Vereinigung berechnet, nicht aus der
+     auf 1.000 gekürzten Liste – sonst gingen die Sterne abgeschnittener Runden
+     verloren. */
+  const sterneSichtbar = summieren(rundenAlle, "sterne", false);
+  const bonusSichtbar = summieren(rundenAlle, "bonusRichtig", true);
+  const sterneGesamt = lebenswert(A.sterneGesamt, summieren(A.runden, "sterne", false),
+    B.sterneGesamt, summieren(B.runden, "sterne", false), sterneSichtbar);
+  const bonusGesamt = lebenswert(A.bonusGesamt, summieren(A.runden, "bonusRichtig", true),
+    B.bonusGesamt, summieren(B.runden, "bonusRichtig", true), bonusSichtbar);
+  const bonusGuthaben = Math.min(
+    Math.max(Number.isSafeInteger(A.bonussterne) ? A.bonussterne : 0,
+      Number.isSafeInteger(B.bonussterne) ? B.bonussterne : 0),
+    bonusGesamt);
+  const runden = rundenAlle.length > 1000 ? rundenAlle.slice(-1000) : rundenAlle;
+
+  const punkteA = (A.bereichPunkte && typeof A.bereichPunkte === "object") ? A.bereichPunkte : {};
+  const punkteB = (B.bereichPunkte && typeof B.bereichPunkte === "object") ? B.bereichPunkte : {};
+  const sichtA = bereichsSumme(A.runden);
+  const sichtB = bereichsSumme(B.runden);
+  const sichtVereinigt = bereichsSumme(rundenAlle);
+  const bereichPunkte = {};
+  const bereicheNamen = new Set(Object.keys(punkteA).concat(Object.keys(punkteB), Object.keys(sichtVereinigt)));
+  bereicheNamen.forEach(function (name) {
+    const a = punkteA[name] || { richtig: 0, gesamt: 0 };
+    const b = punkteB[name] || { richtig: 0, gesamt: 0 };
+    const sa = sichtA[name] || { richtig: 0, gesamt: 0 };
+    const sb = sichtB[name] || { richtig: 0, gesamt: 0 };
+    const sv = sichtVereinigt[name] || { richtig: 0, gesamt: 0 };
+    const gesamt = lebenswert(a.gesamt, sa.gesamt, b.gesamt, sb.gesamt, sv.gesamt);
+    const richtig = Math.min(gesamt, lebenswert(a.richtig, sa.richtig, b.richtig, sb.richtig, sv.richtig));
+    bereichPunkte[name] = { richtig: richtig, gesamt: gesamt };
+  });
+
+  const heute = heutigesDatum();
+  const welten = [];
+  [[A.bonusTag, A.bonusWelten], [B.bonusTag, B.bonusWelten]].forEach(function (paar) {
+    if (paar[0] && paar[0].datum === heute) {
+      liste(paar[1]).forEach(function (welt) { welten.push(welt); });
+    }
+  });
+  let bonusTag = null;
+  if (A.bonusTag && B.bonusTag) {
+    if (A.bonusTag.datum === B.bonusTag.datum) {
+      bonusTag = { datum: A.bonusTag.datum,
+        verteilt: Math.max(A.bonusTag.verteilt || 0, B.bonusTag.verteilt || 0) };
+    } else {
+      bonusTag = String(A.bonusTag.datum) > String(B.bonusTag.datum) ? A.bonusTag : B.bonusTag;
+    }
+  } else {
+    bonusTag = A.bonusTag || B.bonusTag || null;
+  }
+
+  return {
+    version: 2,
+    sterneGesamt: sterneGesamt,
+    modus: A.modus || B.modus || "bluey",
+    runden: runden,
+    /* Merkzettel: die Einträge des eigenen Geräts gelten als die neuesten,
+       deshalb zuerst (vereinigeTexte gibt den zweiten Parameter zuerst aus). */
+    zuletzt: vereinigeTexte(B.zuletzt, A.zuletzt, EINSTELLUNGEN.merkzettelGroesse),
+    knobelZuletzt: vereinigeTexte(B.knobelZuletzt, A.knobelZuletzt, EINSTELLUNGEN.knobelMerken),
+    tagesSet: waehleTagesSet(A.tagesSet, B.tagesSet),
+    vortagSchluessel: vereinigeTexte(B.vortagSchluessel, A.vortagSchluessel, 300),
+    bonussterne: bonusGuthaben,
+    bonusGesamt: bonusGesamt,
+    geschenke: vereinigeGutscheine(A.geschenke, B.geschenke),
+    bereichPunkte: bereichPunkte,
+    sound: A.sound !== undefined ? A.sound : (B.sound !== undefined ? B.sound : null),
+    bonusTag: bonusTag,
+    bonusWelten: Array.from(new Set(welten)).filter(function (welt) {
+      return ["bluey", "gabby", "doozie"].includes(welt);
+    })
+  };
+}
 
 function gesamtSterne() {
   return speicher.daten().sterneGesamt;
@@ -2106,6 +2345,27 @@ function ladeSpielstandNeu() {
   }
 }
 
+/* Sichert den bisherigen Stand und schreibt den neuen. Gibt false zurück, wenn
+   das nicht vollständig gelingt – dann bleibt der alte Stand unverändert. */
+function uebernehmeSpielstand(daten, erfolgsmeldung, sicherungsPraefix) {
+  if (sichereDatenDownload((sicherungsPraefix || "mathe-vor-import-") + heutigesDatum() + ".json") === false) {
+    zeigeImportMeldung("Der bisherige Spielstand konnte nicht gesichert werden " +
+      "(vermutlich sind Downloads blockiert). Der Vorgang wurde abgebrochen – " +
+      "bitte Downloads für diese Seite erlauben und erneut versuchen.");
+    return false;
+  }
+  try {
+    window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(daten));
+  } catch (fehler) {
+    zeigeImportMeldung("Der Spielstand konnte nicht gespeichert werden. " +
+      "Bitte prüfen, ob der Browser Daten speichern darf, und es dann noch einmal versuchen.");
+    return false;
+  }
+  zeigeImportMeldung(erfolgsmeldung);
+  ladeSpielstandNeu();
+  return true;
+}
+
 /* Nimmt den Text einer Sicherungsdatei (oder eines rohen Spielstands) entgegen,
    prüft ihn und fragt vor dem Ersetzen nach. */
 function importiereSpielstand(text) {
@@ -2125,24 +2385,37 @@ function importiereSpielstand(text) {
     ja: "Trotzdem laden",
     nein: "Abbrechen",
     dann: function () {
-      /* Rettungsnetz: den bisherigen Stand herunterladen, bevor er ersetzt wird.
-         Klappt das nicht (z. B. Downloads blockiert), wird NICHT importiert –
-         sonst ginge der alte Stand ungesichert verloren. */
-      if (sichereDatenDownload("mathe-vor-import-" + heutigesDatum() + ".json") === false) {
-        zeigeImportMeldung("Der bisherige Spielstand konnte nicht gesichert werden " +
-          "(vermutlich sind Downloads blockiert). Der Import wurde abgebrochen – " +
-          "bitte Downloads für diese Seite erlauben und erneut versuchen.");
-        return;
-      }
-      try {
-        window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(pruefung.daten));
-      } catch (fehler) {
-        zeigeImportMeldung("Der Spielstand konnte nicht gespeichert werden. " +
-          "Bitte prüfen, ob der Browser Daten speichern darf, und es dann noch einmal versuchen.");
-        return;
-      }
-      zeigeImportMeldung("Spielstand geladen – das Spiel wird neu gestartet.");
-      ladeSpielstandNeu();
+      uebernehmeSpielstand(pruefung.daten, "Spielstand geladen – das Spiel wird neu gestartet.");
+    }
+  });
+}
+
+/* Vereinigt den eigenen Stand mit einer Datei (Merge light). */
+function fuehreSpielstaendeZusammen(text) {
+  const ergebnis = speicher.zusammenfuehren(text);
+  if (!ergebnis.ok) {
+    zeigeImportMeldung("Diese Datei kann nicht zusammengeführt werden: " + ergebnis.grund);
+    return;
+  }
+  const vorschau = ergebnis.vorschau || { runden: 0, sterne: 0, geschenke: 0 };
+  if (vorschau.runden === 0 && vorschau.sterne === 0 && vorschau.geschenke === 0) {
+    zeigeImportMeldung("Beide Spielstände enthalten bereits alles – es gibt nichts zu ergänzen.");
+    return;
+  }
+  const teile = [vorschau.runden + (vorschau.runden === 1 ? " Runde" : " Runden"),
+    vorschau.sterne + (vorschau.sterne === 1 ? " Stern" : " Sterne"),
+    vorschau.geschenke + (vorschau.geschenke === 1 ? " Gutschein" : " Gutscheine")];
+  zeigeFrage({
+    titel: "Spielstände zusammenführen?",
+    text: "Aus der Datei kommen " + teile.join(", ") + " dazu" +
+      (ergebnis.stand ? " (Stand " + datumText(ergebnis.stand) + ")" : "") +
+      ". Beide Stände werden vereinigt, nichts wird gelöscht. Doppelte Runden und Gutscheine " +
+      "zählen nur einmal. Der bisherige Stand wird vorher automatisch als Datei gesichert.",
+    ja: "Ja, zusammenführen",
+    nein: "Abbrechen",
+    dann: function () {
+      uebernehmeSpielstand(ergebnis.daten,
+        "Spielstände zusammengeführt – das Spiel wird neu gestartet.", "mathe-vor-merge-");
     }
   });
 }
@@ -2157,10 +2430,13 @@ function zeigeSpielstandInhalt() {
   karte.appendChild(element("p", null,
     "Der Spielstand liegt nur in diesem Browser auf diesem Gerät. Mit „Spielstand sichern“ " +
     "entsteht eine Datei, die du auf einem anderen PC über „Spielstand laden“ wieder einlesen kannst."));
+  karte.appendChild(element("p", null,
+    "„Spielstand zusammenführen“ vereinigt dagegen beide Stände: Runden und Gutscheine aus der " +
+    "Datei kommen dazu, doppelte zählen nur einmal, der bisherige Fortschritt bleibt erhalten."));
   karte.appendChild(element("p", "rand",
     "Wichtig: Das Spiel auf dem anderen PC im gleichen Browser und über dieselbe Adresse öffnen. " +
     "Vor dem Laden alle anderen Spielfenster schließen. Der bisherige Stand wird vor dem " +
-    "Ersetzen automatisch als Datei gesichert."));
+    "Ersetzen bzw. Zusammenführen automatisch als Datei gesichert."));
 
   const knoepfe = element("div", "statistik-knoepfe");
   const sichern = element("button", "knopf primaer", "Spielstand sichern (Datei)");
@@ -2179,8 +2455,19 @@ function zeigeSpielstandInhalt() {
       datei.click();
     }
   });
+  const zusammen = element("button", "knopf", "Spielstand zusammenführen (Datei)");
+  zusammen.type = "button";
+  zusammen.id = "spielstandMergeKnopf";
+  zusammen.addEventListener("click", function () {
+    const datei = document.getElementById("spielstandMergeDatei");
+    if (datei) {
+      datei.value = "";
+      datei.click();
+    }
+  });
   knoepfe.appendChild(sichern);
   knoepfe.appendChild(laden);
+  knoepfe.appendChild(zusammen);
   karte.appendChild(knoepfe);
   inhalt.appendChild(karte);
 
@@ -3085,22 +3372,32 @@ document.getElementById("fortschrittZurueckKnopf").addEventListener("click", fun
 });
 document.getElementById("csvKnopf").addEventListener("click", csvHerunterladen);
 
-/* Spielstand-Datei einlesen (Knopf „Spielstand laden“ öffnet diesen Dateidialog). */
-document.getElementById("spielstandDatei").addEventListener("change", function (ereignis) {
-  const datei = ereignis.target && ereignis.target.files ? ereignis.target.files[0] : null;
-  if (!datei) { return; }
+/* Liest eine ausgewählte Datei und übergibt ihren Text an dann(text). */
+function leseDateiText(datei, dann) {
   if (typeof datei.text === "function") {
-    datei.text().then(importiereSpielstand, function () {
+    datei.text().then(dann, function () {
       zeigeImportMeldung("Die Datei konnte nicht gelesen werden.");
     });
   } else if (typeof FileReader === "function") {
     const leser = new FileReader();
-    leser.onload = function () { importiereSpielstand(String(leser.result)); };
+    leser.onload = function () { dann(String(leser.result)); };
     leser.onerror = function () { zeigeImportMeldung("Die Datei konnte nicht gelesen werden."); };
     leser.readAsText(datei);
   } else {
     zeigeImportMeldung("Dieser Browser kann die Datei nicht lesen.");
   }
+}
+
+/* Spielstand-Datei einlesen (Knopf „Spielstand laden“ öffnet diesen Dateidialog). */
+document.getElementById("spielstandDatei").addEventListener("change", function (ereignis) {
+  const datei = ereignis.target && ereignis.target.files ? ereignis.target.files[0] : null;
+  if (datei) { leseDateiText(datei, importiereSpielstand); }
+});
+
+/* Zusammenführen (Knopf „Spielstand zusammenführen“ öffnet diesen Dateidialog). */
+document.getElementById("spielstandMergeDatei").addEventListener("change", function (ereignis) {
+  const datei = ereignis.target && ereignis.target.files ? ereignis.target.files[0] : null;
+  if (datei) { leseDateiText(datei, fuehreSpielstaendeZusammen); }
 });
 
 document.getElementById("musikKnopf").addEventListener("click", musik.umschalten);

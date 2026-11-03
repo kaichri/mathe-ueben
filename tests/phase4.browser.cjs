@@ -154,7 +154,7 @@ async function layout(page){return page.evaluate(()=>{
     await check(engine,'Spielstand sichern und auf einem zweiten Browser laden',async()=>{
       // "Alter PC": Runde spielen und den Spielstand als Datei sichern.
       const quelle=await browser.newContext({acceptDownloads:true});
-      await quelle.addInitScript(()=>localStorage.setItem('mathe-ueben-fuer-emma',JSON.stringify({sound:'aus'})));
+      await quelle.addInitScript(()=>{if(localStorage.getItem('mathe-ueben-fuer-emma')===null)localStorage.setItem('mathe-ueben-fuer-emma',JSON.stringify({sound:'aus'}));});
       const p=await quelle.newPage();await p.goto(url);
       await p.locator('#losKnopf').click();await fillCorrect(p);
       await p.locator('.abschnitts-punkt').last().click();await p.locator('#pruefenKnopf').dblclick();
@@ -192,6 +192,49 @@ async function layout(page){return page.evaluate(()=>{
       assert(downloads.some(n=>/^mathe-vor-import-/.test(n)),'Rettungssicherung vor dem Import fehlt');
       await ziel.close();
       return {sterne,rettung:downloads};
+    });
+
+    await check(engine,'Spielstände zusammenführen',async()=>{
+      // Zwei getrennte "Geräte" spielen je eine andere Tagesrunde.
+      async function spiele(anzahlRichtige){
+        const ctx=await browser.newContext({acceptDownloads:true});
+        await ctx.addInitScript(()=>{if(localStorage.getItem('mathe-ueben-fuer-emma')===null)localStorage.setItem('mathe-ueben-fuer-emma',JSON.stringify({sound:'aus'}));});
+        const p=await ctx.newPage();await p.goto(url);
+        await p.locator('#losKnopf').click();
+        await fillCorrect(p,anzahlRichtige);
+        await p.locator('.abschnitts-punkt').last().click();
+        await p.locator('#pruefenKnopf').click();
+        if(await p.locator('#frageUeberlagerung').isVisible())await p.locator('#frageJaKnopf').click();
+        await p.locator('#kinoAusKnopf').click();
+        assert.equal(await p.evaluate(()=>speicher.daten().runden.length),1);
+        return {ctx,p};
+      }
+      const A=await spiele(50);   // 5 Sterne
+      const B=await spiele(25);   // 2 Sterne (50 %)
+      assert.equal(await A.p.evaluate(()=>speicher.daten().sterneGesamt),5);
+      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),2);
+
+      // Gerät A sichert, Gerät B führt zusammen.
+      await A.p.locator('#sterneKnopf').click();await A.p.locator('[data-reiter="daten"]').click();
+      const [dl]=await Promise.all([A.p.waitForEvent('download'),A.p.locator('#spielstandSichernKnopf').click()]);
+      const datei=path.join(output,engine+'-merge-A.json');await dl.saveAs(datei);
+      await A.ctx.close();
+
+      const downloads=[];B.p.on('download',d=>downloads.push(d.suggestedFilename()));
+      await B.p.locator('#sterneKnopf').click();await B.p.locator('[data-reiter="daten"]').click();
+      await B.p.locator('#spielstandMergeDatei').setInputFiles(datei);
+      await B.p.locator('#frageUeberlagerung').waitFor({state:'visible',timeout:5000});
+      assert.match(await B.p.locator('#frageText').innerText(),/1 Runde/);
+      assert.match(await B.p.locator('#frageText').innerText(),/5 Sterne/);
+      await B.p.locator('#frageJaKnopf').click().catch(()=>{});
+      await B.p.waitForTimeout(900);
+      await B.p.reload();
+      assert.equal(await B.p.evaluate(()=>speicher.daten().runden.length),2,'Runden wurden nicht vereinigt');
+      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),7,'Sterne wurden nicht vereinigt');
+      assert.equal(await B.p.evaluate(()=>speicher.meldung()),'');
+      assert(downloads.some(n=>/^mathe-vor-merge-/.test(n)),'Sicherung vor dem Zusammenführen fehlt');
+      await B.ctx.close();
+      return {runden:2,sterne:7,downloads};
     });
 
     await page.evaluate(()=>{const rows=speicher.daten().runden;if(rows.length) while(rows.length<14)rows.push({...rows[0]});});

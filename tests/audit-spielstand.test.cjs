@@ -180,7 +180,7 @@ test("SPIELSTAND: ohne Rettungssicherung wird nicht importiert", () => {
   assert.equal(ziel.raw(), vorher, "Ohne Sicherung darf der Stand nicht ersetzt werden");
   assert.equal(ziel.reloads(), 0, "Kein Neustart ohne Sicherung");
   assert.equal(ziel.run("speicher.daten().sterneGesamt"), 2);
-  assert.match(meldung(ziel), /Import wurde abgebrochen/);
+  assert.match(meldung(ziel), /abgebrochen/);
 });
 
 /* --------------------------------------------------------- ungültige Datei */

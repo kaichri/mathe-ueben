@@ -144,7 +144,9 @@ mathe-ueben/
 │   ├── phase4.browser.cjs
 │   ├── audit-math.test.cjs         Mathematik mit unabhängigen Orakeln
 │   ├── audit-invariants.test.cjs   Zustand, Speicher, Tageswechsel
-│   └── audit-regressions.test.cjs  Regressionstests der Audit-Korrekturen
+│   ├── audit-regressions.test.cjs  Regressionstests der Audit-Korrekturen
+│   ├── audit-spielstand.test.cjs   Sichern, Laden und Zusammenführen
+│   └── audit-merge.test.cjs        Regeln des Zusammenführens
 ├── PHASE1.md … PHASE4.md        Entwicklungs- und Prüfberichte
 ├── reports/
 │   ├── code-audit.md           Code-Audit mit 15 Befunden
@@ -202,39 +204,70 @@ offline.
 
 ## Sicherung, Umzug und Export
 
-### Spielstand sichern und auf einem anderen PC laden
+### Spielstand sichern, laden und zusammenführen
 
-Unter **„Mein Fortschritt“ → „Spielstand“** stehen zwei Knöpfe:
+Unter **„Mein Fortschritt“ → „Spielstand“** stehen drei Knöpfe:
 
 - **„Spielstand sichern (Datei)“** lädt eine JSON-Datei
   (`mathe-spielstand-JJJJ-MM-TT.json`) mit dem aktuellen Sitzungsstand unter
   `daten`, dem ursprünglich gelesenen Speichertext unter `originalSpeicher` und
   einer Formatkennung. Auch beschädigter ursprünglicher Speichertext bleibt
   dadurch in der Sicherung erhalten, sofern er gelesen werden konnte.
-- **„Spielstand laden (Datei)“** liest eine solche Datei wieder ein. Vor dem
-  Ersetzen prüft das Spiel den Inhalt mit derselben Prüfung wie beim Start
-  (Version, Runden, Gutscheine, Bereichssummen, Tagesrunde, Antworten). Ist die
-  Datei unbrauchbar, bleibt der bisherige Stand unverändert und es erscheint
-  eine Meldung. Ist sie brauchbar, zeigt eine Rückfrage, was enthalten ist
-  (Sterne, Runden, Gutscheine, Datum); erst nach „Trotzdem laden“ wird
-  geschrieben. Der bisherige Stand wird dabei automatisch als
-  `mathe-vor-import-JJJJ-MM-TT.json` gesichert, danach startet das Spiel neu.
-  Kann der Browser diese Sicherung nicht anlegen (etwa weil Downloads blockiert
-  sind), wird **nicht** importiert und der vorhandene Stand bleibt unverändert.
+- **„Spielstand laden (Datei)“** liest eine solche Datei wieder ein und
+  **ersetzt** den vorhandenen Stand. Vor dem Ersetzen prüft das Spiel den Inhalt
+  mit derselben Prüfung wie beim Start (Version, Runden, Gutscheine,
+  Bereichssummen, Tagesrunde, Antworten). Ist die Datei unbrauchbar, bleibt der
+  bisherige Stand unverändert und es erscheint eine Meldung. Ist sie brauchbar,
+  zeigt eine Rückfrage, was enthalten ist (Sterne, Runden, Gutscheine, Datum);
+  erst nach „Trotzdem laden“ wird geschrieben. Der bisherige Stand wird dabei
+  automatisch als `mathe-vor-import-JJJJ-MM-TT.json` gesichert, danach startet
+  das Spiel neu.
+- **„Spielstand zusammenführen (Datei)“** vereinigt beide Stände statt zu
+  ersetzen (siehe nächster Abschnitt).
+
+Kann der Browser die Sicherung des bisherigen Standes nicht anlegen (etwa weil
+Downloads blockiert sind), wird **weder** geladen **noch** zusammengeführt und
+der vorhandene Stand bleibt unverändert.
 
 Damit lässt sich ein Spielstand auf einen anderen PC übertragen: auf dem alten
 Gerät sichern, die Datei mitnehmen, auf dem neuen Gerät im **gleichen Browser
 und über dieselbe Adresse** laden. Ein Roh-Spielstand (der reine
 `localStorage`-Inhalt) wird ebenfalls akzeptiert.
 
+### Zusammenführen („Merge light“)
+
+Wurde auf zwei Geräten gespielt, vereinigt „Spielstand zusammenführen“ den
+eigenen Stand mit der Datei:
+
+| Daten | Regel beim Zusammenführen |
+|---|---|
+| Runden der Historie | Vereinigung ohne Doppelung (Schlüssel ist der Zeitstempel), nach Zeit sortiert, neueste 1.000 bleiben |
+| Lebenszeitsterne | sichtbare Rundensterne werden exakt addiert; der nicht mehr sichtbare Rest (abgeschnittene Historie) wird als Maximum übernommen |
+| Bereichssummen | gleiche Rechnung je Bereich über die Runden hinweg |
+| Gutscheine | Vereinigung ohne Doppelung; ein Umtauschvermerk bleibt erhalten |
+| Bonussterne | verdiente Sterne werden vereinigt, das Guthaben ist konservativ das Maximum (es entstehen keine Sterne) |
+| Tagesrunde | eine abgeschlossene Runde gewinnt vor einer offenen (verhindert Doppelbewertung), sonst das neuere Datum |
+| Merkzettel, Ausschlusslisten | Vereinigung, gekappt |
+| Bonus-Tag | neueres Datum; bei gleichem Tag `verteilt` = Maximum |
+
+Vor dem Schreiben zeigt eine Rückfrage, was hinzukommt („+2 Runden, +9 Sterne,
++0 Gutscheine“); der bisherige Stand wird als `mathe-vor-merge-JJJJ-MM-TT.json`
+gesichert. Enthalten beide Stände bereits alles, meldet das Spiel „nichts zu
+ergänzen“ und schreibt nicht. Das Zusammenführen ist wiederholbar: dieselbe
+Datei ein zweites Mal ergänzt nichts mehr.
+
+**Grenzen:** Es ist kein echter Drei-Wege-Merge. Ein nach dem Auseinanderlaufen
+auf beiden Geräten *unterschiedlich* veränderter Tagesstand kann nicht vereinigt
+werden – hier gewinnt die abgeschlossene bzw. die neuere Runde. Das Bonusguthaben
+wird nicht addiert, damit keine Sterne doppelt entstehen. Für automatisches
+Abgleichen beim Start wäre weiterhin ein Server nötig.
+
 Bei einer Speicher- oder Konfliktmeldung erscheint zusätzlich der Knopf
 **„Daten sichern“** mit derselben Datei. Bei verweigertem Lesezugriff kann der
 ursprüngliche Inhalt nicht exportiert werden.
 
 **Es gibt keine automatische Synchronisierung.** Zwei Geräte führen getrennte
-Spielstände; ein Import ersetzt den vorhandenen Stand (keine Zusammenführung).
-Für automatisches Abgleichen beim Start wäre ein Server nötig, den die Seite
-aufruft – das Spiel hat bewusst keinen. Persönliche JSON-Sicherungen und
+Spielstände; Laden ersetzt, Zusammenführen vereinigt. Persönliche JSON-Sicherungen und
 CSV-Exporte werden durch `.gitignore` von der Versionsverwaltung ausgeschlossen.
 
 ### Statistik als CSV
@@ -250,17 +283,18 @@ Spielstand.
 ### Regression und Syntax
 
 Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
-Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 67
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 85
 Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
-Orakeln, Invarianten für Zustand und Speicher sowie Regressionstests für die
+Orakeln, Invarianten für Zustand und Speicher, Regressionstests für die
 Audit-Befunde und die beiden angepassten Spielregeln (Wiederholungssterne,
-Bestätigung beim Abschließen). Node.js 24 wurde für die dokumentierten Prüfungen
+Bestätigung beim Abschließen) sowie Tests für Sichern, Laden und Zusammenführen
+des Spielstands. Node.js 24 wurde für die dokumentierten Prüfungen
 verwendet; zum Spielen ist Node.js nicht erforderlich.
 
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (136 Tests)
+# Alle Node-Tests (154 Tests)
 node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
   tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs `
   tests/audit-spielstand.test.cjs
@@ -328,6 +362,18 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
   stundenlanger realer Sitzungen oder einer Wiederherstellung nach Stromausfall.
 
 ## Versionshistorie
+
+### 1.0.4 — Spielstände zusammenführen („Merge light“)
+
+- Neuer Knopf **„Spielstand zusammenführen (Datei)“** im Reiter „Spielstand“.
+- Runden und Gutscheine werden vereinigt (keine Doppelung, nichts geht verloren);
+  Lebenszeitsterne und Bereichssummen werden aus der vereinigten Historie exakt
+  berechnet, der nicht mehr sichtbare Rest wird als Maximum übernommen.
+- Bonusguthaben bleibt konservativ das Maximum; die Tagesrunde gewinnt
+  abgeschlossen vor offen bzw. nach Datum.
+- Rückfrage mit Vorschau („+2 Runden, +9 Sterne …“), automatische Sicherung als
+  `mathe-vor-merge-…json`, Neustart danach.
+- Kein Drei-Wege-Merge; weiterhin **keine** automatische Synchronisierung.
 
 ### 1.0.3 — Spielstand sichern und laden (Umzug auf einen anderen PC)
 
