@@ -85,7 +85,8 @@ ein Geschenk ohne Bonussterne; er besitzt keine Zugangssperre.
 ### Weitere Funktionen
 
 - Lebenszeitsterne, Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
-- Statistikexport als CSV und JSON-Sicherung des Sitzungsstands.
+- Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als
+  JSON-Datei (Umzug auf einen anderen PC, „Mein Fortschritt → Spielstand“).
 - Hintergrundmusik, synthetische Ersatzmelodie bei fehlenden Dateien und
   Feier-Videos mit pausierter Hintergrundmusik.
 - Tastaturbedienung mit Tab, Enter und Pfeiltasten sowie Dialognavigation mit
@@ -199,7 +200,40 @@ kann gespeicherte Fortschritte entfernen. Die YouTube-Einbettung ist eine
 externe Verbindung; das Spiel ist daher beim Öffnen des Kinos nicht vollständig
 offline.
 
-## Sicherung und Export
+## Sicherung, Umzug und Export
+
+### Spielstand sichern und auf einem anderen PC laden
+
+Unter **„Mein Fortschritt“ → „Spielstand“** stehen zwei Knöpfe:
+
+- **„Spielstand sichern (Datei)“** lädt eine JSON-Datei
+  (`mathe-spielstand-JJJJ-MM-TT.json`) mit dem aktuellen Sitzungsstand unter
+  `daten`, dem ursprünglich gelesenen Speichertext unter `originalSpeicher` und
+  einer Formatkennung. Auch beschädigter ursprünglicher Speichertext bleibt
+  dadurch in der Sicherung erhalten, sofern er gelesen werden konnte.
+- **„Spielstand laden (Datei)“** liest eine solche Datei wieder ein. Vor dem
+  Ersetzen prüft das Spiel den Inhalt mit derselben Prüfung wie beim Start
+  (Version, Runden, Gutscheine, Bereichssummen, Tagesrunde, Antworten). Ist die
+  Datei unbrauchbar, bleibt der bisherige Stand unverändert und es erscheint
+  eine Meldung. Ist sie brauchbar, zeigt eine Rückfrage, was enthalten ist
+  (Sterne, Runden, Gutscheine, Datum); erst nach „Trotzdem laden“ wird
+  geschrieben. Der bisherige Stand wird dabei automatisch als
+  `mathe-vor-import-JJJJ-MM-TT.json` gesichert, danach startet das Spiel neu.
+
+Damit lässt sich ein Spielstand auf einen anderen PC übertragen: auf dem alten
+Gerät sichern, die Datei mitnehmen, auf dem neuen Gerät im **gleichen Browser
+und über dieselbe Adresse** laden. Ein Roh-Spielstand (der reine
+`localStorage`-Inhalt) wird ebenfalls akzeptiert.
+
+Bei einer Speicher- oder Konfliktmeldung erscheint zusätzlich der Knopf
+**„Daten sichern“** mit derselben Datei. Bei verweigertem Lesezugriff kann der
+ursprüngliche Inhalt nicht exportiert werden.
+
+**Es gibt keine automatische Synchronisierung.** Zwei Geräte führen getrennte
+Spielstände; ein Import ersetzt den vorhandenen Stand (keine Zusammenführung).
+Für automatisches Abgleichen beim Start wäre ein Server nötig, den die Seite
+aufruft – das Spiel hat bewusst keinen. Persönliche JSON-Sicherungen und
+CSV-Exporte werden durch `.gitignore` von der Versionsverwaltung ausgeschlossen.
 
 ### Statistik als CSV
 
@@ -209,27 +243,12 @@ Sonderzeichen, Anführungszeichen und Zeilenumbrüche werden für CSV behandelt.
 Die Datei dient der Auswertung und ist kein automatisch wiederherstellbarer
 Spielstand.
 
-### Spielstand als JSON sichern
-
-Bei einer Speicher- oder Konfliktmeldung erscheint **„Daten sichern“**.
-Der Download enthält den aktuellen Sitzungsstand unter `daten`, den ursprünglich
-gelesenen Speichertext unter `originalSpeicher` und eine Formatkennung.
-Auch beschädigter ursprünglicher Speichertext bleibt dadurch in der Sicherung
-erhalten, sofern er gelesen werden konnte. Bei verweigertem Lesezugriff kann
-dieser ursprüngliche Inhalt nicht exportiert werden.
-
-**Eine Importfunktion existiert nicht.** Es gibt keinen Importdialog und keine
-automatische Wiederherstellung einer JSON-Sicherung. Bei einer Fehlermeldung
-das Fenster bis zur Sicherung offen lassen und die Datei aufbewahren.
-Persönliche JSON-Sicherungen und CSV-Exporte werden durch `.gitignore` von der
-Versionsverwaltung ausgeschlossen.
-
 ## Automatisierte Tests
 
 ### Regression und Syntax
 
 Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
-Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 58
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 67
 Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
 Orakeln, Invarianten für Zustand und Speicher sowie Regressionstests für die
 Audit-Befunde und die beiden angepassten Spielregeln (Wiederholungssterne,
@@ -239,9 +258,10 @@ verwendet; zum Spielen ist Node.js nicht erforderlich.
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (127 Tests)
+# Alle Node-Tests (136 Tests)
 node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
-  tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs
+  tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs `
+  tests/audit-spielstand.test.cjs
 
 node --check script.js
 node --check aufgaben-bereiche.js
@@ -306,6 +326,17 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
   stundenlanger realer Sitzungen oder einer Wiederherstellung nach Stromausfall.
 
 ## Versionshistorie
+
+### 1.0.3 — Spielstand sichern und laden (Umzug auf einen anderen PC)
+
+- Neuer Reiter **„Mein Fortschritt → Spielstand“** mit „Spielstand sichern
+  (Datei)“ und „Spielstand laden (Datei)“.
+- Import prüft die Datei mit derselben Logik wie der Start, fragt vor dem
+  Ersetzen nach, sichert den bisherigen Stand automatisch als
+  `mathe-vor-import-…json` und startet danach neu.
+- Rohe `localStorage`-Spielstände und Sicherungsdateien werden gleichermaßen
+  akzeptiert; Spielstände der Versionen 1 und 2 werden weiterhin übernommen.
+- Weiterhin **keine** automatische Synchronisierung zwischen Geräten.
 
 ### 1.0.2 — angepasste Spielregeln
 

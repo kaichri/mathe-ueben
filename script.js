@@ -302,10 +302,79 @@ const speicher = (function () {
     aktualisiereSpeicherHinweis();
   }
   lies();
+
+  /* Prüft einen eingelesenen Spielstand, ohne den laufenden Speicher zu verändern.
+     Nutzt dieselbe Prüfung wie das Laden (bereinige), damit eine importierte
+     Datei genau so streng behandelt wird wie ein vorhandener Spielstand. */
+  function istObjekt(wert) {
+    return wert !== null && typeof wert === "object" && !Array.isArray(wert);
+  }
+  function pruefeImport(text) {
+    const ergebnis = { ok: false, grund: "", daten: null, sterne: 0, runden: 0, geschenke: 0, stand: "" };
+    let roh;
+    try {
+      roh = JSON.parse(String(text));
+    } catch (fehler) {
+      ergebnis.grund = "Die Datei ist kein gültiges JSON.";
+      return ergebnis;
+    }
+    let kandidat = roh;
+    if (istObjekt(roh) && roh.format === "mathe-sicherung") {
+      if (!istObjekt(roh.daten)) {
+        ergebnis.grund = "Die Sicherungsdatei enthält keinen Spielstand.";
+        return ergebnis;
+      }
+      kandidat = roh.daten;
+    }
+    if (!istObjekt(kandidat)) {
+      ergebnis.grund = "Die Datei enthält keinen Spielstand.";
+      return ergebnis;
+    }
+    /* Trockenlauf der echten Prüfung. bereinige() setzt bei Problemen die
+       Schreibsperre; dieser Zustand wird danach wiederhergestellt. */
+    const alteSperre = gesperrt;
+    const alteMeldung = meldung;
+    gesperrt = false;
+    meldung = "";
+    let bereinigt = null;
+    try {
+      bereinigt = bereinige(kandidat);
+    } catch (fehler) {
+      bereinigt = null;
+    }
+    const fehlgeschlagen = gesperrt || !bereinigt || Object.keys(bereinigt).length === 0;
+    const grund = fehlgeschlagen
+      ? (meldung || "Der Spielstand konnte nicht gelesen werden.")
+      : "";
+    gesperrt = alteSperre;
+    meldung = alteMeldung;
+    if (fehlgeschlagen) {
+      ergebnis.grund = grund;
+      return ergebnis;
+    }
+    const zeilen = Array.isArray(bereinigt.runden) ? bereinigt.runden : [];
+    const historie = zeilen.reduce(function (summe, eintrag) {
+      return summe + (eintrag && !eintrag.bonus && Number.isSafeInteger(eintrag.sterne) &&
+        eintrag.sterne > 0 ? eintrag.sterne : 0);
+    }, 0);
+    const zaehler = Number.isSafeInteger(bereinigt.sterneGesamt) && bereinigt.sterneGesamt >= 0
+      ? bereinigt.sterneGesamt : 0;
+    const letzte = zeilen.length ? zeilen[zeilen.length - 1] : null;
+    ergebnis.ok = true;
+    ergebnis.daten = bereinigt;
+    ergebnis.sterne = Math.max(zaehler, historie);
+    ergebnis.runden = zeilen.length;
+    ergebnis.geschenke = Array.isArray(bereinigt.geschenke) ? bereinigt.geschenke.length : 0;
+    ergebnis.stand = (letzte && letzte.datum) ||
+      (bereinigt.tagesSet && bereinigt.tagesSet.datum) || "";
+    return ergebnis;
+  }
+
   return {
     daten: function () { return daten; },
     speichere: schreibe,
     meldung: function () { return meldung; },
+    pruefeImport: pruefeImport,
     sicherung: function () { return { format: "mathe-sicherung", daten: daten, originalSpeicher: originalRoh }; }
   };
 })();
@@ -337,10 +406,10 @@ function datenHerunterladen(inhalt, typ, dateiname) {
   }
 }
 
-function sichereDatenDownload() {
+function sichereDatenDownload(dateiname) {
   try {
     datenHerunterladen(JSON.stringify(speicher.sicherung(), null, 2), "application/json;charset=utf-8",
-      "mathe-sicherung-" + heutigesDatum() + ".json");
+      dateiname || "mathe-sicherung-" + heutigesDatum() + ".json");
   } catch (fehler) {
     window.alert("Die Sicherung konnte nicht heruntergeladen werden. Bitte lass dieses Fenster offen und hole Mama oder Papa dazu.");
   }
@@ -1853,12 +1922,13 @@ function aktualisiereBonusAnzeige() {
   document.getElementById("bonusSterne").textContent = String(speicher.daten().bonussterne);
 }
 
-/* ------------- Der Fortschritts-Bereich (Sterne / Statistik / Gutscheine) ------------- */
+/* ------------- Der Fortschritts-Bereich (Sterne / Statistik / Gutscheine / Spielstand) ------------- */
 
 const FORTSCHRITT_TABS = {
   sterne: "Sterne",
   statistik: "Statistik",
-  geschenke: "Gutscheine"
+  geschenke: "Gutscheine",
+  daten: "Spielstand"
 };
 
 function zeigeFortschritt(tab) {
@@ -1882,7 +1952,8 @@ function zeigeFortschritt(tab) {
   const inhalte = {
     sterne: document.getElementById("sterneInhalt"),
     statistik: document.getElementById("statistikInhalt"),
-    geschenke: document.getElementById("geschenkeInhalt")
+    geschenke: document.getElementById("geschenkeInhalt"),
+    daten: document.getElementById("spielstandInhalt")
   };
   Object.keys(inhalte).forEach(function (name) {
     const knoten = inhalte[name];
@@ -1900,6 +1971,8 @@ function zeigeFortschritt(tab) {
     zeigeStatistikInhalt();
   } else if (aktuellerTab === "geschenke") {
     zeigeGeschenkeInhalt();
+  } else if (aktuellerTab === "daten") {
+    zeigeSpielstandInhalt();
   } else {
     zeigeSterneInhalt();
   }
@@ -2008,6 +2081,116 @@ function zeigeGeschenkeInhalt() {
   mami.appendChild(mamiKnopf);
   mami.appendChild(element("p", "rand", "Damit kannst du auch mal ohne Bonussterne etwas verschenken."));
   inhalt.appendChild(mami);
+}
+
+/* ------------- Spielstand sichern und laden (Umzug auf einen anderen PC) --------------- */
+
+/* Verweis auf die Meldungszeile im Spielstand-Reiter. Ein reiner
+   getElementById-Aufruf würde nach einem Reiterwechsel ins Leere laufen. */
+let spielstandMeldungKnoten = null;
+
+function zeigeImportMeldung(text) {
+  meldeRueckmeldung(text);
+  if (spielstandMeldungKnoten) {
+    spielstandMeldungKnoten.textContent = text;
+  }
+}
+
+function ladeSpielstandNeu() {
+  if (window.location && typeof window.location.reload === "function") {
+    window.location.reload();
+  }
+}
+
+/* Nimmt den Text einer Sicherungsdatei (oder eines rohen Spielstands) entgegen,
+   prüft ihn und fragt vor dem Ersetzen nach. */
+function importiereSpielstand(text) {
+  const pruefung = speicher.pruefeImport(text);
+  if (!pruefung.ok) {
+    zeigeImportMeldung("Diese Datei kann nicht geladen werden: " + pruefung.grund);
+    return;
+  }
+  const teile = [pruefung.sterne + (pruefung.sterne === 1 ? " Stern" : " Sterne"),
+    pruefung.runden + (pruefung.runden === 1 ? " Runde" : " Runden"),
+    pruefung.geschenke + (pruefung.geschenke === 1 ? " Gutschein" : " Gutscheine")];
+  zeigeFrage({
+    titel: "Spielstand laden?",
+    text: "Die Datei enthält " + teile.join(", ") +
+      (pruefung.stand ? " (Stand " + datumText(pruefung.stand) + ")" : "") +
+      ". Der aktuelle Spielstand wird ersetzt. Er wird vorher automatisch als Datei gesichert.",
+    ja: "Trotzdem laden",
+    nein: "Abbrechen",
+    dann: function () {
+      /* Rettungsnetz: den bisherigen Stand herunterladen, bevor er ersetzt wird. */
+      try {
+        sichereDatenDownload("mathe-vor-import-" + heutigesDatum() + ".json");
+      } catch (fehler) {}
+      try {
+        window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(pruefung.daten));
+      } catch (fehler) {
+        zeigeImportMeldung("Der Spielstand konnte nicht gespeichert werden. " +
+          "Bitte prüfen, ob der Browser Daten speichern darf, und es dann noch einmal versuchen.");
+        return;
+      }
+      zeigeImportMeldung("Spielstand geladen – das Spiel wird neu gestartet.");
+      ladeSpielstandNeu();
+    }
+  });
+}
+
+function zeigeSpielstandInhalt() {
+  const inhalt = document.getElementById("spielstandInhalt");
+  inhalt.textContent = "";
+  const daten = speicher.daten();
+
+  const karte = element("div", "sterne-karte");
+  karte.appendChild(element("h3", null, "💾 Spielstand übertragen"));
+  karte.appendChild(element("p", null,
+    "Der Spielstand liegt nur in diesem Browser auf diesem Gerät. Mit „Spielstand sichern“ " +
+    "entsteht eine Datei, die du auf einem anderen PC über „Spielstand laden“ wieder einlesen kannst."));
+  karte.appendChild(element("p", "rand",
+    "Wichtig: Das Spiel auf dem anderen PC im gleichen Browser und über dieselbe Adresse öffnen. " +
+    "Vor dem Laden alle anderen Spielfenster schließen. Der bisherige Stand wird vor dem " +
+    "Ersetzen automatisch als Datei gesichert."));
+
+  const knoepfe = element("div", "statistik-knoepfe");
+  const sichern = element("button", "knopf primaer", "Spielstand sichern (Datei)");
+  sichern.type = "button";
+  sichern.id = "spielstandSichernKnopf";
+  sichern.addEventListener("click", function () {
+    sichereDatenDownload("mathe-spielstand-" + heutigesDatum() + ".json");
+  });
+  const laden = element("button", "knopf", "Spielstand laden (Datei)");
+  laden.type = "button";
+  laden.id = "spielstandLadenKnopf";
+  laden.addEventListener("click", function () {
+    const datei = document.getElementById("spielstandDatei");
+    if (datei) {
+      datei.value = "";
+      datei.click();
+    }
+  });
+  knoepfe.appendChild(sichern);
+  knoepfe.appendChild(laden);
+  karte.appendChild(knoepfe);
+  inhalt.appendChild(karte);
+
+  const stand = element("div", "sterne-karte");
+  stand.appendChild(element("h3", null, "Aktueller Stand auf diesem Gerät"));
+  stand.appendChild(element("p", null,
+    gesamtSterne() + (gesamtSterne() === 1 ? " Stern" : " Sterne") + " · 🌟 " +
+    daten.bonusGesamt + " Bonussterne · 🎁 " + daten.geschenke.length +
+    (daten.geschenke.length === 1 ? " Gutschein" : " Gutscheine") + " · " +
+    daten.runden.length + (daten.runden.length === 1 ? " Runde" : " Runden") +
+    (daten.tagesSet ? " · Tagesrunde von " + datumText(daten.tagesSet.datum) : "")));
+  inhalt.appendChild(stand);
+
+  const meldung = element("p", "rand", "");
+  meldung.id = "spielstandMeldung";
+  meldung.setAttribute("role", "status");
+  meldung.setAttribute("aria-live", "polite");
+  inhalt.appendChild(meldung);
+  spielstandMeldungKnoten = meldung;
 }
 
 function datumText(iso) {
@@ -2893,6 +3076,24 @@ document.getElementById("fortschrittZurueckKnopf").addEventListener("click", fun
 });
 document.getElementById("csvKnopf").addEventListener("click", csvHerunterladen);
 
+/* Spielstand-Datei einlesen (Knopf „Spielstand laden“ öffnet diesen Dateidialog). */
+document.getElementById("spielstandDatei").addEventListener("change", function (ereignis) {
+  const datei = ereignis.target && ereignis.target.files ? ereignis.target.files[0] : null;
+  if (!datei) { return; }
+  if (typeof datei.text === "function") {
+    datei.text().then(importiereSpielstand, function () {
+      zeigeImportMeldung("Die Datei konnte nicht gelesen werden.");
+    });
+  } else if (typeof FileReader === "function") {
+    const leser = new FileReader();
+    leser.onload = function () { importiereSpielstand(String(leser.result)); };
+    leser.onerror = function () { zeigeImportMeldung("Die Datei konnte nicht gelesen werden."); };
+    leser.readAsText(datei);
+  } else {
+    zeigeImportMeldung("Dieser Browser kann die Datei nicht lesen.");
+  }
+});
+
 document.getElementById("musikKnopf").addEventListener("click", musik.umschalten);
 
 document.getElementById("kinoAusKnopf").addEventListener("click", versteckeKino);
@@ -2916,7 +3117,9 @@ starteZeigerSpur();
 zeigeBildschirm("startBildschirm");
 
 // Änderungen bleiben sofort im Arbeitsspeicher; spätestens beim Verlassen schreiben.
-document.getElementById("sicherungKnopf").addEventListener("click", sichereDatenDownload);
+document.getElementById("sicherungKnopf").addEventListener("click", function () {
+  sichereDatenDownload();
+});
 if (typeof window.addEventListener === "function") {
   window.addEventListener("pagehide", function () { sichereTagesAntworten(); speicher.speichere(); });
 }

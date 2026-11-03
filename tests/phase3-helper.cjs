@@ -115,11 +115,13 @@ function game(saved = {}, options = {}) {
   }
   const math = Object.create(Math);
   if (options.failMigration) { math.max = function () { math.max = Math.max; throw new Error('migration failed'); }; }
+  let reloads = 0;
   const context = vm.createContext({ Date: Clock, Math: math, document, window: {
     localStorage: { getItem() { if (options.failRead) throw new Error('read denied'); return stored; }, setItem(key, value) { if (options.failWrite) throw new Error('quota'); stored = value; writes++; } },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
     VIDEOS: ["bluey", "gabby", "doozie"].map(welt => ({welt, video: welt, titel: welt})),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
+    location: { reload() { reloads += 1; } },
     Blob, URL: { createObjectURL(blob) { const id='blob:'+blobs.size; blobs.set(id,blob); return id; }, revokeObjectURL(id) { revoked.push(id); blobs.delete(id); } },
     addEventListener(name, fn) { windowEvents.set(name, fn); },
     setInterval(fn) { const id = timers.size + 1; timers.set(id, fn); return id; },
@@ -133,6 +135,7 @@ function game(saved = {}, options = {}) {
   return {
     run, nodes, audios, timers, contexts, document, downloads, revoked, options,
     raw:()=>stored,
+    reloads: () => reloads,
     flush() { const list=[...pending.values()]; pending.clear(); list.forEach(t=>t.fn()); },
     pagehide() { windowEvents.get('pagehide')?.(); },
     key(key, shiftKey=false) { return document.activeElement.emit('keydown', {key, shiftKey}); },

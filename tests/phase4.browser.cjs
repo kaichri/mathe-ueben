@@ -151,6 +151,49 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(JSON.parse(fs.readFileSync(path.join(output,engine+'-backup.json'),'utf8')).daten.sterneGesamt,5);
     });
 
+    await check(engine,'Spielstand sichern und auf einem zweiten Browser laden',async()=>{
+      // "Alter PC": Runde spielen und den Spielstand als Datei sichern.
+      const quelle=await browser.newContext({acceptDownloads:true});
+      await quelle.addInitScript(()=>localStorage.setItem('mathe-ueben-fuer-emma',JSON.stringify({sound:'aus'})));
+      const p=await quelle.newPage();await p.goto(url);
+      await p.locator('#losKnopf').click();await fillCorrect(p);
+      await p.locator('.abschnitts-punkt').last().click();await p.locator('#pruefenKnopf').dblclick();
+      await p.locator('#kinoAusKnopf').click();
+      const sterne=await p.evaluate(()=>speicher.daten().sterneGesamt);
+      assert.equal(sterne,5);
+      await p.locator('#sterneKnopf').click();
+      await p.locator('[data-reiter="daten"]').click();
+      const [download]=await Promise.all([p.waitForEvent('download'),p.locator('#spielstandSichernKnopf').click()]);
+      const datei=path.join(output,engine+'-spielstand.json');
+      await download.saveAs(datei);
+      assert.match(download.suggestedFilename(),/^mathe-spielstand-\d{4}-\d{2}-\d{2}\.json$/);
+      const gesichert=JSON.parse(fs.readFileSync(datei,'utf8'));
+      assert.equal(gesichert.format,'mathe-sicherung');
+      assert.equal(gesichert.daten.sterneGesamt,5);
+      await quelle.close();
+
+      // "Neuer PC": leerer Speicher, Datei laden, Rückfrage bestätigen.
+      const ziel=await browser.newContext({acceptDownloads:true});
+      const q=await ziel.newPage();await q.goto(url);
+      assert.equal(await q.evaluate(()=>speicher.daten().sterneGesamt),0);
+      const downloads=[];q.on('download',d=>downloads.push(d.suggestedFilename()));
+      await q.locator('#sterneKnopf').click();
+      await q.locator('[data-reiter="daten"]').click();
+      assert.match(await q.locator('#spielstandInhalt').innerText(),/0 Sterne/);
+      await q.locator('#spielstandDatei').setInputFiles(datei);
+      assert.equal(await q.evaluate(()=>document.getElementById('frageUeberlagerung').hidden),false);
+      assert.match(await q.locator('#frageText').innerText(),/5 Sterne/);
+      await q.locator('#frageJaKnopf').click().catch(()=>{});
+      await q.waitForTimeout(900);
+      await q.reload();
+      assert.equal(await q.evaluate(()=>speicher.daten().sterneGesamt),5,'Spielstand wurde nicht übernommen');
+      assert.equal(await q.evaluate(()=>speicher.meldung()),'');
+      assert.equal(await q.evaluate(()=>speicher.daten().runden.length),1);
+      assert(downloads.some(n=>/^mathe-vor-import-/.test(n)),'Rettungssicherung vor dem Import fehlt');
+      await ziel.close();
+      return {sterne,rettung:downloads};
+    });
+
     await page.evaluate(()=>{const rows=speicher.daten().runden;if(rows.length) while(rows.length<14)rows.push({...rows[0]});});
     for(const [width,height] of [[375,812],[390,844],[768,1024],[1366,768],[1920,1080]]) {
       await page.setViewportSize({width,height});

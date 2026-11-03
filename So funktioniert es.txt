@@ -153,7 +153,7 @@ fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
 Mein Fortschritt
 ----------------
 Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
-öffnet "Mein Fortschritt" mit drei Reitern:
+öffnet "Mein Fortschritt" mit vier Reitern:
 
   Sterne     - alle Sterne, Meilensteine, Bonussterne und die letzten Runden
   Statistik  - Runden-, Kalender- und Bereichs-Auswertung. Nichts wird
@@ -164,6 +164,35 @@ Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
                die sich in Excel öffnen lässt. Darin stehen auch die Bonus-
                runden (BONUSRUNDE) und alle Gutscheine mit Umtausch-Vermerk.
   Gutscheine - alle abgeholten Gutscheine, mit Umtausch-Knopf (siehe oben).
+  Spielstand - "Spielstand sichern (Datei)" und "Spielstand laden (Datei)"
+               für den Umzug auf einen anderen PC (siehe unten).
+
+
+Auf einem anderen PC weiterspielen
+---------------------------------
+Der Spielstand liegt nur im Browser des jeweiligen PCs. Zum Übertragen:
+
+  1. Auf dem alten PC: "Mein Fortschritt" -> "Spielstand" ->
+     "Spielstand sichern (Datei)". Es entsteht eine Datei wie
+     mathe-spielstand-2026-11-03.json - diese Datei mitnehmen
+     (E-Mail, USB-Stick, Cloud-Ordner).
+  2. Auf dem neuen PC: Spiel im GLEICHEN Browser und über dieselbe
+     Adresse öffnen (am besten derselbe Ordner wie bisher), dann
+     "Mein Fortschritt" -> "Spielstand" -> "Spielstand laden (Datei)"
+     und die Datei auswählen.
+  3. Das Programm zeigt, was in der Datei steht (Sterne, Runden,
+     Gutscheine, Datum), und fragt vor dem Ersetzen nach. Mit
+     "Trotzdem laden" wird der Stand übernommen, das Spiel startet neu.
+     Der bisherige Stand wird vorher automatisch als Datei
+     mathe-vor-import-....json gesichert.
+
+Wichtig: Es gibt keine automatische Synchronisierung. Beide PCs haben
+getrennte Spielstände, und ein Laden ersetzt den vorhandenen Stand
+(es wird nichts zusammengeführt). Wer auf beiden PCs parallel spielt,
+verliert beim nächsten Laden den anderen Stand. Für automatisches
+Abgleichen beim Start wäre ein Server nötig; das Spiel hat keinen.
+Eine unbrauchbare oder fremde Datei wird abgelehnt, der bisherige
+Stand bleibt dann unverändert.
 
 
 Kino: die Feier-Videos
@@ -246,6 +275,10 @@ Browser gespeichert (localStorage). Das klappt in Edge und Chrome.
 Wenn die Werte nach dem Neustart weg sind: im Browser prüfen, ob
 "Websites Daten speichern" erlaubt ist, und die Seite immer mit dem-
 selben Browser öffnen.
+
+Auf einen anderen PC übertragen: "Mein Fortschritt" -> "Spielstand"
+-> "Spielstand sichern (Datei)" und dort wieder laden (siehe oben).
+Ohne diese Datei hat jeder PC seinen eigenen Spielstand.
 
 
 Ausdrucken
