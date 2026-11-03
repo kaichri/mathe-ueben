@@ -184,7 +184,9 @@ Der Spielstand liegt nur im Browser des jeweiligen PCs. Zum Übertragen:
      Gutscheine, Datum), und fragt vor dem Ersetzen nach. Mit
      "Trotzdem laden" wird der Stand übernommen, das Spiel startet neu.
      Der bisherige Stand wird vorher automatisch als Datei
-     mathe-vor-import-....json gesichert.
+     mathe-vor-import-....json gesichert. Lässt der Browser diese
+     Sicherung nicht zu (z. B. Downloads blockiert), wird nichts
+     importiert - der vorhandene Stand bleibt dann unverändert.
 
 Wichtig: Es gibt keine automatische Synchronisierung. Beide PCs haben
 getrennte Spielstände, und ein Laden ersetzt den vorhandenen Stand

@@ -219,6 +219,8 @@ Unter **„Mein Fortschritt“ → „Spielstand“** stehen zwei Knöpfe:
   (Sterne, Runden, Gutscheine, Datum); erst nach „Trotzdem laden“ wird
   geschrieben. Der bisherige Stand wird dabei automatisch als
   `mathe-vor-import-JJJJ-MM-TT.json` gesichert, danach startet das Spiel neu.
+  Kann der Browser diese Sicherung nicht anlegen (etwa weil Downloads blockiert
+  sind), wird **nicht** importiert und der vorhandene Stand bleibt unverändert.
 
 Damit lässt sich ein Spielstand auf einen anderen PC übertragen: auf dem alten
 Gerät sichern, die Datei mitnehmen, auf dem neuen Gerät im **gleichen Browser

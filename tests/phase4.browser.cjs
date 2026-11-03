@@ -181,7 +181,7 @@ async function layout(page){return page.evaluate(()=>{
       await q.locator('[data-reiter="daten"]').click();
       assert.match(await q.locator('#spielstandInhalt').innerText(),/0 Sterne/);
       await q.locator('#spielstandDatei').setInputFiles(datei);
-      assert.equal(await q.evaluate(()=>document.getElementById('frageUeberlagerung').hidden),false);
+      await q.locator('#frageUeberlagerung').waitFor({state:'visible',timeout:5000});
       assert.match(await q.locator('#frageText').innerText(),/5 Sterne/);
       await q.locator('#frageJaKnopf').click().catch(()=>{});
       await q.waitForTimeout(900);

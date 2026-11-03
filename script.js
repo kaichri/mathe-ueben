@@ -406,12 +406,16 @@ function datenHerunterladen(inhalt, typ, dateiname) {
   }
 }
 
+/* Liefert true, wenn die Sicherungsdatei tatsächlich angestoßen wurde. Der
+   Rückgabewert entscheidet beim Import, ob ersetzt werden darf. */
 function sichereDatenDownload(dateiname) {
   try {
     datenHerunterladen(JSON.stringify(speicher.sicherung(), null, 2), "application/json;charset=utf-8",
       dateiname || "mathe-sicherung-" + heutigesDatum() + ".json");
+    return true;
   } catch (fehler) {
     window.alert("Die Sicherung konnte nicht heruntergeladen werden. Bitte lass dieses Fenster offen und hole Mama oder Papa dazu.");
+    return false;
   }
 }
 
@@ -2121,10 +2125,15 @@ function importiereSpielstand(text) {
     ja: "Trotzdem laden",
     nein: "Abbrechen",
     dann: function () {
-      /* Rettungsnetz: den bisherigen Stand herunterladen, bevor er ersetzt wird. */
-      try {
-        sichereDatenDownload("mathe-vor-import-" + heutigesDatum() + ".json");
-      } catch (fehler) {}
+      /* Rettungsnetz: den bisherigen Stand herunterladen, bevor er ersetzt wird.
+         Klappt das nicht (z. B. Downloads blockiert), wird NICHT importiert –
+         sonst ginge der alte Stand ungesichert verloren. */
+      if (sichereDatenDownload("mathe-vor-import-" + heutigesDatum() + ".json") === false) {
+        zeigeImportMeldung("Der bisherige Spielstand konnte nicht gesichert werden " +
+          "(vermutlich sind Downloads blockiert). Der Import wurde abgebrochen – " +
+          "bitte Downloads für diese Seite erlauben und erneut versuchen.");
+        return;
+      }
       try {
         window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(pruefung.daten));
       } catch (fehler) {

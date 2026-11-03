@@ -168,6 +168,21 @@ test("SPIELSTAND: der bisherige Stand wird vor dem Ersetzen gesichert", async ()
   assert.equal(ziel.saved().sterneGesamt, 5, "Danach gilt der importierte Stand");
 });
 
+test("SPIELSTAND: ohne Rettungssicherung wird nicht importiert", () => {
+  const quelle = spielstandMitFortschritt();
+  // Downloads sind blockiert -> die Sicherung des alten Standes ist nicht möglich.
+  const ziel = game({}, { now: JETZT, failDownload: true });
+  oeffneSpielstand(ziel);
+  ziel.run("speicher.daten().sterneGesamt = 2; speicher.speichere()");
+  const vorher = ziel.raw();
+  importiere(ziel, sicherungVon(quelle));
+  ziel.nodes.get("frageJaKnopf").emit("click");
+  assert.equal(ziel.raw(), vorher, "Ohne Sicherung darf der Stand nicht ersetzt werden");
+  assert.equal(ziel.reloads(), 0, "Kein Neustart ohne Sicherung");
+  assert.equal(ziel.run("speicher.daten().sterneGesamt"), 2);
+  assert.match(meldung(ziel), /Import wurde abgebrochen/);
+});
+
 /* --------------------------------------------------------- ungültige Datei */
 
 test("SPIELSTAND: ungültige Dateien werden abgelehnt und nichts wird geändert", () => {
