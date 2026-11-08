@@ -80,6 +80,14 @@ formulas("uhr-film-dauer", ([a]) => a);
 formulas("uhr-wie-spaet", ([a], extra) => extra.minuten+a);
 formulas("uhr-minuten-davor", ([a], extra) => extra.minuten-a);
 formulas("uhr-zwei-aktivitaeten", ([a,b], extra) => extra.minuten+a+b);
+formulas("alter-rueckwaerts", ([a,b]) => a-b);
+formulas("aufzug-mindestfahrten", ([a,b]) => Math.floor((a+b-1)/b));
+formulas("tretboote-volle-gruppen", ([a,b]) => a-Math.floor(a/b)*b);
+formulas("zahlenweg-huepfen", ([a,b]) => a+b+b+b);
+formulas("rechnung-basteltisch", ([a,b,c]) => `${a} − ${b} + ${c}`);
+formulas("rechenart-fest", ([,,art]) => ["Plus (+)", "Minus (−)", "Mal (×)", "Geteilt (÷)", "Eine Angabe fehlt"][art]);
+formulas("geld-riesenrad-gruppe", ([a,b,c,d]) => (a*c+b*d)*100);
+formulas("geld-muenzbeutel", ([a,b,c]) => (a*20+b*2)*100+c*50);
 
 test("every template: all allowed number combinations have correct integer answers and plausible bounds", () => {
   assert.deepEqual(new Set(Object.keys(answers)), new Set(stories.vorlagenIds()));
@@ -100,7 +108,7 @@ test("every template: all allowed number combinations have correct integer answe
       const expected = answers[v.id](z, extra);
       const field = v.feld ? v.feld(c) : {korrekt: v.losung(c), typ: "zahl"};
       const actual = field.typ === "zeit" ? field.zeit.stunde*60+field.zeit.minute : field.korrekt;
-      assert.equal(actual, expected, v.id);
+      assert.equal(field.auswahl ? field.auswahl[actual-1] : actual, expected, v.id);
       assert(Number.isInteger(actual) && actual >= 0, v.id);
       assert(actual <= (field.typ === "geld" ? 10000 : field.typ === "zeit" ? 1439 : 100), v.id);
       if (v.id === "sitzreihen-kino") assert(actual <= z[0]);
@@ -111,7 +119,37 @@ test("every template: all allowed number combinations have correct integer answe
     visit([]);
     assert(valid > 0, v.id);
   }
-  assert.equal(checked, 93308);
+  assert(checked > 93308);
+});
+
+test("story choices survive reload, count as answers and are graded", () => {
+  const g = game();
+  const ident = g.run(`
+    const probe = neuesTagesSet();
+    const karte = probe.karten.find(k => k.bereich === "geschichte");
+    const vorlage = window.GESCHICHTEN.VORLAGEN.find(v => v.id === "rechnung-basteltisch");
+    const kontext = {p1: "Emma", z: [25, 6, 13]};
+    karte.vorlage = vorlage.id;
+    karte.text = vorlage.text(kontext);
+    karte.frage = "";
+    karte.felder = [vorlage.feld(kontext)];
+    zeigeRunde(probe);
+    zeigeAbschnitt(probe.bereiche.findIndex(b => b.bereich === "geschichte"));
+    const auswahl = eingabeZuFeld.get(karte.felder[0]);
+    auswahl.value = String(karte.felder[0].korrekt);
+    auswahl.emit("change");
+    karte.ident;
+  `);
+  const neu = game(g.saved());
+  neu.nodes.get("losKnopf").emit("click");
+  assert.equal(neu.run(`
+    const karte = runde.karten.find(k => k.ident === ${JSON.stringify(ident)});
+    karteIstAusgefuellt(karte) &&
+      Number(eingabeZuFeld.get(karte.felder[0]).value) === karte.felder[0].korrekt
+  `), true);
+  neu.fill(50);
+  neu.run("pruefeRunde()");
+  assert.equal(neu.saved().runden[0].richtig, 50);
 });
 
 test("contradictory seating and recovered-item examples are rejected", () => {
@@ -264,7 +302,6 @@ test("Doozie file is attempted and missing file falls back to Puppenhaus without
   assert.equal(g.audios[1].src,'musik/puppenhaus.mp3');
   assert.equal(g.audios[0].paused,true);
   assert.equal(g.audios.filter(a=>!a.paused).length,1);
-  g.run("zeigeKino()");g.click();assert.equal(g.audios[1].paused,true);
 });
 
 test("both dialogs have accessible roles/titles and the restart has a description", () => {

@@ -310,7 +310,31 @@ const GESCHICHTEN_ORAKEL = {
   },
   "uhr-wie-spaet": t => { const [, n] = t.match(/In (\d+) Minuten beginnt der Film/); return liesUhr(t) + +n; },
   "uhr-minuten-davor": t => { const [, n] = t.match(/Vor (\d+) Minuten hat/); return liesUhr(t) - +n; },
-  "uhr-zwei-aktivitaeten": t => { const [, a, b] = t.match(/macht (\d+) Minuten .+? und danach (\d+) Minuten/); const [, h] = t.match(/Um (\d+) Uhr hat/); return +h * 60 + +a + +b; }
+  "uhr-zwei-aktivitaeten": t => { const [, a, b] = t.match(/macht (\d+) Minuten .+? und danach (\d+) Minuten/); const [, h] = t.match(/Um (\d+) Uhr hat/); return +h * 60 + +a + +b; },
+  "alter-rueckwaerts": t => { const [, a, b] = t.match(/(\d+) Jahre alt und damit um (\d+) Jahre/); return +a - +b; },
+  "aufzug-mindestfahrten": t => { const [, a, b] = t.match(/(\d+) wartende Personen.*höchstens (\d+) Personen/); return Math.ceil(+a / +b); },
+  "tretboote-volle-gruppen": t => { const [, a, b] = t.match(/(\d+) Kinder auf Tretboote.*genau (\d+) Kinder/); return +a % +b; },
+  "zahlenweg-huepfen": t => { const [, b, c] = t.match(/Landefelder sind \d+, (\d+) und (\d+)/); return 2 * +c - +b; },
+  "rechnung-basteltisch": t => {
+    const [, a, b, c] = t.match(/(\d+) Bastelperlen.*gibt (\d+) Perlen her und bekommt danach (\d+) neue dazu/);
+    return `${a} − ${b} + ${c}`;
+  },
+  "rechenart-fest": t => {
+    if (t.includes("gleichmäßig auf")) return "Geteilt (÷)";
+    if (t.includes("mit je")) return "Mal (×)";
+    if (t.includes("Davon platzen")) return "Minus (−)";
+    if (t.includes("rote und")) return "Plus (+)";
+    assert.match(t, /Auch .+? bringt Ballons mit/);
+    return "Eine Angabe fehlt";
+  },
+  "geld-riesenrad-gruppe": t => {
+    const [, a, b, c, d] = t.match(/(\d+) € pro Erwachsenem und (\d+) € pro Kind.*(\d+) Erwachsene und (\d+) Kinder/);
+    return 100 * (+a * +c + +b * +d);
+  },
+  "geld-muenzbeutel": t => {
+    const [, a, b, c] = t.match(/20-€-Scheine \((\d+) Stück\), 2-€-Münzen \((\d+) Stück\) und 50-Cent-Münzen \((\d+) Stück\)/);
+    return 2000 * +a + 200 * +b + 50 * +c;
+  }
 };
 
 function pruefeGeschichte(karte, zaehler) {
@@ -322,8 +346,11 @@ function pruefeGeschichte(karte, zaehler) {
   const orakel = GESCHICHTEN_ORAKEL[karte.vorlage];
   assert(orakel, "kein Orakel für " + karte.vorlage);
   const erwartet = orakel(karte.text);
-  assert.equal(Number.isFinite(erwartet), true, "Orakel scheiterte: " + karte.text);
-  if (feld.typ === "zeit") {
+  if (feld.auswahl) {
+    assert.equal(feld.auswahl[feld.korrekt - 1], erwartet);
+    assert.equal(feld.anzeige, erwartet);
+    assert.equal(new Set(feld.auswahl).size, feld.auswahl.length);
+  } else if (feld.typ === "zeit") {
     const tatsaechlich = feld.zeit.stunde * 60 + feld.zeit.minute;
     assert.equal(tatsaechlich, erwartet, "Uhrzeit weicht ab: " + karte.text);
     assert(feld.zeit.stunde >= 0 && feld.zeit.stunde < 24, "Stunde ungültig: " + karte.text);
@@ -406,8 +433,7 @@ test("AUDIT Geschichten: alle zulässigen Zahlenkombinationen, Antwort aus dem T
         const erwartet = orakel(text);
         const tatsaechlich = feld.typ === "zeit"
           ? feld.zeit.stunde * 60 + feld.zeit.minute
-          : feld.typ === "geld" ? feld.geld.cent : feld.korrekt;
-        assert.equal(Number.isFinite(erwartet), true, "Orakel scheiterte: " + text);
+          : feld.typ === "geld" ? feld.geld.cent : feld.auswahl ? feld.auswahl[feld.korrekt - 1] : feld.korrekt;
         assert.equal(tatsaechlich, erwartet, `${v.id}: "${text}" -> ${tatsaechlich} statt ${erwartet}`);
         geprueft += 1;
       }

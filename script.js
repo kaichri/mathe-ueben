@@ -181,6 +181,11 @@ const speicher = (function () {
     function feldGueltig(f) {
       if (!objekt(f) || !zahl(f.korrekt) || !["zahl", "zeit", "geld"].includes(f.typ) ||
           !optionaleTexte(f, ["beschriftung", "darstellung", "anzeige", "einheit"])) { return false; }
+      if (f.auswahl !== undefined &&
+          (f.typ !== "zahl" || !Array.isArray(f.auswahl) || f.auswahl.length < 2 ||
+            !f.auswahl.every(text => typeof text === "string" && text.trim()) ||
+            new Set(f.auswahl).size !== f.auswahl.length || f.korrekt < 1 ||
+            f.korrekt > f.auswahl.length || f.anzeige !== f.auswahl[f.korrekt - 1])) { return false; }
       if (f.typ === "zeit") {
         return objekt(f.zeit) && zahl(f.zeit.stunde) && f.zeit.stunde < 24 && zahl(f.zeit.minute) && f.zeit.minute < 60;
       }
@@ -1193,6 +1198,20 @@ function themenSymbol() {
   return "dooziekopf";
 }
 
+const FIGURENBILDER = {
+  hund: "bluey", bingo: "bingo", gabbykopf: "gabby",
+  panda: "pandy", dooziekopf: "doozie", puggie: "puggie"
+};
+
+function figurBild(figur, klassen) {
+  const datei = FIGURENBILDER[figur];
+  if (!datei) { return symbol(figur, klassen); }
+  const bild = element("img", "symbol figurenbild" + (klassen ? " " + klassen : ""));
+  bild.src = "bilder/" + datei + ".webp";
+  bild.alt = "";
+  return bild;
+}
+
 /* ------------- Eine Runde bauen ------------- */
 
 /* --- Tages-Regie für die Bonuswelten (max. 3 Sterne pro Tag) --- */
@@ -1590,7 +1609,6 @@ function zeigeRunde(neueRunde) {
 
   document.getElementById("ergebnisKasten").hidden = true;
   document.getElementById("ergebnisKasten").textContent = "";
-  versteckeKino();
   aktualisiereFortschritt();
   zeigeUebezeit();
   zeigeBildschirm("uebungsBildschirm");
@@ -1686,7 +1704,7 @@ function baueBereich(bereich) {
   const abschnitt = element("section", "bereich bereich-" + bereich.bereich);
 
   const kopf = element("div", "bereich-kopf");
-  kopf.appendChild(symbol(
+  kopf.appendChild(figurBild(
     bereich.bereich === "raetsel" ? "wuerfel"
       : themenSymbol()
   ));
@@ -1711,6 +1729,26 @@ function baueBereich(bereich) {
 }
 
 function neuesEingabefeld(feld, karte) {
+  if (feld.auswahl) {
+    const auswahl = element("select", "eingabe geschichte-auswahl");
+    auswahl.setAttribute("aria-label", "Antwort auswählen");
+    auswahl.setAttribute("aria-describedby", karte.ident + "-text");
+    const leer = element("option", null, "Bitte auswählen …");
+    leer.value = "";
+    auswahl.appendChild(leer);
+    feld.auswahl.forEach(function (text, index) {
+      const option = element("option", null, text);
+      option.value = String(index + 1);
+      auswahl.appendChild(option);
+    });
+    auswahl.addEventListener("change", function () {
+      aktualisiereFortschritt();
+      sichereTagesAntworten();
+    });
+    eingabeZuFeld.set(feld, auswahl);
+    eingabeRegistrieren(karte, auswahl);
+    return auswahl;
+  }
   if (feld.typ === "geld") {
     return neuesGeldEingabefeld(feld, karte);
   }
@@ -1821,7 +1859,7 @@ function springeNachbar(knoten, richtung) {
   const ziel = stelle >= 0 ? alle[stelle + richtung] : null;
   if (ziel) {
     ziel.focus();
-    ziel.select();
+    if (typeof ziel.select === "function") { ziel.select(); }
   }
 }
 
@@ -1890,10 +1928,39 @@ function rechnungsReihe(kinder) {
   return reihe;
 }
 
+const GESCHICHTEN_MOTIVE = {
+  "verschenken": "geschenk", "keepy-uppy": "motiv-ballons",
+  "beim-backen": "motiv-feier", "puppenhaus-aufraeumen": "motiv-kiste",
+  "packungen-dann-weg": "motiv-kiste", "kisten-stapeln": "motiv-kiste",
+  "tueten-gruppen": "motiv-kiste", "parkplaetze-frei": "motiv-auto",
+  "hundehaus-modenschau": "motiv-pfote", "quietschtiere": "motiv-pfote",
+  "sitzreihen-kino": "motiv-karte", "geld-kinokarten": "motiv-karte",
+  "uhr-film-dauer": "motiv-karte",
+  "geld-zwei-eis": "motiv-eis", "geld-eis-rest": "motiv-eis",
+  "alter-rueckwaerts": "motiv-feier", "aufzug-mindestfahrten": "motiv-aufzug",
+  "tretboote-volle-gruppen": "motiv-boot", "zahlenweg-huepfen": "motiv-zahlenweg",
+  "rechnung-basteltisch": "motiv-basteln", "rechenart-fest": "motiv-ballons",
+  "geld-riesenrad-gruppe": "motiv-riesenrad", "geld-muenzbeutel": "motiv-geld"
+};
+
 function baueGeschichte(karte) {
   const kasten = element("div", karte.bereich === "bonus" ? "geschichte knobel" : "geschichte");
   kasten.dataset.kartenId = karte.ident;
-  kasten.appendChild(element("p", "geschichte-text", karte.text));
+  const kopf = element("div", "geschichte-kopf");
+  const bild = element("span", "geschichte-bild");
+  bild.setAttribute("aria-hidden", "true");
+  const figuren = mascottchenAuswahl();
+  const figur = figuren.find(name => new RegExp("\\b" + FIGURENBILDER[name] + "\\b", "i").test(karte.text));
+  bild.appendChild(figurBild(figur || themenSymbol()));
+  const vorlage = typeof karte.vorlage === "string" ? karte.vorlage : "";
+  const motiv = GESCHICHTEN_MOTIVE[vorlage] ||
+    (vorlage.startsWith("uhr-") ? "motiv-uhr" : vorlage.startsWith("geld-") ? "motiv-geld" : "motiv-basteln");
+  bild.appendChild(symbol(motiv, "geschichte-motiv"));
+  kopf.appendChild(bild);
+  const text = element("p", "geschichte-text", karte.text);
+  text.id = karte.ident + "-text";
+  kopf.appendChild(text);
+  kasten.appendChild(kopf);
 
   const zeile = element("div", "geschichte-zeile");
   const feld = karte.felder[0];
@@ -2094,7 +2161,6 @@ function pruefeRunde() {
   if (sterne >= 5 && EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
-  zeigeKino();
   aktualisiereBonusweltKnoepfe();
 }
 
@@ -2382,7 +2448,7 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   if (EINSTELLUNGEN.spaessig) {
     const ecke = element("div", "ergebnis-maskottchen");
     mascottchenAuswahl().forEach(function (figur) {
-      const bild = symbol(figur, "maskottchen-gross" + (sterne >= 5 ? " purzelbaum" : ""));
+      const bild = figurBild(figur, "maskottchen-gross" + (sterne >= 5 ? " purzelbaum" : ""));
       ecke.appendChild(bild);
     });
     kasten.appendChild(ecke);
@@ -3325,7 +3391,6 @@ const musik = (function () {
   let rueckfallTimer = null;
   let audioKontext = null;
   let wartetAufKlick = false;
-  let videoAktiv = false;
   let audioDatei = "";
   let abspielVersuch = 0;
   let abspielVersuchLaeuft = false;
@@ -3341,9 +3406,6 @@ const musik = (function () {
   }
 
   function kontext() {
-    if (videoAktiv) {
-      return null;
-    }
     if (!audioKontext) {
       const Typ = window.AudioContext || window.webkitAudioContext;
       if (!Typ) {
@@ -3362,7 +3424,7 @@ const musik = (function () {
   }
 
   function spielTon(hertz, startBei, dauer, lautheit) {
-    if (!an || videoAktiv) {
+    if (!an) {
       return;
     }
     const k = kontext();
@@ -3390,7 +3452,7 @@ const musik = (function () {
 
   function rueckfallMelodie() {
     stoppeNur();
-    if (!an || videoAktiv) {
+    if (!an) {
       return;
     }
     const k = kontext();
@@ -3405,7 +3467,7 @@ const musik = (function () {
   }
 
   function spieleAudio(knoten) {
-    if (!an || videoAktiv || audioKnoten !== knoten || abspielVersuchLaeuft) {
+    if (!an || audioKnoten !== knoten || abspielVersuchLaeuft) {
       return;
     }
     const versuch = ++abspielVersuch;
@@ -3430,7 +3492,7 @@ const musik = (function () {
   }
 
   function starteHintergrund() {
-    if (!an || videoAktiv) {
+    if (!an) {
       return;
     }
     const datei = aktuellesAudio();
@@ -3501,7 +3563,7 @@ const musik = (function () {
      Browser beim ersten Versuch nein gesagt hat. */
   function horchtAufErstenKlick() {
     document.addEventListener("click", function () {
-      if (!an || videoAktiv) {
+      if (!an) {
         return;
       }
       if ((!audioKnoten && !rueckfallTimer) || wartetAufKlick) {
@@ -3525,22 +3587,6 @@ const musik = (function () {
     },
     umschalten: umschalten,
     modusWechsel: function () { if (gestartet && an) { starteHintergrund(); } },
-    pausiereFuerVideo: function () {
-      videoAktiv = true;
-      stoppeNur();
-      if (audioKontext && audioKontext.suspend) {
-        audioKontext.suspend().catch(function () {});
-      }
-    },
-    weiterNachVideo: function () {
-      videoAktiv = false;
-      if (an) {
-        if (audioKontext && audioKontext.state === "suspended" && audioKontext.resume) {
-          audioKontext.resume().catch(function () {});
-        }
-        starteHintergrund();
-      }
-    },
     fanfare: function (sterne) {
       if (!an) {
         return;
@@ -3575,86 +3621,6 @@ const musik = (function () {
   };
 })();
 
-/* ------------- Kino: die Video-Belohnung nach dem Prüfen -------------
-   Die Clip-Liste steht in videos.js. Gestreamt wird von YouTube –
-   das geht nur mit Internet; dann gibt es einen freundlichen Hinweis. */
-
-function videoListe() {
-  return (window.VIDEOS && window.VIDEOS.length) ? window.VIDEOS : [];
-}
-
-let letztesVideoId = "";
-
-function naechstesVideo() {
-  const zurAuswahl = videoListe().filter(function (v) { return v.welt === modus; });
-  if (zurAuswahl.length === 0) {
-    return null;
-  }
-  if (zurAuswahl.length > 1) {
-    const andere = zurAuswahl.filter(function (v) { return v.video !== letztesVideoId; });
-    if (andere.length > 0) {
-      return andere[Math.floor(Math.random() * andere.length)];
-    }
-  }
-  return zurAuswahl[Math.floor(Math.random() * zurAuswahl.length)];
-}
-
-function zeigeKino() {
-  const kasten = document.getElementById("kinoKasten");
-  const hinweis = document.getElementById("kinoHinweis");
-  const weiterKnopf = document.getElementById("kinoWeiterKnopf");
-  const rahmen = document.getElementById("kinoRahmen");
-  const notlink = document.getElementById("kinoLink");
-
-  kasten.hidden = false;
-  hinweis.hidden = false;
-
-  const video = naechstesVideo();
-  if (!video) {
-    document.getElementById("kinoTitel").textContent = "🎉 Geschafft! Zeit zum Feiern!";
-    hinweis.textContent = "Für diese Welt ist noch kein Video in der Liste – trag es in videos.js ein!";
-    rahmen.src = "";
-    if (notlink) {
-      notlink.hidden = true;
-    }
-    weiterKnopf.hidden = true;
-    return;
-  }
-
-  letztesVideoId = video.video;
-  weiterKnopf.hidden = false;
-  document.getElementById("kinoTitel").textContent = "🎉 Geschafft! Dein Video: " + video.titel;
-  hinweis.textContent = "Gestartet wird von YouTube – dafür braucht es kurz Internet. " +
-    "Mit „Nächstes Video“ suchst du dir ein neues aus, mit „Fernseher aus“ machst du zu. " +
-    "Wenn das Bild hier nicht erscheinen will, klick einfach unten auf „Auf YouTube ansehen“.";
-  musik.pausiereFuerVideo();
-  // Der normale Einbett-Link (nicht nocookie) funktioniert auch, wenn die App
-  // per Doppelklick als Datei geöffnet wird – der Nocookie-Spieler mag das nicht.
-  rahmen.src = "https://www.youtube.com/embed/" + video.video + "?autoplay=1&rel=0";
-  if (notlink) {
-    notlink.href = "https://www.youtube.com/watch?v=" + video.video;
-    notlink.hidden = false;
-  }
-}
-
-function naechstesKinoVideo() {
-  zeigeKino();
-}
-
-function versteckeKino() {
-  const kasten = document.getElementById("kinoKasten");
-  const rahmen = document.getElementById("kinoRahmen");
-  const notlink = document.getElementById("kinoLink");
-  kasten.hidden = true;
-  if (rahmen) {
-    rahmen.src = "";  // damit sofort Ruhe ist
-  }
-  if (notlink) {
-    notlink.hidden = true;
-  }
-  musik.weiterNachVideo();
-}
-
 /* ------------- Maskottchen und Sternenregen ------------- */
 
 function mascottchenAuswahl() {
@@ -3664,20 +3630,18 @@ function mascottchenAuswahl() {
   if (modus === "gabby") {
     return ["gabbykopf", "panda"];
   }
-  return ["dooziekopf", "pogi"];
+  return ["dooziekopf", "puggie"];
 }
 
 function fuelleMaskottchen() {
   const reihe = document.getElementById("maskottchenReihe");
   reihe.textContent = "";
-  const namen = modus === "bluey" ? ["hund", "bingo"]
-    : modus === "gabby" ? ["gabbykopf", "panda"]
-    : ["dooziekopf", "pogi"];
-  namen.forEach(function (figur) {
+  mascottchenAuswahl().forEach(function (figur) {
     const knopf = element("button", "maskottchen");
     knopf.type = "button";
-    knopf.title = "Klick mich an!";
-    knopf.appendChild(symbol(figur));
+    const name = FIGURENBILDER[figur];
+    knopf.title = name[0].toUpperCase() + name.slice(1) + " antippen";
+    knopf.appendChild(figurBild(figur));
     knopf.addEventListener("click", function () {
       knopf.classList.remove("huepfen");
       // kurze Zwangspause, damit die Animation neu startet
@@ -3975,7 +3939,6 @@ document.getElementById("frageJaKnopf").addEventListener("click", function (erei
 
 document.getElementById("abbruchKnopf").addEventListener("click", function () {
   sichereTagesAntworten();
-  versteckeKino();
   zeigeStartErgebnis();
   zeigeBildschirm("startBildschirm");
 });
@@ -4025,8 +3988,6 @@ document.getElementById("spielstandMergeDatei").addEventListener("change", funct
 
 document.getElementById("musikKnopf").addEventListener("click", musik.umschalten);
 
-document.getElementById("kinoAusKnopf").addEventListener("click", versteckeKino);
-document.getElementById("kinoWeiterKnopf").addEventListener("click", naechstesKinoVideo);
 
 document.getElementById("geschenkWegKnopf").addEventListener("click", function () {
   dialogSchliessen("geschenkUeberlagerung");

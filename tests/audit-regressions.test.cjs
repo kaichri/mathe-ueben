@@ -422,7 +422,7 @@ test("BEFUND-9: der Geschichten-Merkzettel bleibt duplikatfrei", () => {
 /* --------------------------------------------------------------- BEFUND-10 */
 test("BEFUND-10: die Startseite meldet eine Bonusrunde als Bonusrunde", () => {
   const g = game({}, { now: JETZT });
-  g.run("zeigeRunde(neuesTagesSet())"); g.fill(50); g.run("pruefeRunde(); versteckeKino()");
+  g.run("zeigeRunde(neuesTagesSet())"); g.fill(50); g.run("pruefeRunde()");
   g.run("zeigeRunde(baueBonusRunde('bluey'))"); g.fill(2); g.run("pruefeRunde()");
   g.nodes.get("abbruchKnopf").emit("click");
   const text = g.nodes.get("startErgebnis").textContent.replace(/\s+/g, " ");

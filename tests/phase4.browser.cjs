@@ -28,7 +28,7 @@ async function check(engine,name,fn){
   try{const details=await fn();result.checks.push({engine,name,status:'pass',details});console.log('PASS',engine,name);}
   catch(e){
     let state;
-    try { state=await currentPage.evaluate(()=>({dialogs:[...document.querySelectorAll('.ueberlagerung')].map(n=>({id:n.id,hidden:n.hidden})),kino:document.getElementById('kinoKasten').hidden,body:document.body.innerText.slice(-1500)}));
+    try { state=await currentPage.evaluate(()=>({dialogs:[...document.querySelectorAll('.ueberlagerung')].map(n=>({id:n.id,hidden:n.hidden})),body:document.body.innerText.slice(-1500)}));
       await currentPage.screenshot({path:path.join(output,engine+'-failure-'+result.checks.length+'.png')});
       await currentPage.keyboard.press('Escape');
     } catch {}
@@ -126,9 +126,10 @@ async function layout(page){return page.evaluate(()=>{
       await fillCorrect(page);
       await page.locator('.abschnitts-punkt').last().click();await page.locator('#pruefenKnopf').dblclick();
       assert.match(await page.locator('#ergebnisKasten').innerText(),/50 von 50/);
+      assert.equal(await page.locator('#uebungsBildschirm iframe').count(),0);
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),1);
       assert.equal(await page.evaluate(()=>gesamtSterne()),5);
-      await page.locator('#kinoAusKnopf').click();await page.locator('#abbruchKnopf').click();
+      await page.locator('#abbruchKnopf').click();
       assert(await page.locator('.bonus-welt-knopf[data-welt="gabby"]').isEnabled());
       await page.evaluate(()=>Object.assign(speicher.daten(), {bonussterne: 2, bonusGesamt: 2}));
       await page.locator('.bonus-welt-knopf[data-welt="gabby"]').click();await fillCorrect(page,3);
@@ -158,7 +159,7 @@ async function layout(page){return page.evaluate(()=>{
       const p=await quelle.newPage();await p.goto(url);
       await p.locator('#losKnopf').click();await fillCorrect(p);
       await p.locator('.abschnitts-punkt').last().click();await p.locator('#pruefenKnopf').dblclick();
-      await p.locator('#kinoAusKnopf').click();
+
       const sterne=await p.evaluate(()=>speicher.daten().sterneGesamt);
       assert.equal(sterne,5);
       await p.locator('#sterneKnopf').click();
@@ -205,7 +206,7 @@ async function layout(page){return page.evaluate(()=>{
         await p.locator('.abschnitts-punkt').last().click();
         await p.locator('#pruefenKnopf').click();
         if(await p.locator('#frageUeberlagerung').isVisible())await p.locator('#frageJaKnopf').click();
-        await p.locator('#kinoAusKnopf').click();
+
         assert.equal(await p.evaluate(()=>speicher.daten().runden.length),1);
         return {ctx,p};
       }
@@ -275,7 +276,7 @@ async function layout(page){return page.evaluate(()=>{
       const A=await geraet();
       await A.p.locator('#losKnopf').click();await fillCorrect(A.p,50);
       await A.p.locator('.abschnitts-punkt').last().click();await A.p.locator('#pruefenKnopf').dblclick();
-      await A.p.locator('#kinoAusKnopf').click();
+
       assert.equal(await A.p.evaluate(()=>speicher.daten().sterneGesamt),5);
       await A.p.locator('#sterneKnopf').click();await A.p.locator('[data-reiter="daten"]').click();
       assert(await A.p.locator('#syncRepo').count()===1,'Synchronisierungsfelder fehlen');
@@ -336,7 +337,7 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(await page.evaluate(()=>document.getElementById('frageUeberlagerung').hidden),false);
       assert.match(await page.locator('#frageText').innerText(),/1 von 50/);
       await page.locator('#frageJaKnopf').click();
-      await page.locator('#kinoAusKnopf').click();
+
       await page.getByRole('button',{name:'Nur diese Aufgaben noch einmal üben'}).click();
       assert.equal(await page.evaluate(()=>runde.bereichsArt),'uebungen');
       assert.equal(await page.evaluate(()=>runde.karten.length),1);
@@ -344,7 +345,7 @@ async function layout(page){return page.evaluate(()=>{
       assert.match(await page.locator('#ergebnisKasten').innerText(),/1 von 1/);
       // Wiederholungsrunde: eine richtige Aufgabe = genau ein Stern.
       assert.match(await page.locator('#ergebnisKasten').innerText(),/1 Stern/);
-      await page.locator('#kinoAusKnopf').click();
+
     });
 
     await check(engine,'two windows cannot silently overwrite an earned round',async()=>{
@@ -367,7 +368,7 @@ async function layout(page){return page.evaluate(()=>{
       assert.deepEqual(core,[]);return {externalFailures:resourceFailures.filter(r=>!r.url.startsWith(url))};
     });
 
-    await check(engine,'real MP3 decoding, pause for video, resume and Doozie fallback',async()=>{
+    await check(engine,'real MP3 decoding and Doozie fallback',async()=>{
       const mediaContext=await browser.newContext();const p=await mediaContext.newPage();
       await p.goto(url);
       await p.locator('#losKnopf').click();
@@ -388,8 +389,7 @@ async function layout(page){return page.evaluate(()=>{
           n.play=function(){const p=play();p?.catch(e=>qaRejections.push(e.name));return p;};
         }return n;};
       });
-      const q=await observed.newPage();const mediaFailures=[];
-      q.on('requestfailed',r=>mediaFailures.push({url:r.url(),error:r.failure()?.errorText}));
+      const q=await observed.newPage();
       await q.goto(url);
       let autoplayRejected=false;
       try{await q.waitForFunction(()=>qaRejections.includes('NotAllowedError'),{},{timeout:2000});autoplayRejected=true;}
@@ -398,24 +398,6 @@ async function layout(page){return page.evaluate(()=>{
       await q.waitForFunction(()=>qaAudio.some(a=>!a.paused && a.currentTime>0.2),{},{timeout:10000});
       if(autoplayRejected)assert.equal(await q.evaluate(()=>qaAudio.length),1);
       const active=await q.evaluate(()=>qaAudio.filter(a=>!a.paused).length);assert.equal(active,1);
-      await q.evaluate(()=>zeigeKino());await q.locator('#kinoWeiterKnopf').click();
-      assert.equal(await q.evaluate(()=>qaAudio.filter(a=>!a.paused).length),0);
-      let video;
-      try {
-        await q.waitForFunction(()=>document.getElementById('kinoRahmen').contentWindow!==null);
-        let frame=q.frames().find(f=>f.url().includes('youtube.com/embed/'));
-        if(!frame){
-          try {frame=await q.waitForEvent('framenavigated',{predicate:f=>f!==q.mainFrame() && /youtube|chrome-error/.test(f.url()),timeout:10000});}
-          catch {}
-        }
-        if(!frame)throw new Error('YouTube frame did not load');
-        try {await frame.waitForFunction(()=>document.querySelector('video')?.currentTime>0.2,{},{timeout:8000});}
-        catch {}
-        video=await frame.evaluate(()=>({text:document.body.innerText.slice(0,600),videos:[...document.querySelectorAll('video')].map(v=>({paused:v.paused,currentTime:v.currentTime,readyState:v.readyState,error:v.error?.code}))}));
-        if(!video.videos.some(v=>!v.paused && v.currentTime>0.2))result.unavailable.push({engine:engine+' YouTube playback',reason:JSON.stringify(video)});
-      } catch(e) {result.unavailable.push({engine:engine+' YouTube playback',reason:JSON.stringify({error:e.message,mediaFailures,frames:q.frames().map(f=>f.url())})});}
-      await q.locator('#kinoAusKnopf').click();
-      await q.waitForFunction(()=>qaAudio.some(a=>!a.paused && a.currentTime>0.2),{},{timeout:10000});
       await q.evaluate(()=>setzeModus('doozie'));
       await q.waitForFunction(()=>qaAudio.some(a=>a.src.endsWith('puppenhaus.mp3') && !a.paused && a.currentTime>0.2),{},{timeout:10000});
       assert.equal(await q.evaluate(()=>qaAudio.filter(a=>!a.paused).length),1);
@@ -425,8 +407,7 @@ async function layout(page){return page.evaluate(()=>{
       await q.evaluate(()=>setzeModus('bluey'));await q.locator('#kopfName').click();
       await q.waitForFunction(()=>qaTones>0&&qaContexts.some(c=>c.state==='running'),{},{timeout:4000});
       const syntheticFallback=await q.evaluate(()=>({tones:qaTones,contexts:qaContexts.map(c=>c.state)}));
-      await q.evaluate(()=>zeigeKino());assert(await q.evaluate(()=>qaContexts.every(c=>c.state==='suspended')));
-      await observed.close();return {audio,autoplayRejected,video,syntheticFallback};
+      await observed.close();return {audio,autoplayRejected,syntheticFallback};
     });
 
     await check(engine,'local MP4 assets decode and SVG symbol references exist',async()=>{
@@ -502,13 +483,10 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(await p.evaluate(()=>fertigAnsicht),true);
       assert.equal(await p.evaluate(()=>speicher.daten().runden.length),1);
       assert.match(await p.locator('#rueckmeldung').textContent(),/von 50/);
-      await target('#kinoAusKnopf');await target('#neuKnopf');
+      await target('#neuKnopf');
       assert.equal(await p.evaluate(()=>document.activeElement.id),'versuchAbbrechenKnopf');
       await p.keyboard.press('Escape');assert.equal(await p.evaluate(()=>document.activeElement.id),'neuKnopf');
       await target('#sterneKnopf');await target('[data-reiter="geschenke"]');
-      await target('#geschenkeInhalt .sterne-karte button');
-      assert(await p.evaluate(()=>document.activeElement.classList.contains('geschenk-karte')));
-      await p.keyboard.press('Enter');assert.equal(await p.evaluate(()=>speicher.daten().geschenke.length),1);
       await keys.close();
     });
 

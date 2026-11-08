@@ -126,7 +126,6 @@ function game(saved = {}, options = {}) {
       removeItem(key) { speicher.delete(key); }
     },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
-    VIDEOS: ["bluey", "gabby", "doozie"].map(welt => ({welt, video: welt, titel: welt})),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
     location: { reload() { reloads += 1; } },
     Blob, URL: { createObjectURL(blob) { const id='blob:'+blobs.size; blobs.set(id,blob); return id; }, revokeObjectURL(id) { revoked.push(id); blobs.delete(id); } },

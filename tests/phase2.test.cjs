@@ -94,7 +94,6 @@ function game(saved = {}, options = {}) {
   const context = vm.createContext({ Date: Clock, document, window: {
     localStorage: { getItem() { return stored; }, setItem(key, value) { stored = value; writes++; } },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
-    VIDEOS: ["bluey", "gabby", "doozie"].map(welt => ({welt, video: welt, titel: welt})),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
     setInterval(fn) { const id = timers.size + 1; timers.set(id, fn); return id; },
     clearInterval(id) { timers.delete(id); }, setTimeout() {}
@@ -226,7 +225,7 @@ test("resuming after a world change preserves answers, tasks, section and origin
   assert.deepEqual(plain(reload.data().tagesSet), before);
 });
 
-test("statistics, video and unlocking follow the resumed round's original world", () => {
+test("statistics and unlocking follow the resumed round's original world", () => {
   const g = game(); g.run("zeigeRunde(neuesTagesSet())");
   g.run("setzeModus('gabby'); zeigeRunde(starteTagesRunde())"); g.fill(25);
   g.run("pruefeRunde()");
@@ -236,7 +235,6 @@ test("statistics, video and unlocking follow the resumed round's original world"
   assert.equal(g.data().runden[0].modus, "bluey");
   assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), true);
   assert.equal(g.run("weltHeuteFreigeschaltet('gabby')"), false);
-  assert.match(g.nodes.get("kinoRahmen").src, /embed\/bluey/);
 });
 
 test("new rounds and bonus rounds may explicitly use a newly selected world", () => {
@@ -246,31 +244,6 @@ test("new rounds and bonus rounds may explicitly use a newly selected world", ()
   g.run("schalteWeltFrei('doozie'); startBonusWelt('doozie')");
   assert.equal(g.run("runde.welt"), "doozie");
   assert.equal(g.run("modus"), "doozie");
-});
-
-test("video blocks background starts from clicks, mode switches and toggles", async () => {
-  const g = game({sound: "an"}); await Promise.resolve();
-  assert.equal(g.audios.length, 1);
-  g.run("zeigeKino()"); g.click(); g.run("setzeModus('gabby'); musik.umschalten(); musik.umschalten()");
-  assert.equal(g.audios.length, 1);
-  assert.equal(g.audios[0].paused, true);
-  g.run("naechstesKinoVideo()"); g.click();
-  assert.equal(g.audios.length, 1);
-  g.run("versteckeKino()"); await Promise.resolve();
-  assert.equal(g.audios.length, 2);
-  assert.equal(g.audios.filter(a => !a.paused).length, 1);
-  assert.equal(g.audios[1].src, "musik/puppenhaus.mp3");
-  g.run("versteckeKino()"); g.click();
-  assert.equal(g.audios.length, 2);
-});
-
-test("closing video respects disabled music and disabling music during video", async () => {
-  const g = game(); g.run("zeigeKino(); versteckeKino()");
-  assert.equal(g.audios.length, 0);
-  g.run("musik.umschalten()"); await Promise.resolve();
-  g.run("zeigeKino(); musik.umschalten(); versteckeKino()"); g.click();
-  assert.equal(g.audios.length, 1);
-  assert.equal(g.audios[0].paused, true);
 });
 
 test("autoplay rejection retries the same instance on a later click", async () => {
@@ -290,21 +263,6 @@ test("synchronous play failure also permits a retry", async () => {
   assert.equal(g.audios[0].plays, 2);
 });
 
-test("synthetic fallback stops for video, including already scheduled tones", async () => {
-  const g = game({sound: "an"}); await Promise.resolve();
-  g.audios[0].emit("error");
-  assert.equal(g.timers.size, 1);
-  const audioContext = g.contexts[0];
-  g.run("zeigeKino()"); g.click();
-  g.run("musik.fanfare(5); musik.ton('freude')");
-  assert.equal(g.timers.size, 0);
-  assert.equal(audioContext.state, "suspended");
-  assert.equal(g.audios.length, 1);
-  g.run("versteckeKino()"); await Promise.resolve();
-  assert.equal(audioContext.state, "running");
-  assert.equal(g.audios.length, 2);
-});
-
 test("the local date uses Vienna calendar days across DST", () => {
   const g = game({}, {now: "2026-03-30T22:30:00Z"});
   assert.equal(g.run("heutigesDatum()"), "2026-03-31");
@@ -315,11 +273,11 @@ test("pending autoplay and stale callbacks cannot create duplicate audio instanc
   const g = game({sound: "an"}, {audio: [() => new Promise((resolve, no) => { reject = no; })]});
   g.click(); g.click();
   assert.equal(g.audios[0].plays, 1);
-  g.run("zeigeKino()"); reject(new Error("late rejection")); await Promise.resolve();
+  g.run("musik.umschalten()"); reject(new Error("late rejection")); await Promise.resolve();
   g.audios[0].emit("error"); g.click();
   assert.equal(g.audios.length, 1);
   assert.equal(g.timers.size, 0);
-  g.run("versteckeKino()"); await Promise.resolve(); g.click();
+  g.run("musik.umschalten()"); await Promise.resolve(); g.click();
   assert.equal(g.audios.length, 2);
   assert.equal(g.audios[1].plays, 1);
 });

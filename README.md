@@ -8,8 +8,12 @@ verarbeitet.
 
 Die Anwendung besteht aus HTML, CSS und JavaScript. Zum Spielen sind weder
 ein Benutzerkonto noch eine Installation oder ein Build-Schritt erforderlich.
-Das Spiel funktioniert lokal ohne Internet; die Feier-Videos werden von
-YouTube geladen und benötigen eine Internetverbindung.
+Das Spiel funktioniert lokal ohne Internet.
+
+Die Figurenbilder im Ordner `bilder/` stammen von den offiziellen Seiten
+zu [Bluey und Bingo](https://www.bluey.tv/characters/),
+[Gabbys Puppenhaus](https://www.gabbysdollhouse.com/uk/characters) und
+[Doozies Hundehaus](https://prod.dreamworks.com/shows/doozies-doghouse).
 
 ## Funktionen und Spielregeln
 
@@ -26,7 +30,7 @@ Ein reguläres Set enthält **50 Aufgaben**:
 | Zahlenrätsel | 5 |
 | Rechengeschichten | 5 |
 
-Die Geschichten stammen aus 47 Vorlagen. Ein Set enthält drei normale
+Die Geschichten stammen aus 55 Vorlagen. Ein Set enthält drei normale
 Geschichten, eine Geldgeschichte und eine Uhr-/Minutengeschichte; drei Vorlagen
 gehören zur einfachen und zwei zur zweiten Schwierigkeitsstufe. Bereits kürzlich
 verwendete Aufgaben werden möglichst vermieden. Bei erschöpften Aufgabenpools
@@ -90,8 +94,7 @@ oder Einlösedatum im Verlauf.
   (Zusammenführen statt Überschreiben).
 - Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als
   JSON-Datei (Umzug auf einen anderen PC, „Mein Fortschritt → Spielstand“).
-- Hintergrundmusik, synthetische Ersatzmelodie bei fehlenden Dateien und
-  Feier-Videos mit pausierter Hintergrundmusik.
+- Hintergrundmusik und synthetische Ersatzmelodie bei fehlenden Dateien.
 - Tastaturbedienung mit Tab, Enter und Pfeiltasten sowie Dialognavigation mit
   Tab/Umschalt+Tab und Escape.
 - Zugängliche Dialogtitel, Fokusführung und eine Live-Region für Ergebnisse.
@@ -131,8 +134,7 @@ mathe-ueben/
 ├── style.css                   Themen, Layout, Fokus und Druckansicht
 ├── script.js                   Spielzustände, Bewertung, Speicher, Audio und Export
 ├── aufgaben-bereiche.js         Rechenaufgaben und Bonusaufgaben
-├── geschichten.js              47 Geschichtenvorlagen und ihre Auswahl
-├── videos.js                   Liste der externen Feier-Videos
+├── geschichten.js              Geschichtenvorlagen und ihre Auswahl
 ├── musik/
 │   ├── blau.mp3
 │   ├── puppenhaus.mp3
@@ -161,9 +163,7 @@ mathe-ueben/
 
 Die Hintergrundmusik verwendet die MP3-Dateien. Eine optionale
 `musik/doozie.mp3` ist **nicht enthalten**; in Doozies Welt wird bei ihrem Fehlen
-auf `puppenhaus.mp3` zurückgefallen. Die vorhandenen MP4-Dateien werden nicht
-für das YouTube-Kino benötigt. Externe Videos können sich ändern oder regional
-nicht verfügbar sein.
+auf `puppenhaus.mp3` zurückgefallen.
 
 ## Lokale Datenspeicherung
 
@@ -207,9 +207,7 @@ ist deshalb empfohlen.
 
 Es gibt keinen eigenen Spielstand-Server und keine Anmeldung im Spiel.
 Das Löschen von Browserdaten oder die Verwendung eines privaten Browserfensters
-kann gespeicherte Fortschritte entfernen. Die YouTube-Einbettung ist eine
-externe Verbindung; das Spiel ist daher beim Öffnen des Kinos nicht vollständig
-offline.
+kann gespeicherte Fortschritte entfernen.
 
 ## Sicherung, Umzug und Export
 
@@ -363,7 +361,6 @@ node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs te
 node --check script.js
 node --check aufgaben-bereiche.js
 node --check geschichten.js
-node --check videos.js
 ```
 
 Die Tests simulieren unter anderem DOM, Browser-Speicher, Audiofehler und

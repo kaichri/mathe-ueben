@@ -6,8 +6,7 @@ So öffnen
 Doppelklick auf die Verknüpfung "Mathe üben" auf dem Desktop.
 Falls es die Verknüpfung nicht gibt: in diesem Ordner die Datei
 index.html doppelklicken (am besten mit Edge oder Chrome).
-Das Programm braucht kein Internet - nur die Feier-Videos aus dem
-"Kino" werden von YouTube gestreamt und brauchen dann kurz Internet.
+Das Programm funktioniert lokal ohne Internet.
 
 
 Was drin ist
@@ -51,7 +50,7 @@ Das Tages-Quiz (ein Aufgaben-Set pro Tag)
   Weiterklicken). Seite zu, Computer aus - beim nächsten Öffnen stehen die
   Antworten und der gleiche Abschnitt wieder da.
 * Erst "Fertig" (im letzten Abschnitt) zeigt alles: alle Bereiche, grün und
-  rot, die richtigen Lösungen bei den Fehlern, Sterne und das Kino.
+  rot, die richtigen Lösungen bei den Fehlern und Sterne.
   Danach kann nichts mehr ausgebessert werden - auch nicht nach einem
   Neustart an diesem Tag.
 * Der Knopf "Neuer Versuch" (erscheint nach dem Fertig) erzeugt nach einer
@@ -126,10 +125,7 @@ Ablauf
    "Runde abschließen?": "Weiter üben" (der Standard) oder "Trotzdem
    abgeben". Escape bricht den Abschluss ab. Sind alle 50 Aufgaben
    beantwortet, wird ohne Rückfrage abgeschlossen.
-4. Zum Feiern kommt automatisch das "Kino": ein Video aus der Welt,
-   die gerade geübt wurde (von YouTube gestreamt). Mit "Nächstes Video"
-   sucht Emma sich ein neues aus, mit "Fernseher aus" geht der Kino zu.
-5. "Nur diese Aufgaben noch einmal üben" wiederholt nur die Fehler,
+4. "Nur diese Aufgaben noch einmal üben" wiederholt nur die Fehler,
    "Neuer Versuch" (nach der Rückfrage) lädt ein komplett neues Set für
    denselben Tag.
 
@@ -250,27 +246,11 @@ Browser die Verbindung zu GitHub blockieren. Dann entweder das Spiel
 bleiben.
 
 
-Kino: die Feier-Videos
-----------------------
-Die Videos werden von YouTube gestreamt (dafür kurz Internet nötig).
-Welche Videos laufen, entscheidet die Liste in der Datei videos.js:
-   { welt: "bluey", titel: "Der letzte Luftballon", video: "Kennung" }
-Neues Video hinzufuegen: auf YouTube das Video oeffnen, die Kennung aus
-der Adresse kopieren (der Teil nach "watch?v=") und so einen Eintrag in
-videos.js dazwischenschreiben. welt kann "bluey", "gabby" oder "doozie"
-sein. Nach dem Fertig wird zufällig ein Video aus der passenden Welt
-ausgewaehlt - mit "Nächstes Video" gibt es ein neues.
-Falls das Video im Kino-Bild mal nicht anlaufen will, hilft der Link
-"▶ Auf YouTube ansehen" direkt unter dem Video: Er öffnet das Video in
-einem neuen Browser-Tab.
-
-
 Musik
 -----
 Oben ist der Musik-Knopf (Notensymbol). Er stellt das Theme-Lieder leise
-im Hintergrund an oder aus; die Einstellung bleibt gemerkt. Im "Kino"
-laufen die Lieder nicht mehr als Datei, sondern als YouTube-Video
-(siehe oben). Die Hintergrund-Lieder liegen im Ordner "musik"
+im Hintergrund an oder aus; die Einstellung bleibt gemerkt.
+Die Hintergrund-Lieder liegen im Ordner "musik"
 (blau.mp3 und puppenhaus.mp3). Für Doozies Hundehaus kann ein eigenes
 Lied als musik/doozie.mp3 dazugelegt werden - bis dahin läuft dort das
 Puppenhaus-Lied. Falls Musikdateien fehlen, singt das Programm selbst

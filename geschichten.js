@@ -100,6 +100,13 @@
     return rest === 0 ? euro + " \u20AC" : euro + " \u20AC " + rest;
   }
 
+  function auswahlFeld(richtig, andere) {
+    var optionen = mische([richtig].concat(andere));
+    var antwort = feld(optionen.indexOf(richtig) + 1, { anzeige: richtig });
+    antwort.auswahl = optionen;
+    return antwort;
+  }
+
   function uhrText(stunde, minute) {
     return stunde + ":" + (minute < 10 ? "0" + minute : minute);
   }
@@ -978,6 +985,91 @@
       einheit: "Minuten"
     }
   ];
+
+  var ALLE_WELTEN = ["bluey", "gabby", "doozie", "alltag"];
+  var RECHENARTEN = ["Plus (+)", "Minus (−)", "Mal (×)", "Geteilt (÷)", "Eine Angabe fehlt"];
+
+  VORLAGEN.push(
+    {
+      id: "alter-rueckwaerts", themen: ALLE_WELTEN, stufe: 1, kategorie: "normal",
+      zahlen: [{ min: 12, max: 18 }, { min: 2, max: 5 }],
+      text: c => c.p1 + " spielt Geburtstag. In der Geschichte ist " + c.p1 + " " + c.z[0] +
+        " Jahre alt und damit um " + c.z[1] + " Jahre älter als " + c.p2 + ". Wie alt ist " + c.p2 + "?",
+      losung: c => c.z[0] - c.z[1], einheit: "Jahren"
+    },
+    {
+      id: "aufzug-mindestfahrten", themen: ALLE_WELTEN, stufe: 2, kategorie: "normal",
+      zahlen: [{ min: 13, max: 36 }, { min: 4, max: 8 }],
+      text: c => c.p1 + " zählt vor dem Aufzug " + c.z[0] + " wartende Personen. Pro Fahrt dürfen höchstens " +
+        c.z[1] + " Personen einsteigen. Wie oft muss der Aufzug mindestens nach oben fahren, damit alle oben sind?",
+      losung: c => Math.ceil(c.z[0] / c.z[1]), einheit: "Fahrten"
+    },
+    {
+      id: "tretboote-volle-gruppen", themen: ALLE_WELTEN, stufe: 2, kategorie: "normal",
+      zahlen: [{ min: 13, max: 32 }, { min: 3, max: 6 }],
+      regeln: z => z[0] % z[1] !== 0,
+      text: c => c.p1 + " teilt " + c.z[0] + " Kinder auf Tretboote auf. In jedes Boot kommen genau " +
+        c.z[1] + " Kinder. Nur volle Boote fahren los. Wie viele Kinder bleiben am Steg?",
+      losung: c => c.z[0] % c.z[1], einheit: "Kindern"
+    },
+    {
+      id: "zahlenweg-huepfen", themen: ALLE_WELTEN, stufe: 1, kategorie: "normal",
+      zahlen: [{ min: 11, max: 34 }, { min: 5, max: 12 }],
+      text: c => c.p1 + " hüpft auf einem Zahlenweg. Die ersten drei Landefelder sind " + c.z[0] + ", " +
+        (c.z[0] + c.z[1]) + " und " + (c.z[0] + 2 * c.z[1]) +
+        ". Die Sprünge sind gleich groß und gehen immer vorwärts. Auf welcher Zahl landet " + c.p1 + " als Nächstes?",
+      losung: c => c.z[0] + 3 * c.z[1]
+    },
+    {
+      id: "rechnung-basteltisch", themen: ALLE_WELTEN, stufe: 2, kategorie: "normal",
+      zahlen: [{ min: 21, max: 38 }, { min: 4, max: 9 }, { min: 11, max: 18 }],
+      text: c => c.p1 + " hat " + c.z[0] + " Bastelperlen. " + c.p1 + " gibt " + c.z[1] +
+        " Perlen her und bekommt danach " + c.z[2] + " neue dazu. Welche Rechnung zeigt, wie viele Perlen es jetzt sind?",
+      feld: c => {
+        var [a, b, d] = c.z;
+        return auswahlFeld(a + " − " + b + " + " + d, [
+          a + " + " + b + " − " + d, a + " + " + b + " + " + d, a + " − " + b + " − " + d
+        ]);
+      }
+    },
+    {
+      id: "rechenart-fest", themen: ALLE_WELTEN, stufe: 1, kategorie: "normal",
+      zahlen: [{ min: 4, max: 9 }, { min: 2, max: 7 }, { min: 0, max: 4 }],
+      text: c => {
+        var [a, b, art] = c.z;
+        return [
+          "Für das Fest bringt " + c.p1 + " " + a + " rote und " + b + " blaue Ballons. Wie viele Ballons sind es zusammen?",
+          c.p1 + " hat " + (a + b) + " Ballons. Davon platzen " + b + ". Wie viele sind noch ganz?",
+          c.p1 + " schmückt " + a + " Tische mit je " + b + " Ballons. Wie viele Ballons braucht " + c.p1 + "?",
+          c.p1 + " verteilt " + (a * b) + " Ballons gleichmäßig auf " + b + " Tische. Wie viele bekommt jeder Tisch?",
+          "Für das Fest bringt " + c.p1 + " " + a + " Ballons. Auch " + c.p2 + " bringt Ballons mit. Wie viele sind es zusammen?"
+        ][art] + " Wähle die Rechenart oder entscheide, ob eine Angabe fehlt.";
+      },
+      feld: c => auswahlFeld(RECHENARTEN[c.z[2]], RECHENARTEN.filter((_, i) => i !== c.z[2]))
+    },
+    {
+      id: "geld-riesenrad-gruppe", themen: ALLE_WELTEN, stufe: 2, kategorie: "geld",
+      zahlen: [{ min: 7, max: 10 }, { min: 3, max: 6 }, { min: 2, max: 4 }, { min: 2, max: 6 }],
+      text: c => c.p1 + " geht mit einer Gruppe zum Riesenrad. Die Karte kostet " + c.z[0] +
+        " € pro Erwachsenem und " + c.z[1] + " € pro Kind. Es fahren " + c.z[2] +
+        " Erwachsene und " + c.z[3] + " Kinder mit. Wie viel kosten alle Karten zusammen?",
+      feld: c => {
+        var cent = 100 * (c.z[0] * c.z[2] + c.z[1] * c.z[3]);
+        return feld(cent, { typ: "geld", geld: { cent: cent }, anzeige: geldText(cent) });
+      }
+    },
+    {
+      id: "geld-muenzbeutel", themen: ALLE_WELTEN, stufe: 1, kategorie: "geld",
+      zahlen: [{ min: 1, max: 3 }, { min: 1, max: 4 }, { min: 1, max: 4 }],
+      text: c => "In der Geldbörse von " + c.p1 + " liegen 20-€-Scheine (" + c.z[0] +
+        " Stück), 2-€-Münzen (" + c.z[1] + " Stück) und 50-Cent-Münzen (" + c.z[2] +
+        " Stück). Wie viel Geld ist das zusammen?",
+      feld: c => {
+        var cent = 2000 * c.z[0] + 200 * c.z[1] + 50 * c.z[2];
+        return feld(cent, { typ: "geld", geld: { cent: cent }, anzeige: geldText(cent) });
+      }
+    }
+  );
 
   /* ---------------- Personen zusammenstellen ---------------- */
 

@@ -241,7 +241,7 @@ test("AUDIT Zustand: Tageswechsel erzeugt neue Aufgaben und behält Sterne und G
   g.run("zeigeRunde(neuesTagesSet())");
   const alteKeys = g.run("runde.karten.map(k => k.schluessel)");
   g.fill(50);
-  g.run("pruefeRunde(); versteckeKino()");
+  g.run("pruefeRunde()");
   const sterne = g.run("gesamtSterne()");
   assert.equal(sterne, 5);
   g.time("2026-11-01T12:00:00Z");
