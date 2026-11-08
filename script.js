@@ -3381,8 +3381,7 @@ const musik = (function () {
   const dateien = {
     blau: "musik/blau.mp3",
     puppenhaus: "musik/puppenhaus.mp3",
-    doozie: "musik/doozie.mp3" // wenn du so eine Datei in den Ordner musik legst,
-                               // nimmt die App im Hundehaus automatisch dieses Lied
+    doozie: "musik/doozie.mp3"
   };
   let an = speicher.daten().sound === null
     ? EINSTELLUNGEN.hintergrundMusikAn

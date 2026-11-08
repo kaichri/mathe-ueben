@@ -139,6 +139,7 @@ mathe-ueben/
 │   ├── blau.mp3
 │   ├── puppenhaus.mp3
 │   ├── blau.mp4
+│   ├── doozie.mp3
 │   └── puppenhaus.mp4
 ├── tests/
 │   ├── phase1.test.cjs
@@ -161,9 +162,8 @@ mathe-ueben/
 └── README.md
 ```
 
-Die Hintergrundmusik verwendet die MP3-Dateien. Eine optionale
-`musik/doozie.mp3` ist **nicht enthalten**; in Doozies Welt wird bei ihrem Fehlen
-auf `puppenhaus.mp3` zurückgefallen.
+Die Hintergrundmusik verwendet lokale MP3-Dateien. Doozies Hundehaus spielt
+`musik/doozie.mp3` und verwendet bei einem Ladefehler `puppenhaus.mp3`.
 
 ## Lokale Datenspeicherung
 

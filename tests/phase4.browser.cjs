@@ -364,7 +364,7 @@ async function layout(page){return page.evaluate(()=>{
 
     await check(engine,'no application exceptions and all core local resources load',async()=>{
       assert.deepEqual(errors,[]);
-      const core=resourceFailures.filter(r=>r.url.startsWith(url) && !/musik\/doozie.mp3$/.test(r.url));
+      const core=resourceFailures.filter(r=>r.url.startsWith(url));
       assert.deepEqual(core,[]);return {externalFailures:resourceFailures.filter(r=>!r.url.startsWith(url))};
     });
 
@@ -399,6 +399,9 @@ async function layout(page){return page.evaluate(()=>{
       if(autoplayRejected)assert.equal(await q.evaluate(()=>qaAudio.length),1);
       const active=await q.evaluate(()=>qaAudio.filter(a=>!a.paused).length);assert.equal(active,1);
       await q.evaluate(()=>setzeModus('doozie'));
+      await q.waitForFunction(()=>qaAudio.some(a=>a.src.endsWith('doozie.mp3') && !a.paused && a.currentTime>0.2),{},{timeout:10000});
+      await observed.route('**/musik/doozie.mp3',route=>route.fulfill({status:404,body:''}));
+      await q.evaluate(()=>{setzeModus('bluey');setzeModus('doozie');});
       await q.waitForFunction(()=>qaAudio.some(a=>a.src.endsWith('puppenhaus.mp3') && !a.paused && a.currentTime>0.2),{},{timeout:10000});
       assert.equal(await q.evaluate(()=>qaAudio.filter(a=>!a.paused).length),1);
       const audio=await q.evaluate(()=>qaAudio.map(a=>({src:a.src,paused:a.paused,currentTime:a.currentTime,readyState:a.readyState,error:a.error?.code})));

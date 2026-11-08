@@ -251,9 +251,7 @@ Musik
 Oben ist der Musik-Knopf (Notensymbol). Er stellt das Theme-Lieder leise
 im Hintergrund an oder aus; die Einstellung bleibt gemerkt.
 Die Hintergrund-Lieder liegen im Ordner "musik"
-(blau.mp3 und puppenhaus.mp3). Für Doozies Hundehaus kann ein eigenes
-Lied als musik/doozie.mp3 dazugelegt werden - bis dahin läuft dort das
-Puppenhaus-Lied. Falls Musikdateien fehlen, singt das Programm selbst
+(blau.mp3, puppenhaus.mp3 und doozie.mp3). Falls Musikdateien fehlen, singt das Programm selbst
 eine kleine Melodie - kaputt geht also nichts.
 
 
