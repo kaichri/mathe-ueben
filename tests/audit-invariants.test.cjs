@@ -317,10 +317,11 @@ test("AUDIT Zustand: Gutschein überlebt Neuladen und Umtausch löscht nichts", 
   assert.match(g.data().geschenke[0].umgetauschtAm, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(g.data().geschenke[1].umgetauschtVon, "g1");
   assert.equal(g.data().bonusGesamt, 5, "Umtausch verändert die Lebenszeitbonussterne");
-  // Nach einer Woche ist der neue Gutschein nicht mehr tauschbar? (er ist neu, also doch)
   g.time("2026-11-09T12:00:00Z");
-  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[1])"), false,
-    "Gutschein nach mehr als einer Woche noch tauschbar");
+  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[1])"), true,
+    "Ein offener Gutschein bleibt nach mehr als einer Woche tauschbar");
+  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[0])"), false,
+    "Der bereits umgetauschte Eintrag bleibt geschlossen");
 });
 
 test("AUDIT Zustand: Statistikgrenze erhält Lebenszeitwerte nach Neuladen", () => {

@@ -92,12 +92,10 @@ Emma sucht sich SELBST ihr Geschenk aus (auch "Wunsch frei"). Fünf
 Bonussterne werden abgezogen, der Rest bleibt erhalten.
 
 Gutschein umtauschen: Unter "Mein Fortschritt" -> Gutscheine kann Emma
-jeden Gutschein innerhalb einer Woche EINMAL umtauschen. Der alte
+jeden offenen Gutschein jederzeit umtauschen. Der alte
 Gutschein bleibt dabei stehen (durchgestrichen, mit dem Vermerk
 "umgetauscht am ...") und der neue kommt dazu - nichts verschwindet.
-Älter als eine Woche gilt der Gutschein so, wie er ist. Mama kann über
-die Schaltfläche "Neuen Gutschein einlösen (für Mama)" jederzeit auch
-mal ohne Bonussterne etwas verschenken.
+Erhaltene Geschenke lassen sich dort als eingelöst markieren.
 
 In script.js lässt sich das bei EINSTELLUNGEN verstellen:
    bonusSterneProTag: 3   - wie viele Bonussterne es höchstens pro Tag gibt

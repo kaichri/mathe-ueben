@@ -77,14 +77,15 @@ pro Tag über alle Welten zusammen** möglich.
 
 **Fünf Bonussterne ergeben einen auswählbaren Gutschein.** Das verfügbare
 Guthaben wird entsprechend vermindert; die insgesamt verdienten Bonussterne
-bleiben separat gespeichert. Gutscheine können innerhalb der vorgesehenen
-Wochenfrist umgetauscht werden. Der alte Eintrag bleibt mit Umtauschvermerk
-erhalten. Der Knopf „Neuen Gutschein einlösen (für Mama)“ erlaubt außerdem
-ein Geschenk ohne Bonussterne; er besitzt keine Zugangssperre.
+bleiben separat gespeichert. Offene Gutscheine können jederzeit umgetauscht
+oder als eingelöst markiert werden. Die Einträge bleiben mit Umtauschvermerk
+oder Einlösedatum im Verlauf.
 
 ### Weitere Funktionen
 
 - Lebenszeitsterne, Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
+- Laufende Übezeit in der sichtbaren Runde sowie Zeit pro Bereich in der Statistik
+  und im CSV-Export. Alte Runden bleiben ohne nachträgliche Zeitangabe erhalten.
 - Optionaler automatischer Abgleich über ein privates GitHub-Repository
   (Zusammenführen statt Überschreiben).
 - Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als

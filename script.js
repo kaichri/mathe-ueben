@@ -54,22 +54,24 @@ const BEREICH_NAMEN = {
   geschichte: "Rechengeschichten"
 };
 
+const ZEITBEREICHE = { ...BEREICH_NAMEN, wiederholung: "Wiederholung", bonus: "Bonuswelt" };
+
+function gueltigeUebezeiten(zeiten) {
+  return zeiten && typeof zeiten === "object" && !Array.isArray(zeiten) &&
+    Object.entries(zeiten).every(function ([bereich, ms]) {
+      return Object.prototype.hasOwnProperty.call(ZEITBEREICHE, bereich) &&
+        Number.isSafeInteger(ms) && ms >= 0;
+    });
+}
+
+function uebezeitSumme(zeiten) {
+  return Object.values(zeiten || {}).reduce((summe, ms) => summe + ms, 0);
+}
+
 /* ------------- Speicher (Sterne, Bonussterne, Gutscheine, Merkzettel) ------ */
 
-/* ------------- Helfer für den Gutschein-Umtausch (nur innerhalb einer Woche) ------------- */
-
-function liegtZurueck(datumText) {
-  if (!datumText) {
-    return true;
-  }
-  const tage = (new Date(heutigesDatum() + "T12:00:00Z") -
-    new Date(datumText + "T12:00:00Z")) / 86400000;
-  return tage > 7;
-}
-/* Ein Gutschein ist tauschbar, wenn er noch keine Woche alt ist
-   und selbst noch nicht umgetauscht wurde. */
 function geschenkIstTauschbar(geschenk) {
-  return !geschenk.umgetauschtAm && !liegtZurueck(geschenk.datum);
+  return !geschenk.eingeloestAm && !geschenk.umgetauschtAm;
 }
 
 const speicher = (function () {
@@ -142,10 +144,16 @@ const speicher = (function () {
         (r.richtig === undefined || r.gesamt === undefined || r.richtig <= r.gesamt) &&
         (r.bereiche === undefined || punkte(r.bereiche));
     });
+    (neu.runden || []).forEach(function (r) {
+      // Fehlerhafte optionale Zeitdaten dürfen die alten Ergebnisse nicht entwerten.
+      if (r.uebezeiten !== undefined && !gueltigeUebezeiten(r.uebezeiten)) {
+        delete r.uebezeiten;
+      }
+    });
     liste("geschenke", function (g) {
       return objekt(g) && typeof g.text === "string" && optionaleTexte(g,
-        ["id", "datum", "zeitpunkt", "umgetauschtAm", "neuerText", "umgetauschtVon"]) &&
-        ["datum", "umgetauschtAm"].every(function (name) { return !g[name] || datum(g[name]); });
+        ["id", "datum", "zeitpunkt", "umgetauschtAm", "neuerText", "umgetauschtVon", "eingeloestAm"]) &&
+        ["datum", "umgetauschtAm", "eingeloestAm"].every(function (name) { return !g[name] || datum(g[name]); });
     });
     ["zuletzt", "knobelZuletzt", "vortagSchluessel"].forEach(function (name) {
       liste(name, function (wert) { return typeof wert === "string"; });
@@ -198,6 +206,7 @@ const speicher = (function () {
         });
       if (!gueltig) { problem(); neu.tagesSet = null; }
       else {
+        if (!gueltigeUebezeiten(set.uebezeiten)) { delete set.uebezeiten; }
         if (!objekt(set.antworten)) { if (set.antworten !== undefined) { problem(); } set.antworten = {}; }
         Object.keys(set.antworten).forEach(function (id) {
           if (!kennungen.has(id) || !Array.isArray(set.antworten[id]) ||
@@ -486,7 +495,12 @@ function verschmelzeSpielstande(lokal, fremd) {
       if (!r || typeof r !== "object") { return; }
       const k = rundenKennung(r);
       const alt = karte.get(k);
-      if (!alt || (r.sterne || 0) > (alt.sterne || 0)) { karte.set(k, r); }
+      if (!alt) { karte.set(k, r); return; }
+      const eintrag = (r.sterne || 0) > (alt.sterne || 0) ? r : alt;
+      const zeitA = gueltigeUebezeiten(alt.uebezeiten) ? alt.uebezeiten : undefined;
+      const zeitB = gueltigeUebezeiten(r.uebezeiten) ? r.uebezeiten : undefined;
+      const zeiten = zeitB && (!zeitA || uebezeitSumme(zeitB) > uebezeitSumme(zeitA)) ? zeitB : zeitA;
+      karte.set(k, zeiten ? { ...eintrag, uebezeiten: zeiten } : eintrag);
     });
     const alle = Array.from(karte.values());
     alle.sort(function (x, y) {
@@ -504,6 +518,7 @@ function verschmelzeSpielstande(lokal, fremd) {
       if (!alt) { karte.set(k, g); return; }
       // Bei gleicher Kennung den Eintrag mit Umtauschvermerk behalten.
       if (!alt.umgetauschtAm && g.umgetauschtAm) { karte.set(k, g); }
+      else if (!alt.umgetauschtAm && !alt.eingeloestAm && g.eingeloestAm) { karte.set(k, g); }
     });
     return Array.from(karte.values()).sort(function (x, y) {
       const u = String((x && (x.zeitpunkt || x.datum)) || "");
@@ -1080,9 +1095,11 @@ function symbol(name, klassen) {
 }
 
 function zeigeBildschirm(id) {
+  if (id !== "uebungsBildschirm") { pausiereUebezeit(); }
   document.querySelectorAll(".bildschirm").forEach(function (schirm) {
     schirm.hidden = schirm.id !== id;
   });
+  if (id === "uebungsBildschirm") { starteUebezeit(); }
   window.scrollTo(0, 0);
 }
 
@@ -1283,6 +1300,59 @@ function istTagesRunde() {
   return !!runde && runde.bereichsArt === "tages";
 }
 
+let uebezeitSegment = null;
+let uebezeitIntervall = null;
+
+function uebezeitJetzt() {
+  return window.performance ? Math.floor(window.performance.now()) : Date.now();
+}
+
+function dauerText(ms) {
+  const sekunden = Math.floor(ms / 1000);
+  return Math.floor(sekunden / 60) + ":" + String(sekunden % 60).padStart(2, "0") + " min";
+}
+
+function zeigeUebezeit() {
+  const anzeige = document.getElementById("uebezeit");
+  if (!anzeige || !runde) { return; }
+  const laufend = uebezeitSegment ? Math.max(0, uebezeitJetzt() - uebezeitSegment.seit) : 0;
+  anzeige.textContent = "Übezeit: " + dauerText(uebezeitSumme(runde.uebezeiten) + laufend);
+  anzeige.hidden = false;
+}
+
+function starteUebezeit() {
+  if (!runde || fertigAnsicht || runde.zeitBeendet || uebezeitSegment ||
+      document.visibilityState === "hidden" || document.getElementById("uebungsBildschirm").hidden) { return; }
+  const bereich = runde.bereiche[abschnittZeiger].bereich;
+  uebezeitSegment = { bereich: bereich, seit: uebezeitJetzt() };
+  zeigeUebezeit();
+  uebezeitIntervall = window.setInterval(zeigeUebezeit, 1000);
+}
+
+function bucheUebezeit() {
+  if (!uebezeitSegment) { return; }
+  const jetzt = uebezeitJetzt();
+  const bereich = uebezeitSegment.bereich;
+  const zeiten = runde.uebezeiten || (runde.uebezeiten = {});
+  zeiten[bereich] = (zeiten[bereich] || 0) + Math.max(0, jetzt - uebezeitSegment.seit);
+  uebezeitSegment.seit = jetzt;
+}
+
+function pausiereUebezeit() {
+  if (!uebezeitSegment) { return; }
+  bucheUebezeit();
+  uebezeitSegment = null;
+  window.clearInterval(uebezeitIntervall);
+  zeigeUebezeit();
+  if (istTagesRunde()) { sichereTagesAntworten(); }
+  const bonusStatistik = runde.bonusAuswertung && runde.bonusAuswertung.statistik;
+  if (bonusStatistik) {
+    bonusStatistik.uebezeiten = { ...runde.uebezeiten };
+    speicher.speichere();
+    sync.nachAenderung(false);
+  }
+}
+
 function schluesselDerSetRunde(setRunde) {
   if (!setRunde || !Array.isArray(setRunde.bereiche)) {
     return [];
@@ -1306,6 +1376,8 @@ function rundeAusSet(set) {
   });
   return {
     bereichsArt: "tages",
+    tagesSet: set,
+    uebezeiten: set.uebezeiten ? { ...set.uebezeiten } : undefined,
     welt: set.welt,
     bereiche: bereiche,
     karten: karten,
@@ -1398,9 +1470,11 @@ function sichereTagesAntworten(aufgeschoben) {
   }
   const daten = speicher.daten();
   const set = daten.tagesSet;
-  if (!set) {
+  if (!set || set !== runde.tagesSet) {
     return;
   }
+  bucheUebezeit();
+  if (runde.uebezeiten) { set.uebezeiten = { ...runde.uebezeiten }; }
   const antworten = (set.antworten && typeof set.antworten === "object")
     ? set.antworten : (set.antworten = {});
   runde.karten.forEach(function (karte) {
@@ -1466,6 +1540,7 @@ function baueBonusRunde(welt) {
 /* ------------- Aufgaben auf der Seite anzeigen ------------- */
 
 function zeigeRunde(neueRunde) {
+  pausiereUebezeit();
   runde = neueRunde;
   // Die Aufgabenwelt gehört zur Runde, nicht zur zuletzt angeklickten Auswahl.
   runde.welt = runde.welt || modus;
@@ -1517,6 +1592,7 @@ function zeigeRunde(neueRunde) {
   document.getElementById("ergebnisKasten").textContent = "";
   versteckeKino();
   aktualisiereFortschritt();
+  zeigeUebezeit();
   zeigeBildschirm("uebungsBildschirm");
 }
 
@@ -1526,7 +1602,10 @@ function zeigeAbschnitt(stelle) {
     return;
   }
   const letzte = runde.bereiche.length - 1;
+  const lief = !!uebezeitSegment;
+  if (lief) { bucheUebezeit(); }
   abschnittZeiger = Math.max(0, Math.min(letzte, stelle));
+  if (lief) { uebezeitSegment.bereich = runde.bereiche[abschnittZeiger].bereich; }
   bereichsKnoten.forEach(function (knoten, nr) {
     knoten.hidden = abschnittsModusAktiv && !fertigAnsicht && nr !== abschnittZeiger;
   });
@@ -1980,6 +2059,7 @@ function pruefeRunde() {
   const sterne = sterneFuerRunde(richtig, gesamt, runde.bereichsArt);
   const lob = lobFuerAnteil(richtig / gesamt);
 
+  pausiereUebezeit();
   speichernRunde(richtig, gesamt, sterne, bereichErgebnis, 0, false);
 
   /* Die Tagesrunde ist jetzt abgeschlossen: nichts mehr ausbessern. */
@@ -2087,14 +2167,21 @@ function pruefeBonusRunde() {
   });
 
   // Genau ein Statistikdatensatz pro Bonusrunde, auch bei späteren Korrekturen.
+  bucheUebezeit();
   if (!auswertung.statistik) {
     speichernRunde(vergeben, runde.karten.length, sterneFuerAnteil(bonusRichtig / runde.karten.length),
       {}, vergeben, true);
     auswertung.statistik = daten.runden[daten.runden.length - 1];
-  } else if (vergeben > 0) {
+  } else {
     auswertung.statistik.richtig += vergeben;
     auswertung.statistik.bonusRichtig += vergeben;
+    auswertung.statistik.uebezeiten = { ...runde.uebezeiten };
     speicher.speichere();
+    sync.nachAenderung(false);
+  }
+  if (bonusRichtig === runde.karten.length) {
+    runde.zeitBeendet = true;
+    pausiereUebezeit();
   }
 
   letzteZusammenfassung = {
@@ -2227,7 +2314,8 @@ function speichernRunde(richtig, gesamt, sterne, bereichErgebnis, bonusRichtig, 
     modus: runde && runde.welt ? runde.welt : modus,
     bonus: !!istBonus,
     bonusRichtig: bonusRichtig || 0,
-    bereiche: bereichErgebnis
+    bereiche: bereichErgebnis,
+    ...(runde && runde.uebezeiten && { uebezeiten: { ...runde.uebezeiten } })
   });
   if (daten.runden.length > 1000) {
     daten.runden = daten.runden.slice(-1000); // nur der Schutz vor Speicherplatz-Not
@@ -2455,9 +2543,7 @@ function geschenkAuswahlOeffnen(modusOptionen, ueberschrift) {
   const raster = document.getElementById("geschenkeRaster");
   titel.textContent = ueberschrift || (optionen.art === "tausch"
     ? "🔄 Was möchtest du stattdessen haben?"
-    : optionen.art === "geschenk"
-      ? "🎁 Such dir etwas aus!"
-      : "🎉 Fünf Bonussterne! Such dir etwas aus!");
+    : "🎉 Fünf Bonussterne! Such dir etwas aus!");
   raster.textContent = "";
   GESCHENKE.forEach(function (geschenk) {
     const karte = element("button", "geschenk-karte");
@@ -2474,26 +2560,25 @@ function geschenkAuswahlOeffnen(modusOptionen, ueberschrift) {
   musik.ton("freude");
 }
 
-/* wird aufgerufen, wenn Emma (oder Mama) etwas ankreuzt */
 function geschenkAusgewaehlt(text) {
   if (geschenkModus.art === "tausch") {
     tauschGutscheinEin(geschenkModus.tauschId, text);
   } else {
-    geschenkGewaehlt(text, geschenkModus.art === "geschenk" ? 0 : EINSTELLUNGEN.bonusSternAlle);
+    geschenkGewaehlt(text);
   }
 }
 
-function geschenkGewaehlt(text, kosten) {
+function geschenkGewaehlt(text) {
   const daten = speicher.daten();
+  const kosten = EINSTELLUNGEN.bonusSternAlle;
+  if (daten.bonussterne < kosten) { return; }
   daten.geschenke.push({
     id: "g" + Date.now() + "-" + Math.floor(Math.random() * 1000),
     zeitpunkt: new Date().toISOString(),
     datum: heutigesDatum(),
     text: text
   });
-  if (kosten > 0) {
-    daten.bonussterne = Math.max(0, daten.bonussterne - kosten);
-  }
+  daten.bonussterne -= kosten;
   speicher.speichere();
   dialogSchliessen("geschenkUeberlagerung");
   aktualisiereBonusAnzeige();
@@ -2556,11 +2641,6 @@ function tauschGutscheinEin(geschenkId, neueText) {
   dialogFokus(document.getElementById("fortschrittZurueckKnopf"));
 }
 
-/* Einlösen wie beim Geschenk – kostet keine Bonussterne (für Mama). */
-function neuesGeschenkEinloesen() {
-  geschenkAuswahlOeffnen({ art: "geschenk", tauschId: null });
-}
-
 function aktualisiereBonusAnzeige() {
   document.getElementById("bonusSterne").textContent = String(speicher.daten().bonussterne);
 }
@@ -2575,6 +2655,7 @@ const FORTSCHRITT_TABS = {
 };
 
 function zeigeFortschritt(tab) {
+  pausiereUebezeit();
   const aktuellerTab = tab || "sterne";
   const reiter = document.getElementById("fortschrittReiter");
   if (reiter) {
@@ -2682,7 +2763,7 @@ function zeigeGeschenkeInhalt() {
   erklaerung.appendChild(element("p", null, daten.geschenke.length === 0
     ? "Noch ist kein Gutschein abgeholt. Fünf Bonussterne 🌟 sind ein Geschenk – such dir dann etwas aus!"
     : "Du hast " + daten.geschenke.length + " Gutschein" + (daten.geschenke.length === 1 ? "" : "e") +
-      " abgeholt. Einen Gutschein kannst du innerhalb einer Woche einmal umtauschen."));
+      " abgeholt. Offene Gutscheine kannst du jederzeit umtauschen."));
   inhalt.appendChild(erklaerung);
 
   if (daten.geschenke.length > 0) {
@@ -2694,10 +2775,10 @@ function zeigeGeschenkeInhalt() {
       if (geschenk.umgetauschtAm) {
         status.textContent = "🔄 umgetauscht am " + datumText(geschenk.umgetauschtAm) +
           (geschenk.neuerText ? " → „" + geschenk.neuerText + "“" : "");
-      } else if (geschenkIstTauschbar(geschenk)) {
-        status.textContent = "noch tauschbar";
+      } else if (geschenk.eingeloestAm) {
+        status.textContent = "✓ Eingelöst am " + datumText(geschenk.eingeloestAm);
       } else {
-        status.textContent = "gilt so – älter als eine Woche";
+        status.textContent = "offen · tauschbar";
       }
       kopf.appendChild(status);
       karte.appendChild(kopf);
@@ -2713,17 +2794,33 @@ function zeigeGeschenkeInhalt() {
         });
         karte.appendChild(tausch);
       }
+      if (geschenkIstTauschbar(geschenk)) {
+        const einloesen = element("button", "knopf klein", "Als eingelöst markieren");
+        einloesen.type = "button";
+        einloesen.addEventListener("click", function () {
+          zeigeFrage({
+            titel: "Gutschein als eingelöst markieren?",
+            text: "„" + geschenk.text + "“ wird mit dem heutigen Datum als eingelöst gespeichert.",
+            ja: "Als eingelöst markieren",
+            nein: "Abbrechen",
+            dann: function () {
+              const aktuell = findeGutschein(geschenk.id);
+              if (!aktuell || aktuell.eingeloestAm || aktuell.umgetauschtAm) { return; }
+              aktuell.eingeloestAm = heutigesDatum();
+              speicher.speichere();
+              sync.nachAenderung(true);
+              zeigeGeschenkeInhalt();
+              meldeRueckmeldung("Gutschein als eingelöst markiert.");
+              dialogFokus(document.getElementById("fortschrittZurueckKnopf"));
+            }
+          });
+        });
+        karte.appendChild(einloesen);
+      }
       inhalt.appendChild(karte);
     });
   }
 
-  const mami = element("div", "sterne-karte");
-  const mamiKnopf = element("button", "knopf", "🎁 Neuen Gutschein einlösen (für Mama)");
-  mamiKnopf.type = "button";
-  mamiKnopf.addEventListener("click", neuesGeschenkEinloesen);
-  mami.appendChild(mamiKnopf);
-  mami.appendChild(element("p", "rand", "Damit kannst du auch mal ohne Bonussterne etwas verschenken."));
-  inhalt.appendChild(mami);
 }
 
 /* ------------- Spielstand sichern und laden (Umzug auf einen anderen PC) --------------- */
@@ -3027,6 +3124,7 @@ function zeigeStatistikInhalt() {
     " · 🎁 " + daten.geschenke.length + " Geschenke"));
   uebersicht.appendChild(element("p", "rand", "Nichts wird überschrieben – jede Runde wird angehängt. Mit „Statistik herunterladen“ bekommst du immer eine neue Datei für Excel."));
   inhalt.appendChild(uebersicht);
+  inhalt.appendChild(baueZeitstatistik(daten.runden));
 
   // Übe-Kalender der letzten 28 Tage
   inhalt.appendChild(baueKalender(daten));
@@ -3054,6 +3152,30 @@ function zeigeStatistikInhalt() {
     tabelle.appendChild(zeile);
   });
   inhalt.appendChild(tabelle);
+}
+
+function baueZeitstatistik(runden) {
+  const karte = element("div", "sterne-karte");
+  karte.appendChild(element("h3", null, "Übezeit nach Bereich"));
+  const summen = {};
+  let erfasst = 0;
+  runden.forEach(function (eintrag) {
+    if (!eintrag.uebezeiten) { return; }
+    erfasst += 1;
+    Object.entries(eintrag.uebezeiten).forEach(function ([bereich, ms]) {
+      summen[bereich] = (summen[bereich] || 0) + ms;
+    });
+  });
+  karte.appendChild(element("p", null, erfasst
+    ? "Gesamt: " + dauerText(uebezeitSumme(summen)) + " · " + erfasst + " von " + runden.length + " Runden mit Zeitmessung"
+    : "Die bisherigen Runden haben noch keine Zeitmessung."));
+  const liste = element("ul");
+  Object.keys(ZEITBEREICHE).forEach(function (bereich) {
+    if (summen[bereich] === undefined) { return; }
+    liste.appendChild(element("li", null, ZEITBEREICHE[bereich] + ": " + dauerText(summen[bereich])));
+  });
+  if (erfasst) { karte.appendChild(liste); }
+  return karte;
 }
 
 function baueKalender(daten) {
@@ -3146,7 +3268,9 @@ function csvHerunterladen() {
   zeilen.push("MATHE ÜBEN – STATISTIK FÜR " + SPIELERIN.toUpperCase());
   zeilen.push("Stand;" + new Date().toLocaleString("de-DE", { timeZone: "Europe/Vienna" }));
   zeilen.push("");
-  zeilen.push("TYP;DATUM;UHRZEIT;MODUS;RICHTIG;GESAMT;STERNE;BONUS RICHTIG;ADDITION;SUBTRAKTION;MULTIPLIKATION;DIVISION;ZAHLENRAETSEL;GESCHICHTEN");
+  const zeitbereiche = Object.keys(ZEITBEREICHE);
+  zeilen.push("TYP;DATUM;UHRZEIT;MODUS;RICHTIG;GESAMT;STERNE;BONUS RICHTIG;ADDITION;SUBTRAKTION;MULTIPLIKATION;DIVISION;ZAHLENRAETSEL;GESCHICHTEN;ÜBEZEIT (SEK);" +
+    zeitbereiche.map(bereich => ZEITBEREICHE[bereich].toUpperCase() + " (SEK)").join(";"));
   daten.runden.forEach(function (eintrag) {
     function spalte(bereich) {
       const punkt = eintrag.bereiche && eintrag.bereiche[bereich];
@@ -3155,7 +3279,12 @@ function csvHerunterladen() {
     zeilen.push([
       eintrag.bonus ? "BONUSRUNDE" : "RUNDE", eintrag.datum || "", eintrag.uhrzeit || "", eintrag.modus || "",
       eintrag.richtig, eintrag.gesamt, eintrag.sterne, eintrag.bonusRichtig || 0,
-      spalte("add"), spalte("sub"), spalte("mul"), spalte("div"), spalte("raetsel"), spalte("geschichte")
+      spalte("add"), spalte("sub"), spalte("mul"), spalte("div"), spalte("raetsel"), spalte("geschichte"),
+      eintrag.uebezeiten ? Math.floor(uebezeitSumme(eintrag.uebezeiten) / 1000) : "",
+      ...zeitbereiche.map(function (bereich) {
+        const ms = eintrag.uebezeiten && eintrag.uebezeiten[bereich];
+        return ms === undefined ? "" : Math.floor(ms / 1000);
+      })
     ].map(csvZelle).join(";"));
   });
   zeilen.push("");
@@ -3163,10 +3292,10 @@ function csvHerunterladen() {
   zeilen.push("BONUSSTERNE;offen für nächstes Geschenk;" + daten.bonussterne);
   zeilen.push("BONUSSTERNE;höchstens pro Tag;" + EINSTELLUNGEN.bonusSterneProTag);
   zeilen.push("");
-  zeilen.push("GUTSCHEIN;DATUM;GETAUSCHT AM;UMGETAUSCHT ZU;TEXT");
+  zeilen.push("GUTSCHEIN;DATUM;GETAUSCHT AM;UMGETAUSCHT ZU;TEXT;EINGELÖST AM");
   daten.geschenke.forEach(function (geschenk) {
     zeilen.push(["GUTSCHEIN", geschenk.datum || "",
-      geschenk.umgetauschtAm || "", geschenk.neuerText || "", geschenk.text].map(csvZelle).join(";"));
+      geschenk.umgetauschtAm || "", geschenk.neuerText || "", geschenk.text, geschenk.eingeloestAm || ""].map(csvZelle).join(";"));
   });
 
   const inhalt = "\uFEFF" + zeilen.join("\r\n");
@@ -3922,17 +4051,22 @@ document.getElementById("sicherungKnopf").addEventListener("click", function () 
 });
 if (typeof window.addEventListener === "function") {
   window.addEventListener("pagehide", function () {
+    pausiereUebezeit();
     sichereTagesAntworten();
     speicher.speichere();
     // Beim Verlassen noch ausstehende Änderungen zum Repository schicken.
     if (sync.istKonfiguriert()) { sync.schieben().catch(function () {}); }
   });
+  window.addEventListener("pageshow", starteUebezeit);
 }
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState === "hidden") {
+    pausiereUebezeit();
     sichereTagesAntworten();
     speicher.speichere();
     if (sync.istKonfiguriert()) { sync.schieben().catch(function () {}); }
+  } else {
+    starteUebezeit();
   }
 });
 aktualisiereSpeicherHinweis();

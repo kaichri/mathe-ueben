@@ -130,14 +130,14 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(await page.evaluate(()=>gesamtSterne()),5);
       await page.locator('#kinoAusKnopf').click();await page.locator('#abbruchKnopf').click();
       assert(await page.locator('.bonus-welt-knopf[data-welt="gabby"]').isEnabled());
+      await page.evaluate(()=>Object.assign(speicher.daten(), {bonussterne: 2, bonusGesamt: 2}));
       await page.locator('.bonus-welt-knopf[data-welt="gabby"]').click();await fillCorrect(page,3);
-      await page.locator('#pruefenKnopf').dblclick();
-      assert.equal(await page.evaluate(()=>speicher.daten().bonussterne),3);
+      await page.locator('#pruefenKnopf').click();
+      assert.equal(await page.evaluate(()=>speicher.daten().bonussterne),5);
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),2);
+      await page.keyboard.press('Enter');assert(await page.locator('#geschenkUeberlagerung').isHidden());
       await page.locator('#abbruchKnopf').click();await page.locator('#sterneKnopf').click();
       await page.locator('[data-reiter="geschenke"]').click();
-      await page.getByRole('button',{name:'Neuen Gutschein einlösen',exact:false}).click();
-      await page.keyboard.press('Enter');assert(await page.locator('#geschenkUeberlagerung').isHidden());
       assert.equal(await page.evaluate(()=>speicher.daten().geschenke.length),1);
     });
 
@@ -324,7 +324,7 @@ async function layout(page){return page.evaluate(()=>{
       await page.evaluate(()=>zeigeFortschritt('daten'));
       await check(engine,'responsive savegame '+width,async()=>{const info=await layout(page);assert(info.documentWidth<=width+1 && !info.overflow.length,JSON.stringify(info));});
       await page.screenshot({path:path.join(output,engine+'-'+width+'-savegame.png')});
-      await page.evaluate(()=>geschenkAuswahlOeffnen({art:'geschenk',tauschId:null}));
+      await page.evaluate(()=>geschenkAuswahlOeffnen());
       await check(engine,'responsive gift selection '+width,async()=>{const info=await layout(page);assert(!info.overflow.length,JSON.stringify(info));});
       await page.keyboard.press('Escape');
     }

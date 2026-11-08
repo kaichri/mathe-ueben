@@ -43,7 +43,7 @@ test("100 full rounds over 25 days: worlds, 25 reloads, stars, vouchers and dail
       if(round===0) {
         g.run(`zeigeRunde(baueBonusRunde('${world}'))`);g.fill(3);
         g.run('pruefeRunde(); pruefeRunde()');
-        if(g.data().bonussterne>=5) g.run('geschenkGewaehlt(GESCHENKE[0].text, 5)');
+        if(g.data().bonussterne>=5) g.run('geschenkGewaehlt(GESCHENKE[0].text)');
         assert.equal(g.data().bonusTag.verteilt,3);
       }
     }

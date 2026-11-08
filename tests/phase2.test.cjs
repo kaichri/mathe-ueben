@@ -305,11 +305,9 @@ test("synthetic fallback stops for video, including already scheduled tones", as
   assert.equal(g.audios.length, 2);
 });
 
-test("voucher age uses Vienna calendar days across DST without changing stored dates", () => {
+test("the local date uses Vienna calendar days across DST", () => {
   const g = game({}, {now: "2026-03-30T22:30:00Z"});
   assert.equal(g.run("heutigesDatum()"), "2026-03-31");
-  assert.equal(g.run("liegtZurueck('2026-03-24')"), false);
-  assert.equal(g.run("liegtZurueck('2026-03-23')"), true);
 });
 
 test("pending autoplay and stale callbacks cannot create duplicate audio instances", async () => {
