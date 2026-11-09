@@ -36,6 +36,7 @@ function game(saved = {}, options = {}) {
       querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
     };
     n.classList = {
+      contains(name) { return n.className.split(/\s+/).includes(name); },
       add(...names) { n.className = [...new Set(n.className.split(/\s+/).concat(names))].join(" ").trim(); },
       remove(...names) { n.className = n.className.split(/\s+/).filter(s => !names.includes(s)).join(" "); },
       toggle(name, on) { if (on) this.add(name); else this.remove(name); }

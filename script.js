@@ -37,12 +37,12 @@ const GESCHENKE = [
 const SPEICHER_NAME = "mathe-ueben-fuer-emma";
 
 const BONUS_STUFEN_SCHRITT = 25;
-const MEILENSTEIN_BILDER = [
-  { figur: "hund", motiv: "motiv-ballons" },
-  { figur: "kittyFee", motiv: "spur-glitzer" },
-  { figur: "hund", motiv: "meilenstein-diamant" },
-  { figur: "panda", motiv: "meilenstein-pokal" },
-  { figur: "bandit", motiv: "meilenstein-hut" }
+const MEILENSTEINE = [
+  { figur: "hund", motiv: "motiv-ballons", text: "So hoch wie ein Keepy-Uppy-Sprung!" },
+  { figur: "kittyFee", motiv: "spur-glitzer", text: "Kitty Fee streut Glitzer für dich." },
+  { figur: "hund", motiv: "meilenstein-diamant", text: "Diamond Bluey! Du bist eine Mathe-Heldin." },
+  { figur: "panda", motiv: "meilenstein-pokal", text: "Pandy-Pokal für dich!" },
+  { figur: "bandit", motiv: "meilenstein-hut", text: "Bandit zieht den Hut vor dir." }
 ];
 
 function naechsteBonusStufe(sterne) {
@@ -1254,11 +1254,21 @@ function themenSymbol() {
 
 const FIGURENBILDER = {
   hund: "bluey", bingo: "bingo", chilli: "chilli", bandit: "bandit",
+  muffin: "muffin", socks: "socks", rusty: "rusty", chloe: "chloe",
+  mackenzie: "mackenzie", snickers: "snickers",
   gabbykopf: "gabby", panda: "pandy", kuchi: "kuchi", meerkatze: "meerkatze",
   carlita: "carlita", ratkatz: "ratkatz", kittyFee: "kitty-fee", dooziekopf: "doozie", puggie: "puggie",
   paillette: "paillette", traumpfoetchen: "traumpfoetchen",
   pixiepfoetchen: "pixiepfoetchen", spielpfoetchen: "spielpfoetchen", swenny: "swenny",
-  sahnepfoetchen: "sahnepfoetchen"
+  sahnepfoetchen: "sahnepfoetchen", babybox: "babybox", djKatzenminze: "dj-katzenminze",
+  kuschelkatze: "kuschelkatze", marty: "marty", bastelpfoetchen: "bastelpfoetchen",
+  crouton: "crouton"
+};
+
+const MASKOTTCHEN_NAMEN = {
+  kittyFee: "Kitty Fee",
+  babybox: "Baby Box",
+  djKatzenminze: "DJ Katzenminze"
 };
 
 const DOOZIE_GESCHICHTENFIGUREN = new Map([
@@ -1314,6 +1324,7 @@ function heutigesDatum() {
 }
 
 function initialisiereWintermodus() {
+  const schluessel = "mathe-ueben-winter";
   const knopf = document.getElementById("winterKnopf");
   const schnee = document.getElementById("winterSchnee");
   for (let i = 0; i < 15; i += 1) {
@@ -1328,9 +1339,22 @@ function initialisiereWintermodus() {
     schnee.hidden = !aktiv;
     knopf.setAttribute("aria-pressed", String(aktiv));
   }
-  const monat = wienerDatumTeile().month;
-  setzeWinter(monat === "12" || monat === "01");
-  knopf.addEventListener("click", function () { setzeWinter(schnee.hidden); });
+  let gespeichert = false;
+  try {
+    gespeichert = window.localStorage.getItem(schluessel) === "an";
+  } catch (fehler) {
+    // Ohne Browser-Speicher bleibt der Wintermodus beim Start aus.
+  }
+  setzeWinter(gespeichert);
+  knopf.addEventListener("click", function () {
+    const aktiv = schnee.hidden;
+    setzeWinter(aktiv);
+    try {
+      window.localStorage.setItem(schluessel, aktiv ? "an" : "aus");
+    } catch (fehler) {
+      // Der Schalter funktioniert auch ohne Browser-Speicher.
+    }
+  });
 }
 
 function verschiebeKalendertag(datum, tage) {
@@ -2352,7 +2376,7 @@ function pruefeBonusRunde() {
     kasten.appendChild(element("p", "ergebnis-zeile",
       "🌟 " + vergeben + " Bonusstern" + (vergeben === 1 ? "" : "e") + " geschafft!"));
     if (EINSTELLUNGEN.spaessig) {
-      sternenRegen();
+      sternenRegen(vergeben === offenVorher);
     }
     musik.fanfare(5);
   } else {
@@ -2832,11 +2856,11 @@ function zeigeSterneInhalt() {
   const summe = gesamtSterne();
   const ziel = naechsteBonusStufe(summe);
   inhalt.appendChild(element("p", "sterne-summe", "Du hast schon " + summe + " Bonussterne gesammelt."));
-  const letzteStufe = Math.max(MEILENSTEIN_BILDER.length, ziel / BONUS_STUFEN_SCHRITT);
-  const ersteStufe = Math.max(1, letzteStufe - MEILENSTEIN_BILDER.length + 1);
+  const letzteStufe = Math.max(MEILENSTEINE.length, ziel / BONUS_STUFEN_SCHRITT);
+  const ersteStufe = Math.max(1, letzteStufe - MEILENSTEINE.length + 1);
   for (let stufe = ersteStufe; stufe <= letzteStufe; stufe += 1) {
     const punkte = stufe * BONUS_STUFEN_SCHRITT;
-    const stein = MEILENSTEIN_BILDER[(stufe - 1) % MEILENSTEIN_BILDER.length];
+    const stein = MEILENSTEINE[(stufe - 1) % MEILENSTEINE.length];
     const erreicht = summe >= punkte;
     const zeile = element("div", "meilenstein" + (erreicht ? "" : " leer"));
     const bild = element("span", "meilenstein-bild");
@@ -2844,7 +2868,7 @@ function zeigeSterneInhalt() {
     bild.appendChild(figurBild(stein.figur));
     bild.appendChild(symbol(stein.motiv, "meilenstein-motiv"));
     zeile.appendChild(bild);
-    zeile.appendChild(element("span", null, (erreicht ? "✓ " : "○ ") + punkte + " Bonussterne"));
+    zeile.appendChild(element("span", null, (erreicht ? "✓ " : "○ ") + punkte + " Bonussterne – " + stein.text));
     inhalt.appendChild(zeile);
   }
 
@@ -3702,42 +3726,137 @@ const musik = (function () {
 
 /* ------------- Maskottchen und Sternenregen ------------- */
 
-function mascottchenAuswahl() {
+function mascottchenAuswahl(startseite = false) {
   if (modus === "bluey") {
-    return ["hund", "bingo", "chilli", "bandit"];
+    const figuren = ["hund", "bingo", "chilli", "bandit"];
+    return startseite ? figuren.concat("muffin", "socks", "rusty", "chloe", "mackenzie", "snickers") : figuren;
   }
   if (modus === "gabby") {
-    return ["gabbykopf", "panda", "kuchi", "meerkatze", "carlita", "ratkatz"];
+    const figuren = ["gabbykopf", "panda", "kuchi", "meerkatze", "carlita", "ratkatz"];
+    return startseite ? figuren.concat("kittyFee", "babybox", "djKatzenminze", "kuschelkatze", "marty") : figuren;
   }
-  return ["dooziekopf", "puggie", "sahnepfoetchen", "paillette", "swenny", "pixiepfoetchen"];
+  const figuren = ["dooziekopf", "puggie", "sahnepfoetchen", "paillette", "swenny", "pixiepfoetchen"];
+  return startseite ? figuren.concat("traumpfoetchen", "spielpfoetchen", "bastelpfoetchen", "crouton") : figuren;
+}
+
+function macheMaskottchenZiehbar(knopf) {
+  const startseite = document.getElementById("startBildschirm");
+  let griff = null;
+  let gezogen = false;
+  let frame = null;
+  let links = 0;
+  let oben = 0;
+  let vx = 0;
+  let vy = 0;
+
+  function positioniere(x, y) {
+    const groesse = knopf.offsetWidth;
+    const maxX = Math.max(0, document.documentElement.clientWidth - groesse);
+    const maxY = Math.max(0, document.documentElement.clientHeight - groesse);
+    links = Math.max(0, Math.min(maxX, x));
+    oben = Math.max(0, Math.min(maxY, y));
+    if (links === 0 || links === maxX) { vx = links === 0 ? Math.abs(vx) : -Math.abs(vx); }
+    if (oben === 0 || oben === maxY) { vy = oben === 0 ? Math.abs(vy) : -Math.abs(vy); }
+    knopf.style.left = links + "px";
+    knopf.style.top = oben + "px";
+  }
+
+  knopf.addEventListener("pointerdown", function (ereignis) {
+    if (!ereignis.isPrimary || ereignis.button !== 0) { return; }
+    if (frame !== null) { window.cancelAnimationFrame(frame); frame = null; }
+    gezogen = false;
+    const ort = knopf.getBoundingClientRect();
+    griff = { id: ereignis.pointerId, links: ort.left, oben: ort.top,
+      x: ereignis.clientX, y: ereignis.clientY, letzterX: ereignis.clientX, letzterY: ereignis.clientY,
+      letzteBewegung: ereignis.timeStamp, tempoX: 0, tempoY: 0 };
+    knopf.setPointerCapture(griff.id);
+  });
+
+  knopf.addEventListener("pointermove", function (ereignis) {
+    if (!griff || ereignis.pointerId !== griff.id) { return; }
+    const dx = ereignis.clientX - griff.x;
+    const dy = ereignis.clientY - griff.y;
+    if (!gezogen && Math.hypot(dx, dy) < 5) { return; }
+    gezogen = true;
+    const richtungX = ereignis.clientX - griff.letzterX;
+    const richtungY = ereignis.clientY - griff.letzterY;
+    const laenge = Math.hypot(richtungX, richtungY);
+    if (laenge > 0) {
+      const dauer = Math.max(16, ereignis.timeStamp - griff.letzteBewegung);
+      const tempo = Math.min(180, laenge / dauer * 500);
+      griff.tempoX = tempo * richtungX / laenge;
+      griff.tempoY = tempo * richtungY / laenge;
+      griff.letzteBewegung = ereignis.timeStamp;
+    }
+    griff.letzterX = ereignis.clientX;
+    griff.letzterY = ereignis.clientY;
+    knopf.classList.add("verschoben", "wird-gezogen");
+    positioniere(griff.links + dx, griff.oben + dy);
+  });
+
+  knopf.addEventListener("lostpointercapture", function (ereignis) {
+    const letzterGriff = griff;
+    griff = null;
+    knopf.classList.remove("wird-gezogen");
+    if (!gezogen || !letzterGriff || !window.requestAnimationFrame ||
+        (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) { return; }
+    const restSchwung = Math.max(0, 1 - (ereignis.timeStamp - letzterGriff.letzteBewegung) / 100);
+    vx = letzterGriff.tempoX * restSchwung;
+    vy = letzterGriff.tempoY * restSchwung;
+    if (Math.hypot(vx, vy) < 5) { return; }
+    let vorher = null;
+    function schwebe(zeit) {
+      frame = null;
+      if (!knopf.isConnected || startseite.hidden) { return; }
+      const sekunden = vorher === null ? 0 : Math.min((zeit - vorher) / 1000, 0.05);
+      vorher = zeit;
+      positioniere(links + vx * sekunden, oben + vy * sekunden);
+      frame = window.requestAnimationFrame(schwebe);
+    }
+    frame = window.requestAnimationFrame(schwebe);
+  });
+
+  knopf.addEventListener("click", function (ereignis) {
+    if (gezogen && ereignis.detail > 0) { return; }
+    musik.ton("huepf");
+  });
 }
 
 function fuelleMaskottchen() {
   const reihe = document.getElementById("maskottchenReihe");
   reihe.textContent = "";
-  mascottchenAuswahl().forEach(function (figur) {
+  const figuren = mascottchenAuswahl(true);
+  for (let i = figuren.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [figuren[i], figuren[j]] = [figuren[j], figuren[i]];
+  }
+  figuren.forEach(function (figur) {
     const knopf = element("button", "maskottchen");
     knopf.type = "button";
-    const name = FIGURENBILDER[figur].replace("pfoetchen", "pfötchen");
-    knopf.title = name[0].toUpperCase() + name.slice(1) + " antippen";
-    knopf.appendChild(figurBild(figur));
-    knopf.addEventListener("click", function () {
-      knopf.classList.remove("huepfen");
-      // kurze Zwangspause, damit die Animation neu startet
-      window.setTimeout(function () {
-        knopf.classList.add("huepfen");
-      }, 20);
-      musik.ton("huepf");
-    });
-    reihe.appendChild(knopf);
+    const name = MASKOTTCHEN_NAMEN[figur] || FIGURENBILDER[figur].replace("pfoetchen", "pfötchen");
+    knopf.title = name[0].toUpperCase() + name.slice(1);
+    const istKind = modus === "bluey" && figur !== "chilli" && figur !== "bandit";
+    const bild = figurBild(figur, istKind ? "maskottchen-kind" : "");
+    if (figur === "crouton") { bild.classList.add("maskottchen-crouton"); }
+    bild.draggable = false;
+    knopf.appendChild(bild);
+    macheMaskottchenZiehbar(knopf);
+    const platz = element("div", "maskottchen-platz");
+    platz.appendChild(knopf);
+    reihe.appendChild(platz);
   });
 }
 
-function sternenRegen() {
+let regenFolge = 0;
+
+function sternenRegen(mitBallons = false) {
   const feld = document.getElementById("regen");
+  if (!mitBallons && feld.classList.contains("ballon-feier")) { return; }
+  const folge = ++regenFolge;
+  feld.classList.toggle("ballon-feier", mitBallons);
   feld.textContent = "";
   feld.hidden = false;
-  const zeichen = ["★", "☆", "✦", "♥", "✿", "🌟"];
+  const zeichen = mitBallons ? ["🎊", "✦", "🎉", "★", "✨"] : ["★", "☆", "✦", "♥", "✿", "🌟"];
   for (let i = 0; i < 34; i++) {
     const troepfchen = element("span", "regen-troepfchen", zeichen[i % zeichen.length]);
     troepfchen.style.left = (2 + Math.random() * 96) + "%";
@@ -3746,10 +3865,22 @@ function sternenRegen() {
     troepfchen.style.fontSize = (14 + Math.random() * 26) + "px";
     feld.appendChild(troepfchen);
   }
+  if (mitBallons) {
+    for (let i = 0; i < 12; i += 1) {
+      const ballon = element("span", "regen-ballon", "🎈");
+      ballon.style.left = (3 + i * 8) + "%";
+      ballon.style.animationDuration = (3.3 + Math.random() * 1.8) + "s";
+      ballon.style.animationDelay = (Math.random() * 0.7) + "s";
+      ballon.style.fontSize = (24 + Math.random() * 24) + "px";
+      feld.appendChild(ballon);
+    }
+  }
   window.setTimeout(function () {
+    if (folge !== regenFolge) { return; }
     feld.hidden = true;
     feld.textContent = "";
-  }, 5600);
+    feld.classList.remove("ballon-feier");
+  }, mitBallons ? 6000 : 5600);
 }
 
 /* ------------- Maus-Spur: die Welt malt Symbole hinter dem Zeiger her ------------- */
@@ -3798,8 +3929,10 @@ function starteZeigerSpur() {
       teilchen.style.color = motiv.farben[spurNummer % motiv.farben.length];
       teilchen.appendChild(symbol(spurNummer % 6 === 0 ? motiv.extra : motiv.haupt));
     }
-    teilchen.style.left = (ereignis.clientX + Math.random() * 16 - 8) + "px";
-    teilchen.style.top = (ereignis.clientY + Math.random() * 16 - 8) + "px";
+    const x = ereignis.clientX + Math.random() * 16 - 8;
+    const y = ereignis.clientY + Math.random() * 16 - 8;
+    teilchen.style.left = x + "px";
+    teilchen.style.top = y + "px";
     teilchen.style.transform = "rotate(" + (Math.random() * 50 - 25) + "deg)";
     feld.appendChild(teilchen);
     unterwegs += 1;
@@ -3828,31 +3961,45 @@ function setzeModus(neuerModus) {
   aktualisiereWeltwahl();
 }
 
+function heutigeQuizWelt() {
+  const { tagesSet, runden } = speicher.daten();
+  const heute = heutigesDatum();
+  if (tagesSet && tagesSet.datum === heute && tagesSet.fertig) { return tagesSet.welt; }
+  // Ein neuer Versuch in derselben Welt öffnet die anderen Welten nicht wieder.
+  const quiz = runden.findLast(eintrag => eintrag.datum === heute && !eintrag.bonus &&
+    Object.hasOwn(WELT_NAMEN, eintrag.modus) && (eintrag.wiederholung === false ||
+      (eintrag.wiederholung === undefined && eintrag.gesamt === 50 && !eintrag.uebezeiten?.wiederholung)));
+  return quiz?.modus;
+}
+
 function aktualisiereWeltwahl() {
   const offen = bonusPlaetzeHeute();
   const welten = speicher.daten().bonusWelten;
+  const quizWelt = heutigeQuizWelt();
   const bonusText = offen > 0
     ? "Noch " + offen + (offen === 1 ? " Bonusstern" : " Bonussterne") + " für heute!"
     : "Morgen warten " + EINSTELLUNGEN.bonusSterneProTag + " neue Bonussterne.";
   document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
     const welt = knopf.dataset.modus;
     const bonus = welten.includes(welt);
+    const gesperrt = Boolean(quizWelt && welt !== quizWelt && !bonus);
+    knopf.disabled = gesperrt;
     knopf.classList.toggle("themen-bonus", bonus);
     knopf.querySelector(".thema-titel").textContent =
       bonus ? "Bonuswelt " + WELT_NAMEN[welt] + " 🌟" : WELT_NAMEN[welt];
-    knopf.querySelector(".thema-text").hidden = bonus;
+    knopf.querySelector(".thema-text").hidden = bonus || gesperrt;
     const status = knopf.querySelector(".thema-bonusstatus");
-    status.hidden = !bonus;
-    status.textContent = bonus ? bonusText : "";
+    status.hidden = !bonus && !gesperrt;
+    status.textContent = bonus ? bonusText : gesperrt ? "Heute schon ein Quiz gespielt." : "";
   });
 
   const los = document.getElementById("losKnopf");
   const set = speicher.daten().tagesSet;
   const heute = set && set.datum === heutigesDatum();
   const bonus = welten.includes(modus);
-  los.disabled = bonus && offen === 0;
+  los.disabled = bonus ? offen === 0 : Boolean(quizWelt && modus !== quizWelt);
   los.textContent = bonus ? (offen > 0 ? "Bonuswelt spielen!" : "Bonus für heute geschafft!")
-    : heute ? (set.fertig ? "Neues Quiz für heute!" : "Weiterspielen!") : "Los geht's!";
+    : los.disabled ? "Für heute gesperrt" : heute ? (set.fertig ? "Neues Quiz für heute!" : "Weiterspielen!") : "Los geht's!";
   document.getElementById("matheWeiterKnopf").hidden = !(bonus && heute && !set.fertig);
 }
 
@@ -3912,11 +4059,13 @@ document.getElementById("startName").textContent = SPIELERIN;
 
 document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
   knopf.addEventListener("click", function () {
-    setzeModus(knopf.dataset.modus);
+    if (!knopf.disabled && knopf.dataset.modus !== modus) { setzeModus(knopf.dataset.modus); }
   });
 });
 
 function starteMatheVonStart() {
+  const quizWelt = heutigeQuizWelt();
+  if (quizWelt && modus !== quizWelt) { return; }
   const set = speicher.daten().tagesSet;
   const heute = heutigesDatum();
   if (set && set.datum === heute && set.fertig) {
@@ -3952,6 +4101,7 @@ function starteMatheVonStart() {
 document.getElementById("matheWeiterKnopf").addEventListener("click", starteMatheVonStart);
 document.getElementById("losKnopf").addEventListener("click", function () {
   aktualisiereWeltwahl();
+  if (document.getElementById("losKnopf").disabled) { return; }
   if (weltHeuteFreigeschaltet(modus)) {
     startBonusWelt(modus);
   } else {

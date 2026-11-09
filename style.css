@@ -230,6 +230,19 @@ main {
   box-shadow: 0 3px 0 #9e6a18;
 }
 
+.themen-knopf:disabled {
+  filter: grayscale(1);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.start-aktionen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
 .knopf.home-knopf {
   display: inline-flex;
   align-items: center;
@@ -778,30 +791,36 @@ main {
    Maskottchen zum Anklicken
    ========================================================= */
 
-.begruessung-zeile {
+.maskottchen-reihe {
+  --maskottchen-groesse: 76px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.maskottchen-reihe { display: flex; flex-wrap: wrap; gap: 8px; }
+.maskottchen-platz, .maskottchen {
+  width: var(--maskottchen-groesse);
+  height: var(--maskottchen-groesse);
+}
 
 .maskottchen {
-  width: 76px;
-  height: 76px;
   border: none;
   background: none;
   padding: 4px;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   border-radius: 18px;
 }
 
 .maskottchen:hover { background: var(--akzent-hell); }
 .maskottchen .symbol { width: 100%; height: 100%; }
+.maskottchen-kind { transform: scale(0.8); transform-origin: center bottom; }
+.maskottchen-crouton { transform: scale(1.2); }
 
-.maskottchen.huepfen { animation: huepfen .6s ease; }
+.maskottchen.verschoben { position: fixed; z-index: 3; }
+.maskottchen.wird-gezogen { z-index: 4; cursor: grabbing; }
 
 .ergebnis-maskottchen {
   display: flex;
@@ -814,13 +833,6 @@ main {
 .maskottchen-gross { width: 64px; height: 64px; }
 
 .maskottchen-gross.purzelbaum { animation: purzelbaum 1.2s ease; }
-
-@keyframes huepfen {
-  0% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-15px) rotate(-7deg); }
-  60% { transform: translateY(0) rotate(5deg); }
-  100% { transform: translateY(0) rotate(0deg); }
-}
 
 @keyframes purzelbaum {
   0% { transform: rotate(0deg) translateY(0); }
@@ -964,6 +976,18 @@ main {
 
 @keyframes herunterfallen {
   to { transform: translateY(114vh) rotate(360deg); opacity: .85; }
+}
+
+.regen-ballon {
+  position: absolute;
+  bottom: -64px;
+  animation: ballon-aufstieg linear forwards;
+}
+
+@keyframes ballon-aufstieg {
+  35% { transform: translate(14px, -40vh) rotate(8deg); }
+  70% { transform: translate(-12px, -80vh) rotate(-8deg); }
+  100% { transform: translate(8px, calc(-100vh - 64px)); }
 }
 
 /* =========================================================
@@ -1140,7 +1164,7 @@ main {
   .geld-zeichen { font-size: 17px; }
   .aufgaben-raster { grid-template-columns: minmax(0, 1fr); }
   .bereich-kopf { flex-wrap: wrap; }
-  .maskottchen { width: 56px; height: 56px; }
+  .maskottchen-reihe { --maskottchen-groesse: 56px; }
   .kalender-punkt { font-size: 12px; }
   .bereich-zeile { grid-template-columns: 110px 1fr 48px; }
 }
@@ -1149,7 +1173,7 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
-  .winter-schnee { display: none; }
+  .winter-schnee, .regen { display: none; }
 }
 
 /* =========================================================

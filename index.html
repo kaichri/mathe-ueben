@@ -298,10 +298,8 @@
 
   <!-- --------------- Startseite --------------- -->
   <section class="bildschirm" id="startBildschirm">
-    <div class="begruessung-zeile">
-      <h2 class="begruessung">Hallo <span id="startName">Emma</span>!</h2>
-      <div class="maskottchen-reihe" id="maskottchenReihe"></div>
-    </div>
+    <div class="maskottchen-reihe" id="maskottchenReihe"></div>
+    <h2 class="begruessung">Hallo <span id="startName">Emma</span>!</h2>
     <p class="start-info">
       Heute gibt es <strong>50 Matheaufgaben</strong>.
       Ab <strong>45 richtigen Antworten</strong> öffnet sich die Bonuswelt.
@@ -326,13 +324,15 @@
       <button class="themen-knopf" type="button" data-modus="doozie" aria-pressed="false">
         <img class="symbol figurenbild" src="bilder/doozie.webp" alt="">
         <span class="thema-titel">Doozies Hundehaus</span>
-        <span class="thema-text">Mit Doozie (Gabbys Schwester), Puggie, Sahnepfötchen, Bastelpfötchen, Pogi, Crouton, Paillette und den Doozie-Hunden</span>
+        <span class="thema-text">Mit Doozie (Gabbys Schwester), Puggie, Sahnepfötchen, Bastelpfötchen, Crouton, Paillette und den Doozie-Hunden</span>
         <span class="thema-text thema-bonusstatus" hidden></span>
       </button>
     </div>
 
-    <button class="knopf primaer riesig" id="losKnopf" type="button">Los geht's!</button>
-    <button class="knopf" id="matheWeiterKnopf" type="button" hidden>Mathe-Runde fortsetzen</button>
+    <div class="start-aktionen">
+      <button class="knopf primaer riesig" id="losKnopf" type="button">Los geht's!</button>
+      <button class="knopf" id="matheWeiterKnopf" type="button" hidden>Mathe-Runde fortsetzen</button>
+    </div>
 
     <div class="ergebnis-kasten" id="startErgebnis" hidden></div>
   </section>

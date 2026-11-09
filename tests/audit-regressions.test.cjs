@@ -391,6 +391,9 @@ test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt
   assert.match(karte.querySelector(".thema-titel").textContent, /Bonuswelt Gabbys Puppenhaus/);
   assert.equal(g.run("document.querySelectorAll('.themen-knopf').length"), 3);
   assert.equal(g.run("document.querySelectorAll('.themen-bonus').length"), 1);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[0].disabled"), true);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[2].disabled"), true);
+  assert.equal(karte.disabled, false);
   g.nodes.get("losKnopf").emit("click");
   assert.equal(g.run("runde.bereichsArt"), "bonus");
   assert.equal(g.run("runde.welt"), "gabby");
@@ -399,6 +402,37 @@ test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt
   g.nodes.get("abbruchKnopf").emit("click");
   assert.equal(karte.querySelector(".thema-titel").textContent, "Gabbys Puppenhaus");
   assert.equal(karte.querySelector(".thema-bonusstatus").hidden, true);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[0].disabled"), false);
+});
+
+test("Nach einem abgeschlossenen Quiz bleiben andere Welten beim erneuten Versuch gesperrt", () => {
+  const g = game({}, { now: JETZT });
+  const andereWelt = g.run("document.querySelectorAll('.themen-knopf')[1]");
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(40);
+  abgeben(g);
+  g.nodes.get("abbruchKnopf").emit("click");
+  assert.equal(andereWelt.disabled, true);
+  andereWelt.emit("click");
+  assert.equal(g.run("modus"), "bluey");
+  g.run("neuesTagesSet(); aktualisiereWeltwahl()");
+  assert.equal(andereWelt.disabled, true);
+  assert.equal(g.nodes.get("losKnopf").disabled, false);
+});
+
+test("Ballons feiern erst den letzten Bonusstern des Tages", () => {
+  const g = game({}, { now: JETZT });
+  g.run("EINSTELLUNGEN.spaessig = true; zeigeRunde(neuesTagesSet())");
+  g.fill(50);
+  g.run("pruefeRunde(); startBonusWelt('bluey')");
+  g.fill(4);
+  abgeben(g, 1);
+  const regen = g.nodes.get("regen");
+  assert.equal(regen.classList.contains("ballon-feier"), false);
+  g.fill(5);
+  g.run("pruefeRunde()");
+  assert.equal(regen.classList.contains("ballon-feier"), true);
+  assert.equal(regen.children.filter(kind => kind.className === "regen-ballon").length, 12);
 });
 
 /* ---------------------------------------------------------------- BEFUND-9 */
