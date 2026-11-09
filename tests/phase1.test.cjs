@@ -154,7 +154,7 @@ test("checking the same bonus card three times awards one star and one record", 
   const g = game(); g.round("bonus", 1, 1);
   g.run("pruefeRunde()"); const writes = g.writes();
   g.run("pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 1);
+  assert.equal(g.data().bonusGesamt, 1);
   assert.equal(g.data().bonusGesamt, 1);
   assert.equal(g.data().bonusTag.verteilt, 1);
   assert.equal(g.data().runden.length, 1);
@@ -166,9 +166,9 @@ test("multiple bonus cards: later corrections reward only new solutions", () => 
   const g = game(); g.round("bonus", 3, 1);
   g.run("pruefeRunde(); pruefeRunde()");
   g.answer(1, "7"); g.run("pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 2);
+  assert.equal(g.data().bonusGesamt, 2);
   g.answer(2, "7"); g.run("pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 3);
+  assert.equal(g.data().bonusGesamt, 3);
   assert.equal(g.data().bonusGesamt, 3);
   assert.equal(g.data().bonusTag.verteilt, 3);
   assert.equal(g.data().runden.length, 1);
@@ -181,7 +181,7 @@ test("multiple bonus cards: later corrections reward only new solutions", () => 
 test("three correct bonus cards checked three times produce three stars total", () => {
   const g = game(); g.round("bonus", 3, 3);
   g.run("pruefeRunde(); pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 3);
+  assert.equal(g.data().bonusGesamt, 3);
   assert.equal(g.data().runden.length, 1);
 });
 
@@ -189,7 +189,7 @@ test("zero-point bonus checks create only one record and can be corrected", () =
   const g = game(); g.round("bonus", 1, 0);
   g.run("pruefeRunde(); pruefeRunde(); pruefeRunde()");
   assert.equal(g.data().runden.length, 1);
-  assert.equal(g.data().bonussterne, 0);
+  assert.equal(g.data().bonusGesamt, 0);
   g.answer(0, "7"); g.run("pruefeRunde()");
   assert.equal(g.data().runden.length, 1);
   assert.equal(g.data().runden[0].bonusRichtig, 1);
@@ -198,12 +198,12 @@ test("zero-point bonus checks create only one record and can be corrected", () =
 test("daily bonus limit and old statistics/rewards are preserved", () => {
   const old = { bonus: true, richtig: 2, gesamt: 2, sterne: 0, bonusRichtig: 2, bereiche: {} };
   const g = game({ bonussterne: 2, bonusGesamt: 2, runden: [old], geschenke: [{id: 'old', text: 'Gift'}] });
-  g.run("holBonusTag().verteilt = 2"); g.round("bonus", 3, 3);
+  g.run("holBonusTag().verteilt = 4"); g.round("bonus", 3, 3);
   g.run("pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 3);
-  assert.equal(g.data().bonusTag.verteilt, 3);
+  assert.equal(g.data().bonusGesamt, 3);
+  assert.equal(g.data().bonusTag.verteilt, 5);
   assert.equal(g.data().runden.length, 2);
-  assert.deepEqual(JSON.parse(JSON.stringify(g.data().runden[0])), old);
+  assert.deepEqual(JSON.parse(JSON.stringify(g.data().runden[0])), Object.fromEntries(Object.entries(old).filter(([key]) => key !== "sterne")));
   assert.equal(g.data().geschenke[0].text, "Gift");
 });
 
@@ -212,13 +212,13 @@ test("one correct practice answer cannot unlock a bonus world", () => {
   assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), false);
 });
 
-test("daily round: exactly 25 of 50 unlocks the world", () => {
-  const g = game(); g.round("tages", 50, 25); g.run("pruefeRunde()");
+test("daily round: exactly 45 of 50 unlocks the world", () => {
+  const g = game(); g.round("tages", 50, 45); g.run("pruefeRunde()");
   assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), true);
 });
 
-test("daily round: 24 of 50 cannot unlock the world", () => {
-  const g = game(); g.round("tages", 50, 24); g.run("pruefeRunde()");
+test("daily round: 44 of 50 cannot unlock the world", () => {
+  const g = game(); g.round("tages", 50, 44); g.run("pruefeRunde()");
   assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), false);
 });
 

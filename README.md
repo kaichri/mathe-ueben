@@ -48,52 +48,30 @@ werden die ältesten Ausschlüsse gelockert.
   „Trotzdem abgeben“); bei 50 von 50 Antworten schließt es direkt ab.
 - Fehlerhafte Aufgaben lassen sich anschließend in einer Wiederholungsrunde üben.
 - „Neuer Versuch“ erzeugt nach einer Rückfrage ein neues Set für denselben Tag.
-  Die bisherigen Tagesantworten werden dabei ersetzt; verdiente Sterne,
+  Die bisherigen Tagesantworten werden dabei ersetzt; verdiente Bonussterne,
   Gutscheine und bereits für diesen Tag geöffnete Bonuswelten bleiben erhalten.
 - Am nächsten Tag wird beim Starten eine neue Tagesrunde erzeugt. Maßgeblich
   ist die Zeitzone **Europe/Vienna**, einschließlich Sommer-/Winterzeit. Sind
   von der Runde des Vortags noch Antworten gespeichert, fragt das Spiel vor dem
   Verwerfen nach.
 
-### Sterne, Bonuswelten und Gutscheine
+### Bonussterne, Bonuswelten und Gutscheine
 
-Reguläre Runden vergeben ein bis fünf Sterne:
+Mit **45 von 50 richtigen Antworten** in einer regulären Tagesrunde öffnet
+sich die Bonuswelt dieser Themenwelt für den Rest des Tages. Sie übernimmt
+ihren Platz in der Auswahl. Das Haus oben führt zurück zur Startseite.
 
-| Anteil richtig | Sterne |
-|---|---:|
-| Ab 90 % | 5 |
-| Ab 80 % | 4 |
-| Ab 60 % | 3 |
-| Ab 40 % | 2 |
-| Darunter | 1 |
+Pro richtig gelöster Knobelaufgabe gibt es **einen Bonusstern**, insgesamt
+bis zu **fünf pro Tag über alle Welten zusammen**. Jede Bonusrunde enthält
+so viele Aufgaben, wie an diesem Tag noch Bonussterne zu holen sind.
 
-Wiederholungsrunden vergeben **einen Stern je richtig gelöster Aufgabe**;
-falsch beantwortete Aufgaben geben keinen Stern. Es gibt **keine Obergrenze**:
-fünf Aufgaben mit drei richtigen ergeben drei Sterne, zwölf richtige ergeben
-zwölf Sterne. Bereits gespeicherte Sterne und abgeschlossene Runden werden
-durch diese Regel nicht rückwirkend verändert.
-
-Eine abgeschlossene reguläre Tagesrunde mit **mindestens 25 von 50** richtigen
-Antworten öffnet die Bonuswelt ihrer Themenwelt für diesen Tag.
-Wiederholungsrunden können keine Bonuswelt freischalten.
-
-In den Bonuswelten gibt es Knobelaufgaben mit freundlicher Rückmeldung.
-Eine freigeschaltete Bonuswelt nimmt bis zum nächsten Tag den Platz ihrer
-normalen Welt in der Auswahl ein. Das Haus oben führt zurück zur Startseite.
-Jede gelöste Bonuskarte vergibt ihren Stern einmal. Noch ungelöste Karten
-können weiter bearbeitet werden. Insgesamt sind **höchstens drei Bonussterne
-pro Tag über alle Welten zusammen** möglich.
-
-**Fünf Bonussterne ergeben einen auswählbaren Gutschein.** Das verfügbare
-Guthaben wird entsprechend vermindert; die insgesamt verdienten Bonussterne
-bleiben separat gespeichert. Offene Gutscheine können jederzeit umgetauscht
-oder als eingelöst markiert werden. Beim Umtausch ändert sich der Wunsch.
-Datum und Platz des Gutscheins bleiben erhalten. Beim Laden werden frühere
-Umtauschpaare zu einem Gutschein zusammengeführt.
+Alle **25 Bonussterne** ist eine neue Stufe erreicht. Für jede neue Stufe
+kann Emma einen Gutschein auswählen. Ihre Bonussterne sammelt sie weiter.
+Beim Umtausch eines offenen Gutscheins bleiben Datum und Platz erhalten.
 
 ### Weitere Funktionen
 
-- Lebenszeitsterne, Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
+- Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
 - Laufende Übezeit in der sichtbaren Runde sowie Zeit pro Bereich in der Statistik
   und im CSV-Export. Alte Runden bleiben ohne nachträgliche Zeitangabe erhalten.
 - Optionaler automatischer Abgleich über ein privates GitHub-Repository
@@ -174,11 +152,11 @@ Die Hintergrundmusik verwendet lokale MP3-Dateien. Doozies Hundehaus spielt
 ## Lokale Datenspeicherung
 
 Das Spiel speichert seine Daten im **`localStorage` des Browsers** unter
-`mathe-ueben-fuer-emma`, aktuell im Speicherformat Version 2. Gespeichert werden
+`mathe-ueben-fuer-emma`, aktuell im Speicherformat Version 3. Gespeichert werden
 unter anderem:
 
 - Tagesaufgaben, eingegebene Antworten und aktueller Abschnitt;
-- reguläre Lebenszeitsterne, Bonusguthaben und insgesamt verdiente Bonussterne;
+- insgesamt verdiente Bonussterne und noch offene Stufengutscheine;
 - Gutscheine mit ihrem aktuellen Wunsch und gegebenenfalls dem Einlösedatum;
 - Rundenhistorie, Bereichssummen, Tagesfreischaltungen und Einstellungen.
 
@@ -187,11 +165,10 @@ Optional liegen die Zugangsdaten für die GitHub-Synchronisierung unter einem
 Eintrag ist **nicht** Teil des Spielstands und wird weder exportiert noch
 mitgesichert; „Synchronisierung entfernen“ löscht ihn.
 
-Die Rundenhistorie ist auf 1.000 Einträge begrenzt. Lebenszeitsterne und
-Bereichssummen werden davon unabhängig erhalten. Beim Laden älterer Spielstände
-werden die noch nachweisbaren regulären Sterne übernommen, ohne sie bei jedem
-Neustart erneut zu addieren. Bereits vor dieser Migration entfernte
-Statistikzeilen lassen sich ohne ältere Sicherung nicht rekonstruieren.
+Die Rundenhistorie ist auf 1.000 Einträge begrenzt. Bonussterne und
+Bereichssummen werden davon unabhängig erhalten. Ältere Spielstände behalten
+ihre Bonussterne, Gutscheine, Runden und erfassten Übezeiten. Beim Wechsel
+auf Version 3 entstehen keine Gutscheine für bereits erreichte Stufen.
 
 Eingaben gelangen sofort in den Arbeitsspeicher; vollständige Schreibvorgänge
 werden beim Tippen um 250 ms gebündelt. Feld-/Abschnittswechsel, Bewertung und
@@ -231,7 +208,7 @@ Unter **„Einstellungen“ → „Spielstand“** stehen drei Knöpfe:
   mit derselben Prüfung wie beim Start (Version, Runden, Gutscheine,
   Bereichssummen, Tagesrunde, Antworten). Ist die Datei unbrauchbar, bleibt der
   bisherige Stand unverändert und es erscheint eine Meldung. Ist sie brauchbar,
-  zeigt eine Rückfrage, was enthalten ist (Sterne, Runden, Gutscheine, Datum);
+  zeigt eine Rückfrage, was enthalten ist (Bonussterne, Runden, Gutscheine, Datum);
   erst nach „Trotzdem laden“ wird geschrieben. Der bisherige Stand wird dabei
   automatisch als `mathe-vor-import-JJJJ-MM-TT.json` gesichert, danach startet
   das Spiel neu.
@@ -255,15 +232,14 @@ eigenen Stand mit der Datei:
 | Daten | Regel beim Zusammenführen |
 |---|---|
 | Runden der Historie | Vereinigung ohne Doppelung (Schlüssel ist der Zeitstempel), nach Zeit sortiert, neueste 1.000 bleiben |
-| Lebenszeitsterne | sichtbare Rundensterne werden exakt addiert; der nicht mehr sichtbare Rest (abgeschnittene Historie) wird als Maximum übernommen |
 | Bereichssummen | gleiche Rechnung je Bereich über die Runden hinweg |
 | Gutscheine | Vereinigung ohne Doppelung; der zuletzt geänderte Wunsch und der Einlösestatus bleiben erhalten |
-| Bonussterne | verdiente Sterne werden vereinigt, das Guthaben ist konservativ das Maximum (es entstehen keine Sterne) |
+| Bonussterne | verdiente Bonussterne aus beiden Historien werden ohne Doppelung vereinigt |
 | Tagesrunde | eine abgeschlossene Runde gewinnt vor einer offenen (verhindert Doppelbewertung), sonst das neuere Datum |
 | Merkzettel, Ausschlusslisten | Vereinigung, gekappt |
 | Bonus-Tag | neueres Datum; bei gleichem Tag `verteilt` = Maximum |
 
-Vor dem Schreiben zeigt eine Rückfrage, was hinzukommt („+2 Runden, +9 Sterne,
+Vor dem Schreiben zeigt eine Rückfrage, was hinzukommt („+2 Runden, +9 Bonussterne,
 +0 Gutscheine“); der bisherige Stand wird als `mathe-vor-merge-JJJJ-MM-TT.json`
 gesichert. Enthalten beide Stände bereits alles, meldet das Spiel „nichts zu
 ergänzen“ und schreibt nicht. Das Zusammenführen ist wiederholbar: dieselbe
@@ -271,8 +247,7 @@ Datei ein zweites Mal ergänzt nichts mehr.
 
 **Grenzen:** Es ist kein echter Drei-Wege-Merge. Ein nach dem Auseinanderlaufen
 auf beiden Geräten *unterschiedlich* veränderter Tagesstand kann nicht vereinigt
-werden – hier gewinnt die abgeschlossene bzw. die neuere Runde. Das Bonusguthaben
-wird nicht addiert, damit keine Sterne doppelt entstehen.
+werden – hier gewinnt die abgeschlossene bzw. die neuere Runde.
 
 ### Automatische Synchronisierung über GitHub (optional)
 

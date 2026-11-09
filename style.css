@@ -126,8 +126,7 @@ body {
 
 .sterne-anzeige {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
   font: inherit;
   font-size: 22px;
   font-weight: 700;
@@ -136,11 +135,7 @@ body {
   border: 2px solid var(--akzent);
   border-radius: 999px;
   min-height: var(--kopf-knopf-hoehe);
-  padding: 0 14px;
-  cursor: pointer;
 }
-
-.sterne-anzeige:hover { background: var(--weiss); }
 
 .kopf .symbol {
   width: var(--kopf-symbol-groesse);
@@ -148,8 +143,21 @@ body {
   color: var(--akzent);
 }
 
-.stern-zaehler { display: inline-flex; align-items: center; gap: 4px; }
-.stern-zaehler + .stern-zaehler { border-left: 1px solid currentColor; padding-left: 8px; }
+.stern-zaehler {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.stern-zaehler:first-child { border-radius: 999px 0 0 999px; }
+.stern-zaehler:last-child { border-radius: 0 999px 999px 0; }
+.stern-zaehler + .stern-zaehler { border-left: 1px solid currentColor; }
+.stern-zaehler:hover { background: var(--weiss); }
 
 /* ---------------- Seiten ---------------- */
 
@@ -655,6 +663,9 @@ main {
 }
 
 .meilenstein {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   background: var(--akzent-hell);
   border: 2px solid var(--akzent);
   border-radius: var(--runden);
@@ -664,6 +675,21 @@ main {
 }
 
 .meilenstein.leer { border-style: dashed; }
+
+.meilenstein-bild {
+  flex: 0 0 66px;
+  position: relative;
+}
+
+.meilenstein-bild .figurenbild { width: 52px; height: 52px; }
+
+.meilenstein-bild .meilenstein-motiv {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 30px;
+  height: 30px;
+}
 
 /* ---------------- Für den Ausdruck ---------------- */
 
@@ -975,52 +1001,29 @@ main {
 
 .kalender {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   margin: 10px 0;
 }
 
 .kalender-punkt {
-  aspect-ratio: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
   background: #f2efe6;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-mild);
 }
 
-.kalender-punkt.geuebt { background: var(--akzent-hell); color: var(--akzent-dunkel); font-weight: 700; }
-.kalender-punkt.geuebt.n3 { background: #d9eede; }
-.kalender-punkt.geuebt.n4 { background: #bfe6cd; }
-.kalender-punkt.geuebt.n5 { background: #8fd8a9; color: #14532d; }
-
-.verlauf {
-  display: flex;
-  align-items: flex-end;
-  gap: 6px;
-  height: 130px;
-  margin-top: 8px;
-}
-
-.verlauf-saule {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  height: 100%;
-  min-width: 18px;
-}
-
-.verlauf-balken { background: var(--akzent); border-radius: 6px 6px 0 0; }
-
-.verlauf-label {
-  font-size: 12px;
-  color: var(--text-mild);
-  text-align: center;
-  margin-top: 3px;
-}
+.kalender > .kalender-punkt { min-height: 46px; }
+.kalender-punkt.geuebt { background: #e4edfd; color: #234477; font-weight: 700; }
+.kalender-punkt.tagesmaximum { background: #8fd8a9; color: #14532d; font-weight: 700; }
+.kalender-punkt.heute { outline: 2px solid var(--akzent-dunkel); outline-offset: -2px; font-weight: 800; }
+.kalender-datum, .kalender-sterne { white-space: nowrap; }
+.kalender-legende { display: flex; flex-wrap: wrap; gap: 6px; }
+.kalender-legende .kalender-punkt { padding: 3px 8px; }
 
 .bereich-zeile {
   display: grid;
@@ -1125,13 +1128,11 @@ main {
   }
   .kopf-knoepfe { gap: 4px; }
   .kopf-knoepfe .sterne-anzeige {
-    gap: 3px;
-    padding: 0 6px;
     font-size: 15px;
+    max-width: 100%;
+    flex-wrap: wrap;
   }
-  .stern-zaehler { gap: 2px; }
-  .kopf-knoepfe .sterne-anzeige { max-width: 100%; flex-wrap: wrap; }
-  .stern-zaehler + .stern-zaehler { padding-left: 4px; }
+  .stern-zaehler { gap: 2px; padding: 0 3px; }
   .winter-flocke:nth-child(n+11) { display: none; }
   .rechnung { font-size: 26px; }
   .eingabe { width: 82px; font-size: 24px; }
@@ -1139,8 +1140,6 @@ main {
   .geld-zeichen { font-size: 17px; }
   .aufgaben-raster { grid-template-columns: minmax(0, 1fr); }
   .bereich-kopf { flex-wrap: wrap; }
-  .verlauf { gap: 2px; }
-  .verlauf-saule { min-width: 0; }
   .maskottchen { width: 56px; height: 56px; }
   .kalender-punkt { font-size: 12px; }
   .bereich-zeile { grid-template-columns: 110px 1fr 48px; }

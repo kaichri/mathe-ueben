@@ -27,7 +27,7 @@ test("Übezeit bleibt pro Abschnitt erhalten und zählt im Hintergrund nicht wei
   neu.run("pruefeRunde()");
 
   const [altGespeichert, eintrag] = neu.saved().runden;
-  assert.deepEqual(altGespeichert, alt);
+  assert.deepEqual(altGespeichert, { datum: alt.datum, gesamt: alt.gesamt, richtig: alt.richtig });
   assert.deepEqual(eintrag.uebezeiten, { add: 12000, sub: 12000 });
   neu.nodes.get("statistikKnopf").emit("click");
   assert.match(neu.nodes.get("statistikInhalt").textContent, /1 von 2 Runden mit Zeitmessung/);
@@ -41,7 +41,7 @@ test("Einlösen speichert das Datum und sperrt Umtausch auch nach erneutem Laden
   g.run("zeigeFortschritt('geschenke')");
   const inhalt = g.nodes.get("geschenkeInhalt");
   assert.match(inhalt.textContent, /Anderes aussuchen/);
-  const knopf = inhalt.children[1].children.find(k => k.textContent === "Als eingelöst markieren");
+  const knopf = inhalt.querySelector(".gutschein-karte").children.find(k => k.textContent === "Als eingelöst markieren");
   knopf.emit("click");
   g.nodes.get("frageNeinKnopf").emit("click");
   assert.equal(g.data().geschenke[0].eingeloestAm, undefined);
@@ -74,4 +74,42 @@ test("Zusammenführen behält Zeitmessung und Einlösedatum aus dem neueren Stan
     assert.equal(ergebnis.daten.geschenke.length, 1);
     assert.equal(ergebnis.daten.geschenke[0].eingeloestAm, "2026-11-02");
   }
+});
+
+test("Alte Bonussterne bleiben erhalten und nur die nächste Stufe bringt einen Gutschein", () => {
+  const alt = {
+    version: 2, sterneGesamt: 500, bonussterne: 4, bonusGesamt: 74,
+    geschenke: [{ id: "g1", datum: "2026-10-01", text: "Spieleabend" }],
+    bonusTag: { datum: "2026-11-02", verteilt: 2 }, bonusWelten: ["bluey"]
+  };
+  const g = game(alt, { now: START });
+  assert.equal(g.saved().bonusGesamt, 74);
+  assert.equal(g.saved().sterneGesamt, undefined);
+  assert.deepEqual(g.saved().bonusStufenOffen, []);
+  assert.equal(g.saved().geschenke.length, 1);
+  assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), false);
+
+  g.nodes.get("losKnopf").emit("click");
+  g.fill(45);
+  g.run("pruefeRunde()");
+  g.nodes.get("frageJaKnopf").emit("click");
+  g.nodes.get("abbruchKnopf").emit("click");
+  g.nodes.get("losKnopf").emit("click");
+  assert.equal(g.run("runde.karten.length"), 3, "Zwei Bonussterne sind an diesem Tag schon vergeben");
+  g.fill(1);
+  g.run("pruefeRunde(); pruefeRunde()");
+  assert.equal(g.saved().bonusGesamt, 75);
+  assert.deepEqual(g.saved().bonusStufenOffen, [75]);
+
+  const neu = game(g.saved(), { now: START });
+  neu.nodes.get("gutscheinZaehlerKnopf").emit("click");
+  const abholen = neu.nodes.get("geschenkeInhalt").children.find(n => n.textContent === "Gutschein abholen");
+  abholen.emit("click");
+  neu.document.activeElement.emit("click");
+  assert.equal(neu.saved().bonusGesamt, 75);
+  assert.equal(neu.saved().geschenke[0].text, "Spieleabend");
+  assert.equal(neu.saved().geschenke[1].id, "bonus-stufe-75");
+  assert.deepEqual(neu.saved().bonusStufenOffen, []);
+  neu.run("geschenkGewaehlt('Zweiter Gutschein')");
+  assert.equal(neu.saved().geschenke.length, 2);
 });

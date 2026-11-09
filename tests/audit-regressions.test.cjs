@@ -60,97 +60,26 @@ function loeseWiederholung(g, anzahlRichtige, anzahlKarten) {
 
 /* ================================================================ REGEL-1 */
 
-test("REGEL-1: 5 Aufgaben, 3 richtig = genau 3 Sterne", () => {
-  const g = game({}, { now: JETZT });
-  baueWiederholung(g, 5);
-  loeseWiederholung(g, 3, 5);
-  abgeben(g, 1);
-  assert.equal(g.data().runden.at(-1).sterne, 3);
-  assert.equal(g.data().runden.at(-1).richtig, 3);
-  assert.equal(g.data().runden.at(-1).gesamt, 5);
-  assert.equal(g.run("gesamtSterne()"), 3);
-});
-
-test("REGEL-1: jede richtige Aufgabe zählt einzeln, falsche zählen nicht", () => {
-  for (const [richtig, gesamt] of [[0, 4], [1, 4], [2, 4], [3, 4], [4, 4], [1, 10], [7, 10], [10, 10]]) {
-    const g = game({}, { now: JETZT });
-    baueWiederholung(g, gesamt);
-    loeseWiederholung(g, richtig, gesamt);
-    abgeben(g, 1);
-    assert.equal(g.data().runden.at(-1).sterne, richtig,
-      `${richtig} von ${gesamt} richtig muss ${richtig} Sterne ergeben`);
-    assert.equal(g.run("gesamtSterne()"), richtig);
-  }
-});
-
-test("REGEL-1: keine Obergrenze von 5 Sternen pro Wiederholungsrunde", () => {
-  const g = game({}, { now: JETZT });
-  baueWiederholung(g, 12);
-  loeseWiederholung(g, 12, 12);
-  abgeben(g, 1);
-  assert.equal(g.data().runden.at(-1).sterne, 12, "12 richtige Aufgaben müssen 12 Sterne ergeben");
-  assert.equal(g.run("gesamtSterne()"), 12);
-  const text = g.nodes.get("ergebnisKasten").textContent;
-  assert.match(text, /12 Sterne/, "Die Zusammenfassung muss die genaue Sternzahl nennen");
-});
-
-test("REGEL-1: 50 richtige Wiederholungsaufgaben ergeben 50 Sterne", () => {
-  const g = game({}, { now: JETZT });
-  baueWiederholung(g, 50);
-  loeseWiederholung(g, 50, 50);
-  abgeben(g, 1);
-  assert.equal(g.data().runden.at(-1).sterne, 50);
-  assert.equal(g.run("gesamtSterne()"), 50);
-});
-
-test("REGEL-1: die alte Regel 'ein Stern je zwei Aufgaben' gilt nicht mehr", () => {
-  // Nach der alten Regel hätte eine Runde mit 4 richtigen von 4 höchstens 2 Sterne ergeben.
-  const g = game({}, { now: JETZT });
-  baueWiederholung(g, 4);
-  loeseWiederholung(g, 4, 4);
-  abgeben(g, 1);
-  assert.equal(g.data().runden.at(-1).sterne, 4);
-});
-
-test("REGEL-1: reguläre Tagesrunden bleiben unverändert (1 bis 5 Sterne)", () => {
-  for (const [richtig, sterne] of [[50, 5], [45, 5], [44, 4], [40, 4], [30, 3], [20, 2], [19, 1], [0, 1]]) {
+test("Regular quiz unlocks at 45 of 50 without awarding stars", () => {
+  for (const richtig of [0, 44, 45, 50]) {
     const g = game({}, { now: JETZT });
     g.run("zeigeRunde(neuesTagesSet())");
-    g.fill(richtig);
-    abgeben(g);
-    assert.equal(g.data().runden.at(-1).sterne, sterne,
-      `Tagesrunde mit ${richtig} von 50 richtig muss ${sterne} Sterne ergeben`);
+    g.fill(richtig); abgeben(g);
+    assert.equal(g.run("weltHeuteFreigeschaltet(\'bluey\')"), richtig >= 45);
+    assert.equal(g.data().runden.at(-1).richtig, richtig);
+    assert.equal(g.data().runden.at(-1).sterne, undefined);
+    assert.equal(g.data().bonusGesamt, 0);
   }
 });
 
-test("REGEL-1: Wiederholungssterne werden nicht doppelt vergeben", () => {
+test("Practice records answers once and awards no bonus stars", () => {
   const g = game({}, { now: JETZT });
-  baueWiederholung(g, 5);
-  loeseWiederholung(g, 3, 5);
-  abgeben(g, 1);
-  assert.equal(g.run("gesamtSterne()"), 3);
-  const zeilen = g.data().runden.length;
-  assert.equal(g.run("runde.abgeschlossen"), true, "Die Runde muss als abgeschlossen markiert sein");
-  // Auch wenn die Oberfläche den Zustand verlöre, darf nicht erneut belohnt werden.
-  g.run("fertigAnsicht = false");
-  g.run("pruefeRunde()");
-  assert.equal(g.run("gesamtSterne()"), 3, "Erneutes Abschließen vergibt Sterne doppelt");
-  assert.equal(g.data().runden.length, zeilen);
-});
-
-test("REGEL-1: gespeicherte Runden mit mehr als 5 Sternen bleiben gültig", () => {
-  // Eine Wiederholungsrunde kann seit der Regeländerung mehr als 5 Sterne haben.
-  const gespeichert = {
-    sterneGesamt: 40,
-    runden: [{ richtig: 12, gesamt: 12, sterne: 12, datum: "2026-10-30" },
-      { richtig: 50, gesamt: 50, sterne: 5, datum: "2026-10-31" }]
-  };
-  const g = game(gespeichert, { now: JETZT });
-  assert.equal(g.run("speicher.meldung()"), "", "Mehr als 5 Sterne dürfen nicht als beschädigt gelten");
-  assert.equal(g.data().runden.length, 2);
-  assert.equal(g.data().runden[0].sterne, 12);
-  assert.equal(g.run("gesamtSterne()"), 40);
-  assert.equal(g.nodes.get("speicherHinweis").hidden, true);
+  baueWiederholung(g, 50); loeseWiederholung(g, 50, 50); abgeben(g, 1);
+  g.run("fertigAnsicht = false; pruefeRunde()");
+  assert.equal(g.data().runden.length, 1);
+  assert.equal(g.data().runden[0].richtig, 50);
+  assert.equal(g.data().bonusGesamt, 0);
+  assert.equal(g.run("weltHeuteFreigeschaltet(\'bluey\')"), false);
 });
 
 /* ================================================================ REGEL-2 */
@@ -241,24 +170,24 @@ test("REGEL-2: auch eine Wiederholungsrunde fragt bei offenen Aufgaben nach", ()
   assert.equal(frageDialogOffen(g), true, "Auch die Wiederholungsrunde muss nachfragen");
   assert.match(g.nodes.get("frageText").textContent, /2 von 5 Aufgaben offen/);
   g.nodes.get("frageJaKnopf").emit("click");
-  assert.equal(g.data().runden.at(-1).sterne, 3);
+  assert.equal(g.data().runden.at(-1).richtig, 3);
 });
 
 /* ---------------------------------------------------------------- BEFUND-1 */
-test("BEFUND-1: eine einzelne richtige Wiederholungsaufgabe ergibt genau 1 Stern", () => {
+test("BEFUND-1: eine einzelne Wiederholungsaufgabe bleibt in der Statistik", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(49);
   abgeben(g);
-  assert.equal(g.run("gesamtSterne()"), 5, "Ausgangslage: 49 von 50 ergibt 5 Sterne");
+  assert.equal(g.data().bonusGesamt, 0);
   const knopf = wiederholungsKnopf(g);
   assert(knopf, "Wiederholungsknopf fehlt");
   knopf.emit("click");
   assert.equal(g.run("runde.karten.length"), 1);
   g.fill(1);
   abgeben(g, 3);
-  assert.equal(g.data().runden.at(-1).sterne, 1);
-  assert.equal(g.run("gesamtSterne()"), 6);
+  assert.equal(g.data().runden.at(-1).richtig, 1);
+  assert.equal(g.data().bonusGesamt, 0);
 });
 
 /* ---------------------------------------------------------------- BEFUND-2 */
@@ -302,28 +231,28 @@ test("BEFUND-3: extern geleerter Speicher sperrt das Spiel nicht", () => {
   g.fill(3);
   g.run("sichereTagesAntworten(); speicher.speichere()");
   g.run("window.localStorage.getItem = function () { return null; }");
-  g.run("speicher.daten().sterneGesamt = 4; speicher.speichere()");
+  g.run("speicher.daten().bonusGesamt = 4; speicher.speichere()");
   assert.doesNotMatch(g.run("speicher.meldung()"), /anderen Fenster/,
     "Das Löschen der Browserdaten ist kein Mehrfenster-Konflikt");
   assert.equal(g.nodes.get("speicherHinweis").hidden, true);
   const gespeichert = JSON.parse(g.raw());
-  assert.equal(gespeichert.sterneGesamt, 4, "Der Stand muss neu geschrieben werden");
+  assert.equal(gespeichert.bonusGesamt, 4, "Der Stand muss neu geschrieben werden");
   assert.equal(Object.keys(gespeichert.tagesSet.antworten).length, 3);
 
   // Fall 2: Eintrag wurde geleert (leerer String ist kein gültiger Spielstand)
   const g2 = game({}, { now: JETZT });
-  g2.run("speicher.daten().sterneGesamt = 2; speicher.speichere()");
-  g2.run("window.localStorage.setItem(SPEICHER_NAME, ''); speicher.daten().sterneGesamt = 7; speicher.speichere()");
+  g2.run("speicher.daten().bonusGesamt = 2; speicher.speichere()");
+  g2.run("window.localStorage.setItem(SPEICHER_NAME, ''); speicher.daten().bonusGesamt = 7; speicher.speichere()");
   assert.doesNotMatch(g2.run("speicher.meldung()"), /anderen Fenster/);
-  assert.equal(JSON.parse(g2.raw()).sterneGesamt, 7);
+  assert.equal(JSON.parse(g2.raw()).bonusGesamt, 7);
 });
 
 test("BEFUND-3: ein echter Mehrfenster-Konflikt wird weiterhin erkannt", () => {
   const g = game({}, { now: JETZT });
-  g.run(`window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(Object.assign({}, speicher.daten(), {sterneGesamt: 99})));
-    speicher.daten().sterneGesamt = 1; speicher.speichere()`);
+  g.run(`window.localStorage.setItem(SPEICHER_NAME, JSON.stringify(Object.assign({}, speicher.daten(), {bonusGesamt: 99})));
+    speicher.daten().bonusGesamt = 1; speicher.speichere()`);
   assert.match(g.run("speicher.meldung()"), /anderen Fenster/);
-  assert.equal(JSON.parse(g.raw()).sterneGesamt, 99, "Der neuere Stand darf nicht überschrieben werden");
+  assert.equal(JSON.parse(g.raw()).bonusGesamt, 99, "Der neuere Stand darf nicht überschrieben werden");
 });
 
 /* ---------------------------------------------------------------- BEFUND-4 */
@@ -350,7 +279,7 @@ test("BEFUND-4: Fehlerliste weist Rest und Lücke korrekt aus", () => {
 test("BEFUND-5: ohne offene Bonussterne startet keine neue Bonusrunde", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())"); g.fill(50); g.run("pruefeRunde()");
-  g.run("zeigeRunde(baueBonusRunde('bluey'))"); g.fill(3); g.run("pruefeRunde()");
+  g.run("zeigeRunde(baueBonusRunde('bluey'))"); g.fill(5); g.run("pruefeRunde()");
   assert.equal(g.run("bonusPlaetzeHeute()"), 0);
   assert.equal(g.nodes.get("neuKnopf").hidden, true, "Der Knopf muss bei 0 offenen Sternen verborgen sein");
   assert.equal(g.run("baueBonusRunde('bluey')"), null);
@@ -365,7 +294,7 @@ test("BEFUND-6: Altzeile ohne Sterne zeigt einen Strich statt 'undefined'", () =
   g.run("zeigeFortschritt('sterne')");
   const text = g.nodes.get("sterneInhalt").textContent;
   assert.doesNotMatch(text, /undefined/, "Anzeige enthält 'undefined'");
-  assert.match(text, /\u2605 \u2013/, "Erwartet wird '★ –'");
+  assert.match(text, /3 von 5/);
 });
 
 /* ---------------------------------------------------------------- BEFUND-7 */
@@ -377,16 +306,63 @@ test("BEFUND-7: ein Tag mit nur einer Bonusrunde gilt als geübt", () => {
   const heute = punkte[punkte.length - 1];
   assert.doesNotMatch(heute.title, /nicht ge\u00fcbt/, "Tag mit Bonusrunde gilt als nicht geübt");
   assert.match(heute.className, /geuebt/);
-  assert.match(kalender.children[2].textContent, /^1 Tag ge\u00fcbt/);
+  assert.match(heute.className, /heute/);
+  assert.equal(heute.children[0].textContent, "Heute");
+  assert.equal(heute.children[1].textContent, "🌟 2");
+  assert.doesNotMatch(heute.className, /tagesmaximum/);
+  assert.match(kalender.children[3].textContent, /^1 Tag ge\u00fcbt/);
 });
 
-test("BEFUND-7: normale Sterntage bleiben unverändert beschriftet", () => {
+test("BEFUND-7: normale Runden bleiben als geuebte Tage sichtbar", () => {
   const g = game({ runden: [{ datum: "2026-10-31", sterne: 3 }] }, { now: JETZT });
   const kalender = g.run("baueKalender(speicher.daten())");
   const punkte = kalender.children[1].children;
   const heute = punkte[punkte.length - 1];
-  assert.equal(heute.title, "31.10.2026: 3 Sterne");
-  assert.match(heute.className, /n3/);
+  assert.equal(heute.title, "31.10.2026: 0 Bonussterne");
+  assert.doesNotMatch(heute.className, /tagesmaximum/);
+});
+
+test("Der Übekalender summiert Bonussterne pro Tag und markiert das Tagesmaximum", () => {
+  const g = game({ runden: [
+    { bonus: true, bonusRichtig: 2, datum: "2026-10-30" },
+    { bonus: true, bonusRichtig: 3, datum: "2026-10-30" }
+  ] }, { now: JETZT });
+  const kalender = g.run("baueKalender(speicher.daten())");
+  const punkte = kalender.children[1].children;
+  const gestern = punkte[punkte.length - 2];
+  assert.equal(gestern.children[1].textContent, "🌟 5");
+  assert.match(gestern.className, /tagesmaximum/);
+  assert.match(kalender.children[2].textContent, /5 Bonussterne = Tagesmaximum/);
+});
+
+test("Die Zusammenfassung zeigt nur Quiz und Bonusquiz", () => {
+  const g = game({ runden: [
+    { wiederholung: false, richtig: 40, gesamt: 50 },
+    { uebezeiten: { wiederholung: 1000 }, richtig: 2, gesamt: 4 },
+    { bonus: true, bonusRichtig: 5, richtig: 5, gesamt: 5 },
+    { richtig: 3, gesamt: 5 }
+  ] }, { now: JETZT });
+  g.run("zeigeStatistikInhalt()");
+  const statistik = g.nodes.get("statistikInhalt").textContent;
+  assert.match(statistik, /Quiz · 1 abgeschlossen · 40 von 50 Aufgaben richtig \(80 %\)/);
+  assert.match(statistik, /Bonusquiz · 1 abgeschlossen · 5 von 5 Aufgaben richtig/);
+  assert.doesNotMatch(statistik, /Wiederholungen|Ältere Übungen ohne Quiztyp/);
+});
+
+test("Die Bereichsstatistik mittelt nur die letzten zehn Übungen je Bereich", () => {
+  const runden = [
+    { bereiche: { add: { richtig: 0, gesamt: 10 }, sub: { richtig: 1, gesamt: 2 } } },
+    ...Array.from({ length: 9 }, () => ({ bereiche: { add: { richtig: 1, gesamt: 1 } } })),
+    { bereiche: { add: { richtig: 0, gesamt: 10 } } },
+    { bonus: true },
+    {}
+  ];
+  const g = game({ runden }, { now: JETZT });
+  g.run("zeigeStatistikInhalt()");
+  const statistik = g.nodes.get("statistikInhalt").textContent;
+  assert.match(statistik, /Addition90 %/);
+  assert.match(statistik, /Subtraktion50 %/);
+  assert.doesNotMatch(statistik, /So war es in deinen letzten Runden/);
 });
 
 /* ---------------------------------------------------------------- BEFUND-8 */
@@ -450,7 +426,7 @@ test("BEFUND-10: die Startseite meldet eine Bonusrunde als Bonusrunde", () => {
   g.nodes.get("abbruchKnopf").emit("click");
   const text = g.nodes.get("startErgebnis").textContent.replace(/\s+/g, " ");
   assert.doesNotMatch(text, /0 Sterne/, "Startseite meldet für die Bonusrunde 0 Sterne");
-  assert.match(text, /Letzte Bonusrunde: 2 von 3 geknobelt/);
+  assert.match(text, /Letzte Bonusrunde: 2 von 5 geknobelt/);
   assert.match(text, /\uD83C\uDF1F 2 Bonussterne/);
 });
 
@@ -496,11 +472,11 @@ test("BEFUND-13: eine abgeschlossene Tagesrunde wird nicht erneut bewertet", () 
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())"); g.fill(50);
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
-  assert.equal(g.run("gesamtSterne()"), 5);
+  assert.equal(g.run("gesamtSterne()"), 0);
   g.nodes.get("abbruchKnopf").emit("click");
   g.run("zeigeRunde(rundeAusSet(speicher.daten().tagesSet))");
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
-  assert.equal(g.run("gesamtSterne()"), 5, "Die fertige Runde wurde erneut belohnt");
+  assert.equal(g.run("gesamtSterne()"), 0, "Die fertige Runde wurde erneut belohnt");
   assert.equal(g.data().runden.length, 1);
 });
 
@@ -519,7 +495,7 @@ test("BEFUND-14: echte Spielstände werden weiterhin normal geladen", () => {
   const quelle = game({}, { now: JETZT });
   quelle.run("zeigeRunde(neuesTagesSet())");
   quelle.fill(5);
-  quelle.run("sichereTagesAntworten(); speicher.daten().sterneGesamt = 12; speicher.speichere()");
+  quelle.run("sichereTagesAntworten(); speicher.daten().bonusGesamt = 12; speicher.speichere()");
   const g = game({}, { raw: quelle.raw(), now: JETZT });
   assert.equal(g.run("speicher.meldung()"), "");
   assert.equal(g.run("gesamtSterne()"), 12);
@@ -530,7 +506,7 @@ test("BEFUND-14: echte Spielstände werden weiterhin normal geladen", () => {
 test("BEFUND-15: Einzahl bei genau einer fehlenden Aufgabe", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
-  g.fill(24);
+  g.fill(44);
   abgeben(g);
   const text = g.nodes.get("ergebnisKasten").textContent;
   assert.doesNotMatch(text, /1 richtige Aufgaben/);
@@ -540,7 +516,7 @@ test("BEFUND-15: Einzahl bei genau einer fehlenden Aufgabe", () => {
 test("BEFUND-15: Mehrzahl bleibt korrekt", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
-  g.fill(20);
+  g.fill(40);
   abgeben(g);
   assert.match(g.nodes.get("ergebnisKasten").textContent, /Noch 5 richtige Aufgaben/);
 });

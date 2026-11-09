@@ -22,14 +22,13 @@ const plain = v => JSON.parse(JSON.stringify(v));
 function runde(zeit, sterne, extra) {
   return Object.assign({
     zeit: zeit, datum: zeit.slice(0, 10), uhrzeit: "12:00",
-    richtig: 50, gesamt: 50, sterne: sterne, modus: "bluey",
-    bonus: false, bonusRichtig: 0, bereiche: {}
+    richtig: sterne, gesamt: 5, modus: "bluey", bonus: true, bonusRichtig: sterne, bereiche: {}
   }, extra || {});
 }
 function spielstand(teile) {
   return Object.assign({
-    version: 2, sterneGesamt: 0, modus: "bluey", runden: [], zuletzt: [],
-    knobelZuletzt: [], tagesSet: null, vortagSchluessel: [], bonussterne: 0,
+    version: 3, modus: "bluey", runden: [], zuletzt: [],
+    knobelZuletzt: [], tagesSet: null, vortagSchluessel: [], bonusStufenOffen: [],
     bonusGesamt: 0, geschenke: [], bereichPunkte: {}, sound: "aus",
     bonusTag: null, bonusWelten: []
   }, teile);
@@ -66,10 +65,10 @@ const R2 = runde("2026-10-29T09:00:00.000Z", 3);
 const R3 = runde("2026-10-30T09:00:00.000Z", 5);
 const R4 = runde("2026-10-31T09:00:00.000Z", 4);
 function standLokal() {
-  return spielstand({ sterneGesamt: 8, runden: [R1, R2] });
+  return spielstand({ bonusGesamt: 8, runden: [R1, R2] });
 }
 function standFremd() {
-  return spielstand({ sterneGesamt: 14, runden: [R1, R3, R4] });
+  return spielstand({ bonusGesamt: 14, runden: [R1, R3, R4] });
 }
 
 /* ------------------------------------------------------------- Grundregeln */
@@ -84,7 +83,7 @@ test("MERGE: getrennte Runden werden vereinigt, Sterne exakt addiert", () => {
   assert.deepEqual(ergebnis.daten.runden.map(r => r.zeit),
     [R1.zeit, R2.zeit, R3.zeit, R4.zeit]);
   // 5+3 (lokal) + 5+4 (fremd) = 17
-  assert.equal(ergebnis.daten.sterneGesamt, 17);
+  assert.equal(ergebnis.daten.bonusGesamt, 17);
   assert.deepEqual(ergebnis.vorschau, { runden: 2, sterne: 9, geschenke: 0 });
 });
 
@@ -97,12 +96,12 @@ test("MERGE: keine lokalen Daten gehen verloren", () => {
 });
 
 test("MERGE: eine gemeinsame Runde wird nicht doppelt gezählt", () => {
-  const lokal = spielstand({ sterneGesamt: 5, runden: [R1] });
-  const fremd = spielstand({ sterneGesamt: 5, runden: [R1] });
+  const lokal = spielstand({ bonusGesamt: 5, runden: [R1] });
+  const fremd = spielstand({ bonusGesamt: 5, runden: [R1] });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   assert.equal(ergebnis.daten.runden.length, 1);
-  assert.equal(ergebnis.daten.sterneGesamt, 5);
+  assert.equal(ergebnis.daten.bonusGesamt, 5);
   assert.deepEqual(ergebnis.vorschau, { runden: 0, sterne: 0, geschenke: 0 });
 });
 
@@ -110,31 +109,31 @@ test("MERGE: zweimal dieselbe Datei ändert nichts mehr", () => {
   const erstes = zusammenfuehren(game(standLokal(), { now: JETZT }), sicherung(standFremd()));
   const zweites = zusammenfuehren(game(erstes.daten, { now: JETZT }), sicherung(standFremd()));
   assert.deepEqual(zweites.vorschau, { runden: 0, sterne: 0, geschenke: 0 });
-  assert.equal(zweites.daten.sterneGesamt, erstes.daten.sterneGesamt);
+  assert.equal(zweites.daten.bonusGesamt, erstes.daten.bonusGesamt);
 });
 
 /* ----------------------------------------------------------- abgeschnitten */
 
 test("MERGE: abgeschnittene Historie verliert keine Lebenszeitsterne", () => {
   // Beide Stände haben einen Zähler über der sichtbaren Historie.
-  const lokal = spielstand({ sterneGesamt: 500, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
-  const fremd = spielstand({ sterneGesamt: 300, runden: [runde("2026-10-29T09:00:00.000Z", 3)] });
+  const lokal = spielstand({ bonusGesamt: 500, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const fremd = spielstand({ bonusGesamt: 300, runden: [runde("2026-10-29T09:00:00.000Z", 3)] });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   // unsichtbar: 495 und 297 -> Maximum 495, plus sichtbar 8
-  assert.equal(ergebnis.daten.sterneGesamt, 503);
+  assert.equal(ergebnis.daten.bonusGesamt, 503);
 });
 
 test("MERGE: mehr als 1.000 Runden werden gekürzt, Sterne bleiben erhalten", () => {
   const basis = Date.UTC(2026, 0, 1, 9);
   const viele = (start, anzahl) => Array.from({ length: anzahl }, (_, i) =>
     runde(new Date(basis + (start + i) * 3600000).toISOString(), 2));
-  const lokal = spielstand({ sterneGesamt: 1200, runden: viele(0, 600) });
-  const fremd = spielstand({ sterneGesamt: 1200, runden: viele(1000, 600) });
+  const lokal = spielstand({ bonusGesamt: 1200, runden: viele(0, 600) });
+  const fremd = spielstand({ bonusGesamt: 1200, runden: viele(1000, 600) });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   assert.equal(ergebnis.daten.runden.length, 1000, "Historie muss auf 1.000 begrenzt sein");
-  assert.equal(ergebnis.daten.sterneGesamt, 2400, "Sterne aller vereinigten Runden müssen zählen");
+  assert.equal(ergebnis.daten.bonusGesamt, 2400, "Sterne aller vereinigten Runden müssen zählen");
   // Die neuesten Runden bleiben erhalten.
   const zeiten = ergebnis.daten.runden.map(r => r.zeit);
   assert.equal(zeiten[zeiten.length - 1], new Date(basis + 1599 * 3600000).toISOString());
@@ -206,35 +205,34 @@ test("MERGE: unterschiedliche Tage – der neuere Tag gewinnt", () => {
 
 test("MERGE: Bereichssummen zählen gemeinsame Runden nur einmal", () => {
   const mitBereich = runde("2026-10-28T09:00:00.000Z", 5, { bereiche: { add: { richtig: 10, gesamt: 10 } } });
-  const lokal = spielstand({ sterneGesamt: 5, runden: [mitBereich],
+  const lokal = spielstand({ bonusGesamt: 5, runden: [mitBereich],
     bereichPunkte: { add: { richtig: 10, gesamt: 10 } } });
-  const fremd = spielstand({ sterneGesamt: 10, runden: [
+  const fremd = spielstand({ bonusGesamt: 10, runden: [
     mitBereich, runde("2026-10-29T09:00:00.000Z", 5, { bereiche: { add: { richtig: 8, gesamt: 10 } } })],
     bereichPunkte: { add: { richtig: 18, gesamt: 20 } } });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   assert.deepEqual(ergebnis.daten.bereichPunkte.add, { richtig: 18, gesamt: 20 });
-  assert.equal(ergebnis.daten.sterneGesamt, 10);
+  assert.equal(ergebnis.daten.bonusGesamt, 10);
 });
 
-test("MERGE: Bonussterne werden vereinigt, das Guthaben bleibt konservativ", () => {
+test("MERGE: Bonussterne werden ohne doppelte Runden vereinigt", () => {
   const bonusRunde = (zeit, anzahl) => runde(zeit, 0, { bonus: true, bonusRichtig: anzahl, richtig: anzahl, gesamt: 3 });
   const gemeinsam = bonusRunde("2026-10-28T09:00:00.000Z", 3);
-  const lokal = spielstand({ sterneGesamt: 0, bonusGesamt: 6, bonussterne: 1, runden: [
+  const lokal = spielstand({ bonusGesamt: 6, runden: [
     gemeinsam, bonusRunde("2026-10-28T10:00:00.000Z", 3)] });
-  const fremd = spielstand({ sterneGesamt: 0, bonusGesamt: 9, bonussterne: 6, runden: [
+  const fremd = spielstand({ bonusGesamt: 9, runden: [
     gemeinsam, bonusRunde("2026-10-28T10:00:00.000Z", 3), bonusRunde("2026-10-29T09:00:00.000Z", 3)] });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   assert.equal(ergebnis.daten.bonusGesamt, 9, "Verdiente Bonussterne dürfen nicht doppelt zählen");
-  assert.equal(ergebnis.daten.bonussterne, 6, "Guthaben ist konservativ das Maximum");
-  assert(ergebnis.daten.bonussterne <= ergebnis.daten.bonusGesamt);
+  assert.deepEqual(ergebnis.daten.bonusStufenOffen, []);
 });
 
 /* ------------------------------------------------------------------ Fehler */
 
 test("MERGE: ungültige Dateien ändern nichts", () => {
-  const g = game(spielstand({ sterneGesamt: 7, runden: [R1] }), { now: JETZT });
+  const g = game(spielstand({ bonusGesamt: 7, runden: [R1] }), { now: JETZT });
   const vorher = g.raw();
   for (const text of ["{kaputt", "[]", '{"foo":1}', JSON.stringify({ version: 99, runden: [] })]) {
     const ergebnis = zusammenfuehren(g, text);
@@ -255,7 +253,7 @@ test("MERGE: Knopf, Rückfrage, Sicherung und Neustart", () => {
   g.run("fuehreSpielstaendeZusammen(" + JSON.stringify(sicherung(standFremd())) + ")");
   assert.equal(frageOffen(g), true, "Vor dem Zusammenführen muss gefragt werden");
   assert.match(g.nodes.get("frageText").textContent, /2 Runden/);
-  assert.match(g.nodes.get("frageText").textContent, /9 Sterne/);
+  assert.match(g.nodes.get("frageText").textContent, /9 Bonussterne/);
   assert.equal(g.nodes.get("frageJaKnopf").textContent, "Ja, zusammenführen");
   assert.equal(g.nodes.get("frageNeinKnopf").textContent, "Abbrechen");
   assert.equal(g.document.activeElement, g.nodes.get("frageNeinKnopf"),
@@ -263,7 +261,7 @@ test("MERGE: Knopf, Rückfrage, Sicherung und Neustart", () => {
 
   g.nodes.get("frageJaKnopf").emit("click");
   assert.equal(g.reloads(), 1, "Nach dem Zusammenführen muss neu gestartet werden");
-  assert.equal(g.saved().sterneGesamt, 17);
+  assert.equal(g.saved().bonusGesamt, 17);
   assert.equal(g.saved().runden.length, 4);
   assert.equal(g.downloads.length, 1);
   assert.match(g.downloads[0].name, /^mathe-vor-merge-\d{4}-\d{2}-\d{2}\.json$/,

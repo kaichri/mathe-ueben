@@ -127,7 +127,7 @@ function game(saved = {}, options = {}) {
   };
 }
 
-test("migration preserves old regular stars, separate bonuses, vouchers and area totals", () => {
+test("migration preserves bonus stars, voucher and scores while removing regular stars", () => {
   const saved = {
     runden: [{sterne: 5, bonus: false, datum: "2026-10-31"}, {sterne: 3}, {sterne: 0, bonus: true, bonusRichtig: 2}],
     bonussterne: 2, bonusGesamt: 12,
@@ -135,20 +135,25 @@ test("migration preserves old regular stars, separate bonuses, vouchers and area
     bereichPunkte: {add: {richtig: 30, gesamt: 50}}
   };
   const g = game(saved);
-  assert.equal(g.run("gesamtSterne()"), 8);
-  assert.equal(g.data().version, 2);
-  for (const key of ["runden", "bonussterne", "bonusGesamt", "geschenke", "bereichPunkte"]) {
+  assert.equal(g.run("gesamtSterne()"), 12);
+  assert.equal(g.data().version, 3);
+  for (const key of ["bonusGesamt", "geschenke", "bereichPunkte"]) {
     assert.deepEqual(plain(g.data()[key]), saved[key]);
   }
   const again = game(g.saved());
-  assert.equal(again.run("gesamtSterne()"), 8);
+  assert.equal(again.run("gesamtSterne()"), 12);
   assert.equal(again.data().bonusGesamt, 12);
+  assert.equal(again.data().runden.length, 3);
+  assert(again.data().runden.every(row => !Object.hasOwn(row, "sterne")));
+  assert.equal(again.data().bonussterne, undefined);
 });
 
 test("existing lifetime counter is not re-added or reduced by reload", () => {
   const g = game({ version: 2, sterneGesamt: 7000, runden: [{sterne: 5}], bonusGesamt: 30 });
-  assert.equal(g.run("gesamtSterne()"), 7000);
-  assert.equal(game(g.saved()).run("gesamtSterne()"), 7000);
+  assert.equal(g.run("gesamtSterne()"), 30);
+  assert.equal(game(g.saved()).run("gesamtSterne()"), 30);
+  assert.equal(g.data().sterneGesamt, undefined);
+  assert.deepEqual(plain(g.data().bonusStufenOffen), []);
 });
 
 test("new game starts with zero lifetime stars", () => {
@@ -157,25 +162,24 @@ test("new game starts with zero lifetime stars", () => {
   assert.equal(g.data().bonusGesamt, 0);
 });
 
-test("incomplete lifetime counters recover the available sum without counting bonuses", () => {
+test("incomplete bonus counters recover the available bonus sum", () => {
   for (const counter of [undefined, null, -1, "5", 0]) {
-    const g = game({sterneGesamt: counter, runden: [{sterne: 5}, {sterne: 3}, {bonus: true, sterne: 5}],
-      bonussterne: 2, bonusGesamt: 7});
-    assert.equal(g.run("gesamtSterne()"), 8);
-    assert.equal(g.data().bonusGesamt, 7);
+    const g = game({bonusGesamt: counter, runden: [{sterne: 5}, {sterne: 3}, {bonus: true, bonusRichtig: 3}],
+      bonussterne: 2});
+    assert.equal(g.run("gesamtSterne()"), 3);
   }
 });
 
 test("more than 1000 rows preserve lifetime stars and lifetime area totals", () => {
-  const g = game({ runden: Array.from({length: 1000}, () => ({sterne: 5})),
+  const g = game({ bonusGesamt: 45, runden: Array.from({length: 1000}, () => ({sterne: 5})),
     bereichPunkte: {add: {richtig: 1000, gesamt: 1000}} });
-  for (let i = 0; i < 10; i++) g.run("speichernRunde(1, 1, 5, {add: {richtig: 1, gesamt: 1}}, 0, false)");
+  for (let i = 0; i < 10; i++) g.run("speichernRunde(1, 1, {add: {richtig: 1, gesamt: 1}}, 0, false)");
   assert.equal(g.data().runden.length, 1000);
-  assert.equal(g.run("gesamtSterne()"), 5050);
+  assert.equal(g.run("gesamtSterne()"), 45);
   assert.equal(g.data().bereichPunkte.add.richtig, 1010);
-  g.run("speichernRunde(0, 3, 0, {}, 0, true)");
-  assert.equal(g.run("gesamtSterne()"), 5050);
-  assert.equal(game(g.saved()).run("gesamtSterne()"), 5050);
+  g.run("speichernRunde(0, 3, {}, 0, true)");
+  assert.equal(g.run("gesamtSterne()"), 45);
+  assert.equal(game(g.saved()).run("gesamtSterne()"), 45);
 });
 
 test("legacy daily answers and world survive migration and resuming", () => {
@@ -189,20 +193,19 @@ test("legacy daily answers and world survive migration and resuming", () => {
   assert.equal(g.run("runde.welt"), "gabby");
 });
 
-test("regular completion and repeated bonus checks never double-count either star type", () => {
+test("regular completion awards no stars and bonus checks cannot double-count", () => {
   const g = game({sterneGesamt: 10, bonussterne: 1, bonusGesamt: 6});
   g.run("zeigeRunde(neuesTagesSet())"); g.fill(50);
   g.run("pruefeRunde(); pruefeRunde()");
-  assert.equal(g.run("gesamtSterne()"), 15);
+  assert.equal(g.run("gesamtSterne()"), 6);
   assert.equal(g.data().runden.length, 1);
   g.run("zeigeRunde(baueBonusRunde('bluey'))"); g.fill(3);
   g.run("pruefeRunde(); pruefeRunde(); pruefeRunde()");
-  assert.equal(g.run("gesamtSterne()"), 15);
-  assert.equal(g.data().bonussterne, 4);
+  assert.equal(g.run("gesamtSterne()"), 9);
   assert.equal(g.data().bonusGesamt, 9);
   assert.equal(g.data().runden.length, 2);
   const again = game(g.saved());
-  assert.equal(again.run("gesamtSterne()"), 15);
+  assert.equal(again.run("gesamtSterne()"), 9);
   assert.equal(again.data().bonusGesamt, 9);
 });
 
@@ -227,9 +230,9 @@ test("resuming after a world change preserves answers, tasks, section and origin
 
 test("statistics and unlocking follow the resumed round's original world", () => {
   const g = game(); g.run("zeigeRunde(neuesTagesSet())");
-  g.run("setzeModus('gabby'); zeigeRunde(starteTagesRunde())"); g.fill(25);
+  g.run("setzeModus('gabby'); zeigeRunde(starteTagesRunde())"); g.fill(45);
   g.run("pruefeRunde()");
-  // 25 von 50 beantwortet: die Rückfrage vor dem Abschließen bestätigen.
+  // 45 von 50 beantwortet: die Rückfrage vor dem Abschließen bestätigen.
   assert.equal(g.nodes.get("frageUeberlagerung").hidden, false);
   g.nodes.get("frageJaKnopf").emit("click");
   assert.equal(g.data().runden[0].modus, "bluey");
@@ -318,14 +321,15 @@ test("Vienna midnight is shared by daily quiz, bonus, statistics and calendar", 
   g.time("2026-10-31T23:01:00Z");
   assert.equal(g.run("heutigesDatum()"), "2026-11-01");
   assert.equal(g.run("holBonusTag().verteilt"), 0);
-  g.run("zeigeRunde(starteTagesRunde()); speichernRunde(1, 1, 1, {}, 0, false)");
+  g.run("zeigeRunde(starteTagesRunde()); speichernRunde(1, 1, {}, 0, false)");
   assert.equal(g.data().tagesSet.datum, "2026-11-01");
   assert.equal(g.data().bonusTag.datum, "2026-11-01");
   assert.equal(g.data().runden[0].datum, "2026-11-01");
   assert.equal(g.data().runden[0].uhrzeit, "00:01");
   const calendar = g.run("baueKalender(speicher.daten())");
   const last = calendar.children[1].children.at(-1);
-  assert.equal(last.textContent, "1"); assert.match(last.title, /01\.11\.2026: 1 Sterne/);
+  assert.equal(last.children[0].textContent, "Heute");
+  assert.match(last.title, /01\.11\.2026: 0 Bonussterne/);
 });
 
 for (const [name, now, today, previous, future] of [
@@ -360,8 +364,8 @@ test("Vienna clock handles the skipped and repeated hour at DST transitions", ()
 });
 
 test("migration never shifts historical stored dates", () => {
-  const history = [{zeit: "2026-10-31T23:30:00Z", datum: "2026-10-31", uhrzeit: "00:30", sterne: 5}];
-  const g = game({runden: history});
+  const history = [{zeit: "2026-10-31T23:30:00Z", datum: "2026-10-31", uhrzeit: "00:30"}];
+  const g = game({runden: [{...history[0], sterne: 5}]});
   assert.deepEqual(plain(g.data().runden), history);
   g.run("baueKalender(speicher.daten()); speicher.speichere()");
   assert.deepEqual(g.saved().runden, history);

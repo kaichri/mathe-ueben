@@ -14,12 +14,11 @@ const JETZT = "2026-10-31T12:00:00Z";
 const plain = v => JSON.parse(JSON.stringify(v));
 
 function runde(zeit, sterne) {
-  return { zeit: zeit, datum: zeit.slice(0, 10), uhrzeit: "12:00", richtig: 50, gesamt: 50,
-    sterne: sterne, modus: "bluey", bonus: false, bonusRichtig: 0, bereiche: {} };
+  return { zeit: zeit, datum: zeit.slice(0, 10), uhrzeit: "12:00", richtig: sterne, gesamt: 5, modus: "bluey", bonus: true, bonusRichtig: sterne, bereiche: {} };
 }
 function spielstand(teile) {
-  return Object.assign({ version: 2, sterneGesamt: 0, modus: "bluey", runden: [], zuletzt: [],
-    knobelZuletzt: [], tagesSet: null, vortagSchluessel: [], bonussterne: 0, bonusGesamt: 0,
+  return Object.assign({ version: 3, modus: "bluey", runden: [], zuletzt: [],
+    knobelZuletzt: [], tagesSet: null, vortagSchluessel: [], bonusStufenOffen: [], bonusGesamt: 0,
     geschenke: [], bereichPunkte: {}, sound: "aus", bonusTag: null, bonusWelten: [] }, teile || {});
 }
 
@@ -56,7 +55,7 @@ function fakeGithub(start) {
       if (steuerung.konfliktEinmal) {
         // Jemand anderes schreibt genau zwischen Lesen und Schreiben.
         steuerung.konfliktEinmal = false;
-        zustand.text = JSON.stringify(spielstand({ sterneGesamt: 3,
+        zustand.text = JSON.stringify(spielstand({ bonusGesamt: 3,
           runden: [runde("2026-10-29T09:00:00.000Z", 3)] }));
         zustand.sha = "sha-" + (++zustand.nummer);
         return antwort(409, { message: "sha does not match" });
@@ -112,12 +111,12 @@ test("SYNC: 'Synchronisierung entfernen' löscht die Zugangsdaten", () => {
 
 test("SYNC: erster Abgleich legt die Datei an", async () => {
   const fake = fakeGithub();
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   const ergebnis = await g.run("sync.schieben({erzwingen:true})");
   assert.equal(ergebnis.ok, true, JSON.stringify(ergebnis));
   assert.equal(fake.aufrufe.filter(a => a.methode === "PUT").length, 1);
   const gespeichert = JSON.parse(fake.zustand.text);
-  assert.equal(gespeichert.sterneGesamt, 5);
+  assert.equal(gespeichert.bonusGesamt, 5);
   assert.equal(gespeichert.runden.length, 1);
   assert.match(fake.aufrufe[0].kopf.Authorization, /^Bearer ghp_test$/);
 });
@@ -132,17 +131,17 @@ test("SYNC: Umlaute und Emoji überstehen die Base64-Kodierung", () => {
 /* ---------------------------------------------------------------- Ziehen */
 
 test("SYNC: Start holt den Serverstand und vereinigt ihn ohne Verlust", async () => {
-  const fake = fakeGithub({ text: JSON.stringify(spielstand({ sterneGesamt: 3,
+  const fake = fakeGithub({ text: JSON.stringify(spielstand({ bonusGesamt: 3,
     runden: [runde("2026-10-29T09:00:00.000Z", 3)] })) });
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   await g.run("sync.starten()");
   assert.equal(g.reloads(), 1, "Nach dem Übernehmen muss neu geladen werden");
   assert.equal(g.saved().runden.length, 2);
-  assert.equal(g.saved().sterneGesamt, 8);
+  assert.equal(g.saved().bonusGesamt, 8);
 });
 
 test("SYNC: sind beide gleich, wird nicht neu geladen", async () => {
-  const lokal = spielstand({ sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const lokal = spielstand({ bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   const fake = fakeGithub({ text: JSON.stringify(lokal) });
   const g = spielMit(fake, plain(lokal));
   await g.run("sync.starten()");
@@ -151,26 +150,26 @@ test("SYNC: sind beide gleich, wird nicht neu geladen", async () => {
 });
 
 test("SYNC: zweimal starten ändert nichts mehr", async () => {
-  const fake = fakeGithub({ text: JSON.stringify(spielstand({ sterneGesamt: 3,
+  const fake = fakeGithub({ text: JSON.stringify(spielstand({ bonusGesamt: 3,
     runden: [runde("2026-10-29T09:00:00.000Z", 3)] })) });
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   await g.run("sync.starten()");
   const g2 = game(g.saved(), { now: JETZT });
   g2.window.fetch = fake.fetch;
   verbinde(g2);
   await g2.run("sync.starten()");
   assert.equal(g2.reloads(), 0);
-  assert.equal(g2.saved().sterneGesamt, 8);
+  assert.equal(g2.saved().bonusGesamt, 8);
 });
 
 test("SYNC: beim Schreiben geht der Serverstand nicht verloren", async () => {
-  const fake = fakeGithub({ text: JSON.stringify(spielstand({ sterneGesamt: 3,
+  const fake = fakeGithub({ text: JSON.stringify(spielstand({ bonusGesamt: 3,
     runden: [runde("2026-10-29T09:00:00.000Z", 3)] })) });
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   await g.run("sync.schieben({erzwingen:true})");
   const server = JSON.parse(fake.zustand.text);
   assert.equal(server.runden.length, 2, "Der Server muss beide Runden enthalten");
-  assert.equal(server.sterneGesamt, 8);
+  assert.equal(server.bonusGesamt, 8);
   // Die laufende Sitzung bleibt unangetastet (kein stiller Zustandswechsel).
   assert.equal(g.data().runden.length, 1);
   assert.equal(g.reloads(), 0);
@@ -180,7 +179,7 @@ test("SYNC: beim Schreiben geht der Serverstand nicht verloren", async () => {
 
 test("SYNC: 409 wird durch erneutes Zusammenführen gelöst", async () => {
   const fake = fakeGithub();
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   await g.run("sync.schieben({erzwingen:true})");
 
   const g2 = game(g.saved(), { now: JETZT });
@@ -193,7 +192,7 @@ test("SYNC: 409 wird durch erneutes Zusammenführen gelöst", async () => {
     "Nach dem Konflikt muss erneut geschrieben werden");
   const nachher = JSON.parse(fake.zustand.text);
   assert.equal(nachher.runden.length, 2, "Beide Runden müssen im Serverstand sein");
-  assert.equal(nachher.sterneGesamt, 8);
+  assert.equal(nachher.bonusGesamt, 8);
 });
 
 /* ---------------------------------------------------------------- Fehler */
@@ -201,7 +200,7 @@ test("SYNC: 409 wird durch erneutes Zusammenführen gelöst", async () => {
 test("SYNC: ungültiges Token meldet einen Fehler und ändert nichts", async () => {
   const fake = fakeGithub();
   fake.steuerung.ungueltig = true;
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   const vorher = g.raw();
   const ergebnis = await g.run("sync.jetzt()");
   assert.equal(ergebnis.ok, false);
@@ -213,7 +212,7 @@ test("SYNC: ungültiges Token meldet einen Fehler und ändert nichts", async () 
 test("SYNC: Netzfehler meldet einen Fehler und ändert nichts", async () => {
   const fake = fakeGithub();
   fake.steuerung.netzfehler = true;
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   const vorher = g.raw();
   const ergebnis = await g.run("sync.jetzt()");
   assert.equal(ergebnis.ok, false);
@@ -223,10 +222,10 @@ test("SYNC: Netzfehler meldet einen Fehler und ändert nichts", async () => {
 
 test("SYNC: leerer Server wird beim ersten Schreiben angelegt", async () => {
   const fake = fakeGithub();
-  const g = spielMit(fake, { sterneGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
+  const g = spielMit(fake, { bonusGesamt: 5, runden: [runde("2026-10-30T09:00:00.000Z", 5)] });
   await g.run("sync.starten()");
   assert.equal(g.reloads(), 0);
-  assert.equal(JSON.parse(fake.zustand.text).sterneGesamt, 5);
+  assert.equal(JSON.parse(fake.zustand.text).bonusGesamt, 5);
 });
 
 /* -------------------------------------------------------------- Auslöser */
@@ -237,7 +236,7 @@ test("SYNC: Abschluss einer Runde stößt das Schreiben an", async () => {
   await g.run("sync.schieben({erzwingen:true})");
   const vorher = fake.aufrufe.length;
 
-  g.run("speichernRunde(50, 50, 5, {}, 0, false)");
+  g.run("speichernRunde(50, 50, {}, 0, false)");
   g.flush();
   await tick();
   assert(fake.aufrufe.length > vorher, "Nach dem Abschluss muss geschrieben werden");
@@ -249,7 +248,7 @@ test("SYNC: Tippen plant nur einen Schreibvorgang", async () => {
   await g.run("sync.schieben({erzwingen:true})");
   const vorher = fake.aufrufe.length;
 
-  g.run("speicher.daten().sterneGesamt = 9; speicher.speichere()");
+  g.run("speicher.daten().bonusGesamt = 9; speicher.speichere()");
   g.run("sync.nachAenderung(false); sync.nachAenderung(false); sync.nachAenderung(false)");
   g.flush();
   await tick();

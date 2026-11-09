@@ -11,6 +11,21 @@
 
 <svg class="symbolvorrat" aria-hidden="true" focusable="false" width="0" height="0">
   <defs>
+    <symbol id="meilenstein-diamant" viewBox="0 0 32 32">
+      <path d="m3 11 6-7h14l6 7-13 16Z" fill="#8bdaf2" stroke="#345f9b" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M3 11h26M9 4l2 7 5 16 5-16 2-7M11 11l5-7 5 7" fill="none" stroke="#345f9b" stroke-width="1.2"/>
+      <path d="M22 14l-4 6 2-6Z" fill="#fff"/>
+    </symbol>
+    <symbol id="meilenstein-pokal" viewBox="0 0 32 32">
+      <path d="M9 6H4v4c0 4 3 6 7 6m12-10h5v4c0 4-3 6-7 6M16 20v6m-6 2h12" fill="none" stroke="#996118" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8 4h16v7a8 8 0 0 1-16 0Z" fill="#f6c745" stroke="#996118" stroke-width="1.8"/>
+      <path d="m16 7 1 2.3 2.6.3-1.9 1.8.5 2.6-2.2-1.3-2.2 1.3.5-2.6-1.9-1.8 2.6-.3Z" fill="#fff1a5"/>
+    </symbol>
+    <symbol id="meilenstein-hut" viewBox="0 0 32 32">
+      <path d="m7 18 3-10q1-3 4-2l2 2 2-2q3-1 4 2l3 10Z" fill="#ab7350" stroke="#623c2d" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="M7 17h18l1 3H6Z" fill="#69463d"/>
+      <path d="M3 19q5 3 13 3t13-3v3q-4 4-13 4T3 22Z" fill="#d79c65" stroke="#623c2d" stroke-width="1.8" stroke-linejoin="round"/>
+    </symbol>
     <symbol id="spur-katze" viewBox="0 0 24 24">
       <path d="M4 10V3l5 4h6l5-4v7a8 7 0 0 1-16 0Z" fill="currentColor" stroke="#743f78" stroke-width="1.2" stroke-linejoin="round"/>
       <path d="M8 11h.1m7.9 0h.1m-6 3q2 2 4 0" fill="none" stroke="#743f78" stroke-width="1.4" stroke-linecap="round"/>
@@ -260,20 +275,16 @@
     <button class="kopf-knopf" id="statistikKnopf" type="button" aria-label="Einstellungen öffnen" title="Einstellungen öffnen">
       <svg class="symbol" aria-hidden="true"><use href="#zahnrad"/></svg>
     </button>
-    <button class="sterne-anzeige" id="sterneKnopf" type="button" title="Sterne und Gutscheine ansehen">
-      <span class="stern-zaehler">
-        <svg class="symbol" aria-hidden="true"><use href="#stern"/></svg>
-        <span id="sterneGesamt">0</span><span class="nur-screenreader"> Sterne</span>
-      </span>
-      <span class="stern-zaehler">
+    <div class="sterne-anzeige" role="group" aria-label="Belohnungen">
+      <button class="stern-zaehler" id="sterneKnopf" type="button" title="Bonussterne ansehen">
         <svg class="symbol" aria-hidden="true"><use href="#bonusstern"/></svg>
         <span id="bonusSterne">0</span><span class="nur-screenreader"> Bonussterne</span>
-      </span>
-      <span class="stern-zaehler">
+      </button>
+      <button class="stern-zaehler" id="gutscheinZaehlerKnopf" type="button" title="Gutscheine ansehen">
         <svg class="symbol" aria-hidden="true"><use href="#geschenk"/></svg>
         <span id="offeneGutscheine">0</span><span class="nur-screenreader"> offene Gutscheine</span>
-      </span>
-    </button>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -293,9 +304,9 @@
     </div>
     <p class="start-info">
       Heute gibt es <strong>50 Matheaufgaben</strong>.
-      Ab <strong>25 richtigen Antworten</strong> öffnet sich die Bonuswelt zum Knobeln.
-      Dort kannst du bis zu <strong>3 Bonussterne 🌟 pro Tag</strong> sammeln.
-      Für <strong>5 Bonussterne</strong> darfst du dir ein Geschenk aussuchen!
+      Ab <strong>45 richtigen Antworten</strong> öffnet sich die Bonuswelt.
+      Dort gibt es <strong>einen Bonusstern 🌟 pro richtiger Antwort</strong>, bis zu fünf am Tag.
+      Bei <strong>25, 50, 75 Bonussternen</strong> und bei jeder weiteren Stufe gibt es einen Gutschein!
     </p>
 
     <p class="feldueberschrift">Womit möchtest du üben?</p>
@@ -363,7 +374,7 @@
 <!-- --------------- Geschenk-Auswahl (Pop-up) --------------- -->
 <div class="ueberlagerung" id="geschenkUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="geschenkTitel" tabindex="-1" hidden>
   <div class="geschenk-kasten">
-    <h2 class="geschenk-ueberschrift" id="geschenkTitel">🎉 Fünf Bonussterne! Such dir etwas aus!</h2>
+    <h2 class="geschenk-ueberschrift" id="geschenkTitel">🎉 Such dir ein Geschenk aus!</h2>
     <div class="geschenke-raster" id="geschenkeRaster"></div>
     <button class="knopf schlicht" id="geschenkWegKnopf" type="button">Lieber später aussuchen</button>
   </div>
@@ -376,7 +387,7 @@
     <p class="versuch-text" id="versuchText">
       Mit einem neuen Versuch bekommst du <strong>ganz neue Aufgaben</strong> –
       deine bisherigen Antworten von heute gehen dabei verloren.
-      Deine Sterne, Bonussterne und jede offene Bonuswelt bleiben erhalten.
+      Deine Bonussterne und jede offene Bonuswelt bleiben erhalten.
     </p>
     <div class="versuch-knoepfe">
       <button class="knopf primaer" id="versuchBestaetigenKnopf" type="button">Ja, neue Fragen!</button>

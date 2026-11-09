@@ -50,14 +50,12 @@ Das Tages-Quiz (ein Aufgaben-Set pro Tag)
   Weiterklicken). Seite zu, Computer aus - beim nächsten Öffnen stehen die
   Antworten und der gleiche Abschnitt wieder da.
 * Erst "Fertig" (im letzten Abschnitt) zeigt alles: alle Bereiche, grün und
-  rot, die richtigen Lösungen bei den Fehlern und Sterne.
+  rot, die richtigen Lösungen bei den Fehlern.
   Danach kann nichts mehr ausgebessert werden - auch nicht nach einem
   Neustart an diesem Tag.
 * Der Knopf "Neuer Versuch" (erscheint nach dem Fertig) erzeugt nach einer
   Rückfrage ein brandneues Set für denselben Tag - die alten Antworten gehen
-  dabei verloren, aber verdiente Sterne, Bonussterne und jede offene
-  Bonuswelt bleiben. Mit dem neuen Set kann man neue Sterne verdienen;
-  die 3 Bonussterne pro Tag bleiben trotzdem der Höchstwert.
+  dabei verloren, aber verdiente Bonussterne und offene Bonuswelten bleiben.
 * Am nächsten Tag gibt es automatisch ein neues Set. Die Aufgaben des alten
   Tags werden beim Bauen ausgeschlossen, kommen also nicht sofort wieder.
 
@@ -67,27 +65,14 @@ Die Bonuswelten (Knobeln mit Bonussternen)
 Sobald Emma eine Bonuswelt öffnet, erscheint sie an der Stelle ihrer
 normalen Welt. Mit dem Haus oben geht es zurück zur Startseite.
 
-  * Sie hat eine reguläre Runde in DIESE Welt gespielt und mindestens
-    die Hälfte (25 von 50) richtig - dann öffnet sich die Bonuswelt
-    dieser Welt für den ganzen Tag. Auch wenn sie später eine
-    schlechtere Runde hat, bleibt sie offen.
-  * In der Bonuswelt gibt es Knobelaufgaben (z. B. "Das ist genau die
-    Hälfte von dem, was Mackenzie hat - wie viele hat Mackenzie?",
-    Zahlenreihen, Rückwärtsrätsel, Alter-Vergleiche, Zaun-Aufgaben u. v. m.
-    mit Figuren aus der jeweiligen Welt). Auch hier merkt sich das
-    Programm die letzten Rätsel, damit nicht bald dasselbe kommt.
-    Hier wird nichts rot - es heißt höchstens "Knobel weiter!".
-  * Höchstens 3 Bonussterne 🌟 gibt es pro Tag über ALLE Welten
-    zusammen. Sind die 3 schon geholt, steht bei den offenen Bonuswelten:
-    "Morgen warten 3 neue Bonussterne."
-  * Teilweiser Ertrag bleibt: hat sie heute schon 2 Sterne geholt,
-    bekommt sie in der nächsten Bonuswelt nur noch 1 Aufgabe - und
-    danach ist Pause für heute.
-
-Für jede richtige Knobelaufgabe gibt es einen Bonusstern 🌟 (oben in der
-goldenen Anzeige). Bei fünf Bonussternen öffnet sich ein Fenster, und
-Emma sucht sich SELBST ihr Geschenk aus (auch "Wunsch frei"). Fünf
-Bonussterne werden abgezogen, der Rest bleibt erhalten.
+  * Mit mindestens 45 von 50 richtigen Antworten in einer normalen
+    Runde öffnet sich die Bonuswelt für den Rest des Tages.
+  * Jede richtig gelöste Knobelaufgabe bringt einen Bonusstern.
+    Pro Tag gibt es höchstens fünf über alle Welten zusammen. Hast du
+    schon zwei geholt, warten noch drei Knobelaufgaben.
+  * Bei 25, 50, 75 Bonussternen und danach alle 25 Sterne erreichst du
+    eine neue Stufe und kannst dir einen Gutschein aussuchen. Deine
+    Bonussterne sammelst du weiter.
 
 Gutschein umtauschen: Unter "Einstellungen" -> "Gutscheine" kann Emma
 jeden offenen Gutschein jederzeit umtauschen. Der neue Wunsch steht
@@ -95,9 +80,9 @@ danach am selben Platz und trägt das ursprüngliche Datum.
 Erhaltene Geschenke lassen sich dort als eingelöst markieren.
 
 In script.js lässt sich das bei EINSTELLUNGEN verstellen:
-   bonusSterneProTag: 3   - wie viele Bonussterne es höchstens pro Tag gibt
-   bonusAbAnteil: 0.5     - ab welchem Anteil eine Bonuswelt aufgeht
-   bonusSternAlle: 5      - wie viele Bonussterne ein Geschenk kosten
+   bonusSterneProTag: 5   - wie viele Bonussterne es höchstens pro Tag gibt
+   bonusAbAnteil: 0.9     - ab welchem Anteil eine Bonuswelt aufgeht
+   BONUS_STUFEN_SCHRITT = 25  - Abstand zwischen Gutschein-Stufen
    merkzettelGroesse: 12  - wie viele letzte Geschichten gemerkt werden
    knobelMerken: 9        - wie viele letzte Knobelaufgaben gemerkt werden
 
@@ -127,17 +112,6 @@ Ablauf
    "Neuer Versuch" (nach der Rückfrage) lädt ein komplett neues Set für
    denselben Tag.
 
-Sterne (reguläre Tagesrunde): 5 Sterne ab 90 % richtig, 4 ab 80 %,
-3 ab 60 %, 2 ab 40 %, 1 Stern gibt es immer - auch wenn noch nicht alles
-klappt. Bei 5 Sternen gibt es Sternenregen und die Maskottchen machen
-Purzelbaum. Die Sterne bleiben über Tage erhalten.
-
-Sterne (Wiederholungsrunde): "Nur diese Aufgaben noch einmal üben" gibt
-für JEDE richtig gelöste Aufgabe genau einen Stern, für falsche Aufgaben
-keinen. Es gibt keine Obergrenze: 5 Aufgaben mit 3 richtigen sind 3
-Sterne, 12 richtige sind 12 Sterne. Bereits verdiente Sterne und alte
-Runden bleiben unverändert.
-
 Ist am nächsten Tag noch eine angefangene Runde von gestern gespeichert,
 fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
 
@@ -147,7 +121,7 @@ Einstellungen
 Ein Klick auf die Sterne-Anzeige oder das Zahnrad oben öffnet
 "Einstellungen" mit vier Reitern:
 
-  Sterne     - Sterne, Meilensteine und Bonussterne
+  Bonussterne - gesammelte Bonussterne und Stufen
   Gutscheine - alle Gutscheine mit ihrem aktuellen Wunsch
   Statistik  - Runden-, Kalender- und Bereichs-Auswertung. Nichts wird
                überschrieben: jede Runde wird angehängt gespeichert.
@@ -174,7 +148,7 @@ Der Spielstand liegt nur im Browser des jeweiligen PCs. Zum Übertragen:
      Adresse öffnen (am besten derselbe Ordner wie bisher), dann
      "Einstellungen" -> "Spielstand" -> "Spielstand laden (Datei)"
      und die Datei auswählen.
-  3. Das Programm zeigt, was in der Datei steht (Sterne, Runden,
+  3. Das Programm zeigt, was in der Datei steht (Bonussterne, Runden,
      Gutscheine, Datum), und fragt vor dem Ersetzen nach. Mit
      "Trotzdem laden" wird der Stand übernommen, das Spiel startet neu.
      Der bisherige Stand wird vorher automatisch als Datei
@@ -189,13 +163,13 @@ Statt zu ersetzen kann man die Stände auch vereinigen:
   "Einstellungen" -> "Spielstand" -> "Spielstand zusammenführen (Datei)"
   und die Sicherungsdatei des anderen PCs auswählen.
 
-  Das Programm zeigt vorher, was dazukommt, z. B. "+2 Runden, +9 Sterne,
+  Das Programm zeigt vorher, was dazukommt, z. B. "+2 Runden, +9 Bonussterne,
   +0 Gutscheine", und fragt nach. Erst mit "Ja, zusammenführen" wird
   geschrieben; der bisherige Stand wird vorher als
   mathe-vor-merge-....json gesichert, danach startet das Spiel neu.
 
   Regeln: Runden und Gutscheine werden vereinigt, doppelte zählen nur
-  einmal. Sterne und Bereichssummen werden aus den vereinigten Runden
+  einmal. Bonussterne und Bereichssummen werden aus den vereinigten Runden
   berechnet - nichts geht verloren, nichts zählt doppelt. Bonussternen:
   verdiente werden zusammengezählt, das Guthaben bleibt der höhere der
   beiden Stände. Die Tagesrunde: eine abgeschlossene Runde gewinnt vor
@@ -278,7 +252,7 @@ Division ohne Rest: in script.js bei
 stellen.
 
 Bonuswelt-Regeln ändern: siehe oben bei "Die Bonuswelten"
-(bonusSterneProTag, bonusAbAnteil, bonusSternAlle).
+(bonusSterneProTag, bonusAbAnteil, BONUS_STUFEN_SCHRITT).
 
 Musik leiser/lauter: in script.js bei
    musikLautstaerke: 0.16
@@ -299,9 +273,9 @@ Schrift größer: in der Datei style.css oben bei
 z. B. 22px einsetzen.
 
 
-Sterne bleiben gespeichert
+Bonussterne bleiben gespeichert
 --------------------------
-Sterne, Bonussterne, Gutscheine und die Statistik werden im
+Bonussterne, Gutscheine und die Statistik werden im
 Browser gespeichert (localStorage). Das klappt in Edge und Chrome.
 Wenn die Werte nach dem Neustart weg sind: im Browser prüfen, ob
 "Websites Daten speichern" erlaubt ist, und die Seite immer mit dem-

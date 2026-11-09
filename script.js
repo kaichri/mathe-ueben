@@ -15,9 +15,8 @@ const EINSTELLUNGEN = {
   geschichtenAnzahl: 5,
   merkzettelGroesse: 12,      // so viele letzte Geschichte-Merkmale merkt sich das Programm
   knobelMerken: 9,            // so viele letzte Knobelaufgaben merkt es sich
-  bonusSterneProTag: 3,       // so viele Bonussterne gibt es höchstens pro Tag
-  bonusAbAnteil: 0.5,         // ab so vielen richtigen Aufgaben öffnet die Bonuswelt
-  bonusSternAlle: 5,          // so viele Bonussterne braucht man für ein Geschenk
+  bonusSterneProTag: 5,
+  bonusAbAnteil: 0.9,
   hintergrundMusikAn: true,   // Standard, falls noch nichts gespeichert ist
   musikLautstaerke: 0.16,     // 0 = ganz leise, 1 = voll
   syncVerzoegerungMs: 60000,  // beim Tippen höchstens einmal pro Minute zu GitHub
@@ -27,23 +26,36 @@ const EINSTELLUNGEN = {
 
 /* Die Gutscheine – Mama kann diese Liste jederzeit ändern. */
 const GESCHENKE = [
-  { text: "Beim Einkaufen etwas für bis zu 2 € aussuchen" },
+  { text: "Ein Geschenk für 2 €" },
   { text: "Zwei Nächte mit Mama oder Papa schlafen" },
-  { text: "20 Minuten extra vorgelesen bekommen" },
+  { text: "90 Minuten Film oder Serie anschauen" },
   { text: "Filmabend mit Popcorn" },
-  { text: "Picknick im Wohnzimmer (Decke auf dem Boden!)" },
+  { text: "90 Minuten Videospiel spielen" },
   { text: "Wunsch frei – such dir etwas aus und sag es Mama!" }
 ];
 
 const SPEICHER_NAME = "mathe-ueben-fuer-emma";
 
-const MEILENSTEINE = [
-  { sterne: 10, text: "10 Sterne – so hoch wie ein Keepy-Uppy-Sprung!" },
-  { sterne: 25, text: "25 Sterne – Kitty Fee streut Glitzer für dich." },
-  { sterne: 50, text: "50 Sterne – Diamond Bluey! Du bist eine Mathe-Heldin." },
-  { sterne: 100, text: "100 Sterne – Pandy-Pokal für dich!" },
-  { sterne: 200, text: "200 Sterne – Bandit zieht den Hut vor dir." }
+const BONUS_STUFEN_SCHRITT = 25;
+const MEILENSTEIN_BILDER = [
+  { figur: "hund", motiv: "motiv-ballons" },
+  { figur: "kittyFee", motiv: "spur-glitzer" },
+  { figur: "hund", motiv: "meilenstein-diamant" },
+  { figur: "panda", motiv: "meilenstein-pokal" },
+  { figur: "bandit", motiv: "meilenstein-hut" }
 ];
+
+function naechsteBonusStufe(sterne) {
+  return (Math.floor(sterne / BONUS_STUFEN_SCHRITT) + 1) * BONUS_STUFEN_SCHRITT;
+}
+
+function bonusGutscheinId(stufe) { return "bonus-stufe-" + stufe; }
+
+function offeneStufenOhneGutschein(stufen, geschenke) {
+  const kennungen = new Set(geschenke.map(g => g.id));
+  return Array.from(new Set(stufen)).filter(stufe => !kennungen.has(bonusGutscheinId(stufe)))
+    .sort((a, b) => a - b);
+}
 
 const BEREICH_NAMEN = {
   add: "Addition",
@@ -130,11 +142,11 @@ const speicher = (function () {
   let letzterStand = null;
   let schreibTimer = null;
   let daten = {
-    version: 2, sterneGesamt: 0, modus: "bluey", runden: [], zuletzt: [],
+    version: 3, modus: "bluey", runden: [], zuletzt: [],
     knobelZuletzt: [], // die letzten Knobelaufgaben – damit nicht bald dasselbe Rätsel kommt
     tagesSet: null,    // { datum, welt, fertig, runde, antworten, abschnitt } – das heutige Quiz
     vortagSchluessel: [], // die Aufgaben von gestern: nur zum Ausschluss beim Bauen
-    bonussterne: 0, bonusGesamt: 0, geschenke: [], bereichPunkte: {}, sound: null,
+    bonusGesamt: 0, bonusStufenOffen: [], geschenke: [], bereichPunkte: {}, sound: null,
     bonusTag: null,     // { datum, verteilt } – wie viele Bonussterne heute schon vergeben sind
     bonusWelten: []     // ["bluey", ...] – welche Bonuswelten sind heute schon offen
   };
@@ -151,14 +163,14 @@ const speicher = (function () {
        behandeln, sondern wie beschädigte Daten schützen. */
     const BEKANNTE_FELDER = ["version", "sterneGesamt", "modus", "runden", "zuletzt",
       "knobelZuletzt", "tagesSet", "vortagSchluessel", "bonussterne", "bonusGesamt",
-      "geschenke", "bereichPunkte", "sound", "bonusTag", "bonusWelten"];
+      "geschenke", "bereichPunkte", "sound", "bonusTag", "bonusWelten", "bonusStufenOffen"];
     if (!BEKANNTE_FELDER.some(function (name) {
       return Object.prototype.hasOwnProperty.call(geladen, name);
     })) {
       problem();
       return {};
     }
-    if (geladen.version !== undefined && ![1, 2].includes(geladen.version)) { problem(); }
+    if (geladen.version !== undefined && ![1, 2, 3].includes(geladen.version)) { problem(); }
     const neu = Object.assign(Object.create(null), geladen);
     function datum(wert) {
       return typeof wert === "string" && /^\d{4}-\d{2}-\d{2}$/.test(wert) &&
@@ -188,12 +200,12 @@ const speicher = (function () {
         ["sterne", "richtig", "gesamt", "bonusRichtig"].every(function (name) {
         return r[name] === undefined || zahl(r[name]);
         }) && (r.bonus === undefined || typeof r.bonus === "boolean") &&
-        // Wiederholungsrunden vergeben einen Stern je richtiger Aufgabe – ohne Obergrenze.
         (r.datum === undefined || r.datum === "" || datum(r.datum)) &&
         (r.richtig === undefined || r.gesamt === undefined || r.richtig <= r.gesamt) &&
         (r.bereiche === undefined || punkte(r.bereiche));
     });
     (neu.runden || []).forEach(function (r) {
+      delete r.sterne;
       // Fehlerhafte optionale Zeitdaten dürfen die alten Ergebnisse nicht entwerten.
       if (r.uebezeiten !== undefined && !gueltigeUebezeiten(r.uebezeiten)) {
         delete r.uebezeiten;
@@ -213,6 +225,20 @@ const speicher = (function () {
     ["sterneGesamt", "bonussterne", "bonusGesamt"].forEach(function (name) {
       if (neu[name] !== undefined && !zahl(neu[name])) { problem(); delete neu[name]; }
     });
+    const bonusAusRunden = (neu.runden || []).reduce((summe, r) =>
+      summe + (r.bonus ? r.bonusRichtig || 0 : 0), 0);
+    neu.bonusGesamt = Math.max(neu.bonusGesamt || 0, neu.bonussterne || 0, bonusAusRunden);
+    delete neu.sterneGesamt;
+    delete neu.bonussterne;
+    if (geladen.version !== 3) {
+      // Alte erreichte Stufen erhalten rückwirkend keine Gutscheine.
+      neu.bonusStufenOffen = [];
+      neu.bonusWelten = [];
+    }
+    liste("bonusStufenOffen", stufe => zahl(stufe) && stufe > 0 &&
+      stufe % BONUS_STUFEN_SCHRITT === 0 && stufe <= neu.bonusGesamt);
+    neu.bonusStufenOffen = offeneStufenOhneGutschein(neu.bonusStufenOffen || [], neu.geschenke || []);
+    neu.version = 3;
     if (neu.bereichPunkte !== undefined && !punkte(neu.bereichPunkte)) {
       problem();
       const alt = neu.bereichPunkte;
@@ -290,8 +316,7 @@ const speicher = (function () {
             modusWert = "bluey"; // die alte Misch-Welt gibt es nicht mehr
           }
           const kandidat = {
-            version: 2,
-            sterneGesamt: 0,
+            version: 3,
             modus: modusWert,
             runden: Array.isArray(geladen.runden) ? geladen.runden : [],
             zuletzt: Array.isArray(geladen.zuletzt) ? geladen.zuletzt : [],
@@ -299,8 +324,8 @@ const speicher = (function () {
             tagesSet: (geladen.tagesSet && typeof geladen.tagesSet === "object" &&
               geladen.tagesSet.runde) ? geladen.tagesSet : null,
             vortagSchluessel: Array.isArray(geladen.vortagSchluessel) ? geladen.vortagSchluessel : [],
-            bonussterne: Number(geladen.bonussterne) || 0,
             bonusGesamt: Number(geladen.bonusGesamt) || 0,
+            bonusStufenOffen: geladen.bonusStufenOffen || [],
             geschenke: Array.isArray(geladen.geschenke) ? geladen.geschenke : [],
             bereichPunkte: (geladen.bereichPunkte && typeof geladen.bereichPunkte === "object")
               ? geladen.bereichPunkte : {},
@@ -308,15 +333,6 @@ const speicher = (function () {
             bonusTag: (geladen.bonusTag && typeof geladen.bonusTag === "object") ? geladen.bonusTag : null,
             bonusWelten: Array.isArray(geladen.bonusWelten) ? geladen.bonusWelten : []
           };
-          // Einmalige Migration: vorhandenen Lebenszeitzähler nie zur Historie
-          // addieren. Bonussterne besitzen bereits ihren eigenen Lebenszeitzähler.
-          const historischeSterne = kandidat.runden.reduce(function (summe, eintrag) {
-            return summe + (eintrag && !eintrag.bonus && Number.isSafeInteger(eintrag.sterne) &&
-              eintrag.sterne > 0 ? eintrag.sterne : 0);
-          }, 0);
-          kandidat.sterneGesamt = Math.max(historischeSterne,
-            Number.isSafeInteger(geladen.sterneGesamt) && geladen.sterneGesamt >= 0
-              ? geladen.sterneGesamt : 0);
           /* Alte Gutscheine bekommen nachträglich eine Kennung,
              damit man sie umtauschen kann. Der Text bleibt, wie er ist. */
           kandidat.geschenke.forEach(function (geschenk, nummer) {
@@ -419,16 +435,10 @@ const speicher = (function () {
       return ergebnis;
     }
     const zeilen = Array.isArray(bereinigt.runden) ? bereinigt.runden : [];
-    const historie = zeilen.reduce(function (summe, eintrag) {
-      return summe + (eintrag && !eintrag.bonus && Number.isSafeInteger(eintrag.sterne) &&
-        eintrag.sterne > 0 ? eintrag.sterne : 0);
-    }, 0);
-    const zaehler = Number.isSafeInteger(bereinigt.sterneGesamt) && bereinigt.sterneGesamt >= 0
-      ? bereinigt.sterneGesamt : 0;
     const letzte = zeilen.length ? zeilen[zeilen.length - 1] : null;
     ergebnis.ok = true;
     ergebnis.daten = bereinigt;
-    ergebnis.sterne = Math.max(zaehler, historie);
+    ergebnis.sterne = bereinigt.bonusGesamt;
     ergebnis.runden = zeilen.length;
     ergebnis.geschenke = Array.isArray(bereinigt.geschenke) ? bereinigt.geschenke.length : 0;
     ergebnis.stand = (letzte && letzte.datum) ||
@@ -474,7 +484,7 @@ const speicher = (function () {
     ergebnis.stand = pruefung.stand;
     ergebnis.vorschau = {
       runden: (bereinigt.runden || []).length - (daten.runden || []).length,
-      sterne: bereinigt.sterneGesamt - daten.sterneGesamt,
+      sterne: bereinigt.bonusGesamt - daten.bonusGesamt,
       geschenke: (bereinigt.geschenke || []).length - (daten.geschenke || []).length
     };
     ergebnis.veraendert = stabilStringify(bereinigt) !== stabilStringify(daten);
@@ -516,8 +526,8 @@ function stabilStringify(wert) {
      Historie) wird als Maximum der beiden Stände übernommen. Dadurch entsteht
      nichts doppelt und nichts geht verloren.
    - Gutscheine: Vereinigung ohne Doppelung (erzeugte Kennung, sonst Inhalt).
-   - Bonus: verdiente Sterne wie oben über bonusRichtig; das Guthaben ist das
-     Maximum beider Stände (konservativ, es entstehen keine Sterne).
+   - Bonus: verdiente Bonussterne über bonusRichtig. Offene Stufengutscheine
+     werden vereinigt und bereits abgeholte Stufen ausgeschlossen.
    - Tagesrunde: abgeschlossene Runde vor offener (verhindert Doppelbewertung),
      sonst mehr Antworten, sonst das neuere Datum.
    - Merkzettel und Ausschlusslisten: Vereinigung, gekappt.
@@ -552,7 +562,7 @@ function verschmelzeSpielstande(lokal, fremd) {
       const k = rundenKennung(r);
       const alt = karte.get(k);
       if (!alt) { karte.set(k, r); return; }
-      const eintrag = (r.sterne || 0) > (alt.sterne || 0) ? r : alt;
+      const eintrag = (r.bonusRichtig || 0) > (alt.bonusRichtig || 0) ? r : alt;
       const zeitA = gueltigeUebezeiten(alt.uebezeiten) ? alt.uebezeiten : undefined;
       const zeitB = gueltigeUebezeiten(r.uebezeiten) ? r.uebezeiten : undefined;
       const zeiten = zeitB && (!zeitA || uebezeitSumme(zeitB) > uebezeitSumme(zeitA)) ? zeitB : zeitA;
@@ -633,16 +643,10 @@ function verschmelzeSpielstande(lokal, fremd) {
   /* Die Summen werden aus der vollständigen Vereinigung berechnet, nicht aus der
      auf 1.000 gekürzten Liste – sonst gingen die Sterne abgeschnittener Runden
      verloren. */
-  const sterneSichtbar = summieren(rundenAlle, "sterne", false);
   const bonusSichtbar = summieren(rundenAlle, "bonusRichtig", true);
-  const sterneGesamt = lebenswert(A.sterneGesamt, summieren(A.runden, "sterne", false),
-    B.sterneGesamt, summieren(B.runden, "sterne", false), sterneSichtbar);
   const bonusGesamt = lebenswert(A.bonusGesamt, summieren(A.runden, "bonusRichtig", true),
     B.bonusGesamt, summieren(B.runden, "bonusRichtig", true), bonusSichtbar);
-  const bonusGuthaben = Math.min(
-    Math.max(Number.isSafeInteger(A.bonussterne) ? A.bonussterne : 0,
-      Number.isSafeInteger(B.bonussterne) ? B.bonussterne : 0),
-    bonusGesamt);
+  const geschenke = vereinigeGutscheine(A.geschenke, B.geschenke);
   const runden = rundenAlle.length > 1000 ? rundenAlle.slice(-1000) : rundenAlle;
 
   const punkteA = (A.bereichPunkte && typeof A.bereichPunkte === "object") ? A.bereichPunkte : {};
@@ -683,8 +687,7 @@ function verschmelzeSpielstande(lokal, fremd) {
   }
 
   return {
-    version: 2,
-    sterneGesamt: sterneGesamt,
+    version: 3,
     modus: A.modus || B.modus || "bluey",
     runden: runden,
     /* Merkzettel: die Einträge des eigenen Geräts gelten als die neuesten,
@@ -693,9 +696,9 @@ function verschmelzeSpielstande(lokal, fremd) {
     knobelZuletzt: vereinigeTexte(B.knobelZuletzt, A.knobelZuletzt, EINSTELLUNGEN.knobelMerken),
     tagesSet: waehleTagesSet(A.tagesSet, B.tagesSet),
     vortagSchluessel: vereinigeTexte(B.vortagSchluessel, A.vortagSchluessel, 300),
-    bonussterne: bonusGuthaben,
     bonusGesamt: bonusGesamt,
-    geschenke: vereinigeGutscheine(A.geschenke, B.geschenke),
+    bonusStufenOffen: offeneStufenOhneGutschein(liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen)), geschenke),
+    geschenke: geschenke,
     bereichPunkte: bereichPunkte,
     sound: A.sound !== undefined ? A.sound : (B.sound !== undefined ? B.sound : null),
     bonusTag: bonusTag,
@@ -1083,7 +1086,7 @@ const sync = (function () {
 })();
 
 function gesamtSterne() {
-  return speicher.daten().sterneGesamt;
+  return speicher.daten().bonusGesamt;
 }
 
 function aktualisiereSpeicherHinweis() {
@@ -1252,7 +1255,7 @@ function themenSymbol() {
 const FIGURENBILDER = {
   hund: "bluey", bingo: "bingo", chilli: "chilli", bandit: "bandit",
   gabbykopf: "gabby", panda: "pandy", kuchi: "kuchi", meerkatze: "meerkatze",
-  carlita: "carlita", ratkatz: "ratkatz", dooziekopf: "doozie", puggie: "puggie",
+  carlita: "carlita", ratkatz: "ratkatz", kittyFee: "kitty-fee", dooziekopf: "doozie", puggie: "puggie",
   paillette: "paillette", traumpfoetchen: "traumpfoetchen",
   pixiepfoetchen: "pixiepfoetchen", spielpfoetchen: "spielpfoetchen", swenny: "swenny",
   sahnepfoetchen: "sahnepfoetchen"
@@ -1288,7 +1291,7 @@ function figurBild(figur, klassen) {
 
 /* ------------- Eine Runde bauen ------------- */
 
-/* --- Tages-Regie für die Bonuswelten (max. 3 Sterne pro Tag) --- */
+/* --- Tages-Regie für die Bonuswelten --- */
 
 function wienerDatumTeile(zeitpunkt) {
   const teile = {};
@@ -1623,7 +1626,7 @@ function baueBonusRunde(welt) {
     // Tageskontingent erschöpft: keine belohnungslose Bonusrunde bauen.
     return null;
   }
-  const anzahl = Math.min(offen, 3);
+  const anzahl = offen;
   const aufgaben = window.AUFGABEN.erzeugeBonus(anzahl, welt, speicher.daten().knobelZuletzt);
   // merken, welche Knobelaufgaben Emma gerade bekam – die kommen so schnell nicht wieder
   const daten = speicher.daten();
@@ -1643,6 +1646,7 @@ function baueBonusRunde(welt) {
   }];
   return {
     bereichsArt: "bonus",
+    bonusDatum: heutigesDatum(),
     welt: welt,
     bereiche: bereiche,
     karten: aufgaben,
@@ -2164,7 +2168,7 @@ function pruefeRunde() {
         titel: "Runde abschließen?",
         text: "Du hast noch " + offen + " von " + gesamtKarten + " Aufgaben offen. " +
           "Wenn du jetzt abschließt, kannst du sie nicht mehr ausfüllen. " +
-          "Deine Sterne und Gutscheine bleiben natürlich erhalten.",
+          "Deine Bonussterne und Gutscheine bleiben erhalten.",
         ja: "Trotzdem abgeben",
         nein: "Weiter üben",
         dann: function () {
@@ -2215,11 +2219,11 @@ function pruefeRunde() {
   });
 
   const gesamt = runde.karten.length;
-  const sterne = sterneFuerRunde(richtig, gesamt, runde.bereichsArt);
-  const lob = lobFuerAnteil(richtig / gesamt);
+  const anteil = richtig / gesamt;
+  const lob = lobFuerAnteil(anteil);
 
   pausiereUebezeit();
-  speichernRunde(richtig, gesamt, sterne, bereichErgebnis, 0, false);
+  speichernRunde(richtig, gesamt, bereichErgebnis, 0, false);
 
   /* Die Tagesrunde ist jetzt abgeschlossen: nichts mehr ausbessern. */
   if (istTagesRunde()) {
@@ -2237,20 +2241,20 @@ function pruefeRunde() {
   aktualisiereKnopfLeiste();
   aktualisiereFortschritt();
 
-  /* Nur eine reguläre Tagesrunde öffnet die Bonuswelt ab der Hälfte.
+  /* Nur eine reguläre Tagesrunde öffnet die Bonuswelt ab 90 %.
      Eine bereits offene Welt bleibt für den Tag offen. */
   const welt = runde.welt || modus;
   const offenVorher = weltHeuteFreigeschaltet(welt);
   const ebenFreigeschaltet = (istTagesRunde() && richtig / gesamt >= EINSTELLUNGEN.bonusAbAnteil)
     ? schalteWeltFrei(welt) : false;
 
-  zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten,
+  zeigeZusammenfassung(richtig, gesamt, lob, falschKarten,
     { ebenFreigeschaltet: ebenFreigeschaltet, weltOffen: offenVorher || ebenFreigeschaltet });
 
-  if (sterne >= 4) {
-    musik.fanfare(sterne);
+  if (anteil >= 0.8) {
+    musik.fanfare(anteil >= EINSTELLUNGEN.bonusAbAnteil ? 5 : 4);
   }
-  if (sterne >= 5 && EINSTELLUNGEN.spaessig) {
+  if (anteil >= EINSTELLUNGEN.bonusAbAnteil && EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
   aktualisiereWeltwahl();
@@ -2259,6 +2263,12 @@ function pruefeRunde() {
 /* --- die Bonuswelt prüfen: nie rot, nie Meckern, Sterne bis zum Tagesdeckel --- */
 
 function pruefeBonusRunde() {
+  if (runde.bonusDatum && runde.bonusDatum !== heutigesDatum()) {
+    window.alert("Ein neuer Tag! Spiele zuerst das heutige Mathe-Quiz, um die Bonuswelt zu öffnen.");
+    zeigeStartErgebnis();
+    zeigeBildschirm("startBildschirm");
+    return;
+  }
   // Gehört zur laufenden Bonusrunde und bleibt bei erneutem Prüfen erhalten.
   const auswertung = runde.bonusAuswertung || (runde.bonusAuswertung = {
     belohnt: new Set(), statistik: null
@@ -2306,9 +2316,11 @@ function pruefeBonusRunde() {
       });
     });
     holBonusTag().verteilt += vergeben;
-    daten.bonussterne += vergeben;
+    const vorher = daten.bonusGesamt;
     daten.bonusGesamt += vergeben;
-    speicher.speichere();
+    for (let stufe = naechsteBonusStufe(vorher); stufe <= daten.bonusGesamt; stufe += BONUS_STUFEN_SCHRITT) {
+      daten.bonusStufenOffen.push(stufe);
+    }
     aktualisiereBonusAnzeige();
   }
 
@@ -2327,8 +2339,7 @@ function pruefeBonusRunde() {
   // Genau ein Statistikdatensatz pro Bonusrunde, auch bei späteren Korrekturen.
   bucheUebezeit();
   if (!auswertung.statistik) {
-    speichernRunde(vergeben, runde.karten.length, sterneFuerAnteil(bonusRichtig / runde.karten.length),
-      {}, vergeben, true);
+    speichernRunde(vergeben, runde.karten.length, {}, vergeben, true);
     auswertung.statistik = daten.runden[daten.runden.length - 1];
   } else {
     auswertung.statistik.richtig += vergeben;
@@ -2343,7 +2354,7 @@ function pruefeBonusRunde() {
   }
 
   letzteZusammenfassung = {
-    richtig: auswertung.belohnt.size, gesamt: runde.karten.length, sterne: 0,
+    richtig: auswertung.belohnt.size, gesamt: runde.karten.length,
     lob: "", falschKarten: [], bonusRunde: true
   };
 
@@ -2369,7 +2380,7 @@ function pruefeBonusRunde() {
   aktualisiereKnopfLeiste();
   meldeRueckmeldung(vergeben + " neue Bonussterne. " + bonusTagesText());
 
-  if (daten.bonussterne >= EINSTELLUNGEN.bonusSternAlle &&
+  if (daten.bonusStufenOffen.length > 0 &&
       document.getElementById("geschenkUeberlagerung").hidden) {
     geschenkAuswahlOeffnen();
   }
@@ -2417,27 +2428,6 @@ function fehlerZeilen(karte) {
   });
 }
 
-function sterneFuerAnteil(anteil) {
-  if (anteil >= 0.9) { return 5; }
-  if (anteil >= 0.8) { return 4; }
-  if (anteil >= 0.6) { return 3; }
-  if (anteil >= 0.4) { return 2; }
-  return 1;
-}
-
-/* Sterne für eine ganze Runde.
-   - Reguläre Tagesrunden: 1 bis 5 Sterne nach dem Anteil richtiger Antworten.
-   - Wiederholungsrunden („Nur diese Aufgaben noch einmal üben“): genau ein Stern
-     je richtig gelöster Aufgabe, falsche Aufgaben geben keinen Stern. Es gibt
-     bewusst keine Obergrenze – 5 Aufgaben mit 3 richtigen ergeben 3 Sterne,
-     12 richtige ergeben 12 Sterne. */
-function sterneFuerRunde(richtig, gesamt, bereichsArt) {
-  if (bereichsArt === "uebungen") {
-    return Math.max(0, richtig);
-  }
-  return sterneFuerAnteil(gesamt > 0 ? richtig / gesamt : 0);
-}
-
 function lobFuerAnteil(anteil) {
   if (anteil >= 0.95) {
     return "Fast alles richtig – stark, " + SPIELERIN + "!";
@@ -2455,22 +2445,19 @@ function lobFuerAnteil(anteil) {
 }
 
 /* Alles wird angehängt – nichts wird überschrieben. */
-function speichernRunde(richtig, gesamt, sterne, bereichErgebnis, bonusRichtig, istBonus) {
+function speichernRunde(richtig, gesamt, bereichErgebnis, bonusRichtig, istBonus) {
   const daten = speicher.daten();
   const jetzt = new Date();
   const zeitTeile = wienerDatumTeile(jetzt);
-  if (!istBonus) {
-    daten.sterneGesamt += sterne;
-  }
   daten.runden.push({
     zeit: jetzt.toISOString(),
     datum: lokalesDatum(jetzt),
     uhrzeit: zeitTeile.hour + ":" + zeitTeile.minute,
     richtig: richtig,
     gesamt: gesamt,
-    sterne: istBonus ? 0 : sterne,
     modus: runde && runde.welt ? runde.welt : modus,
     bonus: !!istBonus,
+    ...(!istBonus && runde && { wiederholung: runde.bereichsArt === "uebungen" }),
     bonusRichtig: bonusRichtig || 0,
     bereiche: bereichErgebnis,
     ...(runde && runde.uebezeiten && { uebezeiten: { ...runde.uebezeiten } })
@@ -2485,7 +2472,6 @@ function speichernRunde(richtig, gesamt, sterne, bereichErgebnis, bonusRichtig, 
   });
   daten.modus = modus;
   speicher.speichere();
-  aktualisiereSternenAnzeige();
   // Abschluss einer Runde: sofort zum Repository spiegeln.
   sync.nachAenderung(true);
 }
@@ -2501,13 +2487,11 @@ function merkeGeschichten(karten) {
   speicher.speichere();
 }
 
-function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinweise) {
-  meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig. " + sterne +
-    (sterne === 1 ? " Stern." : " Sterne."));
+function zeigeZusammenfassung(richtig, gesamt, lob, falschKarten, hinweise) {
+  meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig.");
   letzteZusammenfassung = {
     richtig: richtig,
     gesamt: gesamt,
-    sterne: sterne,
     lob: lob,
     falschKarten: falschKarten
   };
@@ -2518,7 +2502,6 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   kasten.appendChild(element("p", "ergebnis-zeile",
     "Du hast " + richtig + " von " + gesamt + " Aufgaben richtig!"));
   kasten.appendChild(element("p", "ergebnis-lob", lob));
-  kasten.appendChild(element("p", "sterne-reihe", sterneZeichen(sterne)));
 
   /* Freundlicher Hinweis zur Bonuswelt dieser Welt */
   const offen = (hinweise && hinweise.weltOffen) || weltHeuteFreigeschaltet(modus);
@@ -2529,10 +2512,11 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   } else if (offen) {
     kasten.appendChild(element("p", "bonus-hinweis",
       "🌟 Die Bonuswelt " + WELT_NAMEN[modus] + " ist heute weiterhin offen."));
-  } else {
-    const fehlen = Math.max(1, Math.ceil(gesamt / 2) - richtig);
+  } else if (istTagesRunde()) {
+    const ziel = Math.ceil(gesamt * EINSTELLUNGEN.bonusAbAnteil);
+    const fehlen = ziel - richtig;
     kasten.appendChild(element("p", "bonus-hinweis",
-      "Tipp: Wenn du in " + WELT_NAMEN[modus] + " mindestens die Hälfte schaffst, " +
+      "Tipp: Wenn du in " + WELT_NAMEN[modus] + " mindestens " + ziel + " Aufgaben richtig löst, " +
       "öffnet sich die Bonuswelt. Noch " + fehlen +
       (fehlen === 1 ? " richtige Aufgabe" : " richtige Aufgaben") + " – du schaffst das!"));
   }
@@ -2540,7 +2524,8 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   if (EINSTELLUNGEN.spaessig) {
     const ecke = element("div", "ergebnis-maskottchen");
     mascottchenAuswahl().forEach(function (figur) {
-      const bild = figurBild(figur, "maskottchen-gross" + (sterne >= 5 ? " purzelbaum" : ""));
+      const bild = figurBild(figur, "maskottchen-gross" +
+        (richtig / gesamt >= EINSTELLUNGEN.bonusAbAnteil ? " purzelbaum" : ""));
       ecke.appendChild(bild);
     });
     kasten.appendChild(ecke);
@@ -2578,20 +2563,6 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
 
   kasten.scrollIntoView({ block: "start" });
   merkeGeschichten(runde.karten);
-}
-
-function sterneZeichen(anzahl) {
-  /* Höchstens fünf Sternsymbole – die genaue Zahl steht immer daneben.
-     Wiederholungsrunden können mehr als fünf Sterne ergeben. */
-  const gefuellt = Math.min(anzahl, 5);
-  let text = "";
-  for (let i = 0; i < gefuellt; i++) {
-    text += "★";
-  }
-  for (let i = gefuellt; i < 5; i++) {
-    text += "☆";
-  }
-  return text + "  " + anzahl + (anzahl === 1 ? " Stern" : " Sterne");
 }
 
 /* ------------- Bonussterne und Gutscheine ------------- */
@@ -2695,13 +2666,14 @@ let geschenkModus = { art: "neu", tauschId: null };
 
 function geschenkAuswahlOeffnen(modusOptionen, ueberschrift) {
   const optionen = modusOptionen || { art: "neu", tauschId: null };
+  const stufe = speicher.daten().bonusStufenOffen[0];
   geschenkModus = optionen;
   const lager = document.getElementById("geschenkUeberlagerung");
   const titel = document.getElementById("geschenkTitel");
   const raster = document.getElementById("geschenkeRaster");
   titel.textContent = ueberschrift || (optionen.art === "tausch"
     ? "🔄 Was möchtest du stattdessen haben?"
-    : "🎉 Fünf Bonussterne! Such dir etwas aus!");
+    : stufe ? "🎉 " + stufe + " Bonussterne! Such dir etwas aus!" : "Such dir ein Geschenk aus!");
   raster.textContent = "";
   GESCHENKE.forEach(function (geschenk) {
     const karte = element("button", "geschenk-karte");
@@ -2728,19 +2700,22 @@ function geschenkAusgewaehlt(text) {
 
 function geschenkGewaehlt(text) {
   const daten = speicher.daten();
-  const kosten = EINSTELLUNGEN.bonusSternAlle;
-  if (daten.bonussterne < kosten) { return; }
+  const stufe = daten.bonusStufenOffen[0];
+  if (!stufe) { return; }
   daten.geschenke.push({
-    id: "g" + Date.now() + "-" + Math.floor(Math.random() * 1000),
+    id: bonusGutscheinId(stufe),
     zeitpunkt: new Date().toISOString(),
     datum: heutigesDatum(),
     text: text
   });
-  daten.bonussterne -= kosten;
+  daten.bonusStufenOffen.shift();
   speicher.speichere();
   dialogSchliessen("geschenkUeberlagerung");
-  aktualisiereBonusAnzeige();
   aktualisiereGutscheinAnzeige();
+  if (!document.getElementById("fortschrittBildschirm").hidden) {
+    zeigeFortschritt("geschenke");
+    dialogFokus(document.getElementById("fortschrittZurueckKnopf"));
+  }
   sync.nachAenderung(true);
 
   const kasten = document.getElementById("ergebnisKasten");
@@ -2796,7 +2771,7 @@ function tauschGutscheinEin(geschenkId, neueText) {
 }
 
 function aktualisiereBonusAnzeige() {
-  document.getElementById("bonusSterne").textContent = String(speicher.daten().bonussterne);
+  document.getElementById("bonusSterne").textContent = String(gesamtSterne());
 }
 
 function aktualisiereGutscheinAnzeige() {
@@ -2807,7 +2782,7 @@ function aktualisiereGutscheinAnzeige() {
 /* ------------- Einstellungen ------------- */
 
 const FORTSCHRITT_TABS = {
-  sterne: "Sterne",
+  sterne: "Bonussterne",
   geschenke: "Gutscheine",
   statistik: "Statistik",
   daten: "Spielstand"
@@ -2868,30 +2843,45 @@ function zeigeSterneInhalt() {
 
   const daten = speicher.daten();
   const summe = gesamtSterne();
-  inhalt.appendChild(element("p", "sterne-summe", "Du hast schon " + summe + " Sterne gesammelt."));
-
-  MEILENSTEINE.forEach(function (stein) {
-    const erreicht = summe >= stein.sterne;
-    inhalt.appendChild(element("div", "meilenstein" + (erreicht ? "" : " leer"),
-      (erreicht ? "✓ " : "○ ") + stein.text));
-  });
+  const ziel = naechsteBonusStufe(summe);
+  inhalt.appendChild(element("p", "sterne-summe", "Du hast schon " + summe + " Bonussterne gesammelt."));
+  const letzteStufe = Math.max(MEILENSTEIN_BILDER.length, ziel / BONUS_STUFEN_SCHRITT);
+  const ersteStufe = Math.max(1, letzteStufe - MEILENSTEIN_BILDER.length + 1);
+  for (let stufe = ersteStufe; stufe <= letzteStufe; stufe += 1) {
+    const punkte = stufe * BONUS_STUFEN_SCHRITT;
+    const stein = MEILENSTEIN_BILDER[(stufe - 1) % MEILENSTEIN_BILDER.length];
+    const erreicht = summe >= punkte;
+    const zeile = element("div", "meilenstein" + (erreicht ? "" : " leer"));
+    const bild = element("span", "meilenstein-bild");
+    bild.setAttribute("aria-hidden", "true");
+    bild.appendChild(figurBild(stein.figur));
+    bild.appendChild(symbol(stein.motiv, "meilenstein-motiv"));
+    zeile.appendChild(bild);
+    zeile.appendChild(element("span", null, (erreicht ? "✓ " : "○ ") + punkte + " Bonussterne"));
+    inhalt.appendChild(zeile);
+  }
 
   // Bonussterne: gesamt, offen fürs Geschenk und der Tagesdeckel
-  const bonusKarte = element("div", "sterne-karte");
-  bonusKarte.appendChild(element("h3", null, "🌟 Bonussterne"));
-  bonusKarte.appendChild(element("p", null, daten.bonussterne + " von " + EINSTELLUNGEN.bonusSternAlle +
-    " Bonussternen für das nächste Geschenk gesammelt."));
+  const bonusKarte = element("div", "sterne-karte bonus-sterne-karte");
+  bonusKarte.setAttribute("tabindex", "-1");
+  bonusKarte.appendChild(element("h3", null, "Nächste Stufe: " + ziel + " Bonussterne"));
+  bonusKarte.appendChild(element("p", null, "Noch " + (ziel - summe) + " bis zum nächsten Gutschein."));
   const balken = element("div", "bonus-balken");
   const fuellung = element("div", "bonus-fuellung");
-  fuellung.style.width = Math.min(100, Math.round(daten.bonussterne / EINSTELLUNGEN.bonusSternAlle * 100)) + "%";
+  fuellung.style.width = ((summe % BONUS_STUFEN_SCHRITT) / BONUS_STUFEN_SCHRITT * 100) + "%";
   balken.appendChild(fuellung);
   bonusKarte.appendChild(balken);
-  bonusKarte.appendChild(element("p", "rand", "Insgesamt hast du schon " + daten.bonusGesamt +
-    " Bonussterne geschafft. " + bonusTagesText()));
+  bonusKarte.appendChild(element("p", "rand", bonusTagesText()));
+  if (daten.bonusStufenOffen.length) {
+    const abholen = element("button", "knopf klein", "Gutschein abholen");
+    abholen.type = "button";
+    abholen.addEventListener("click", function () { geschenkAuswahlOeffnen(); });
+    bonusKarte.appendChild(abholen);
+  }
   inhalt.appendChild(bonusKarte);
 
   if (daten.runden.length === 0) {
-    inhalt.appendChild(element("p", null, "Nach deiner ersten Übungsrunde erscheinen hier deine Sterne."));
+    inhalt.appendChild(element("p", null, "Hier erscheinen deine letzten Übungsrunden."));
   } else {
     const karten = element("div", "sterne-karte");
     karten.appendChild(element("h3", null, "Deine letzten Runden"));
@@ -2902,30 +2892,27 @@ function zeigeSterneInhalt() {
         (eintrag.bonus ? " · Bonuswelt" : "")));
       zeile.appendChild(element("span", null, (eintrag.richtig === undefined ? "–" : eintrag.richtig) +
         " von " + (eintrag.gesamt === undefined ? "–" : eintrag.gesamt)));
-      zeile.appendChild(element("span", null, eintrag.bonus ? "🌟 " + (eintrag.bonusRichtig || 0)
-        : "★ " + (eintrag.sterne === undefined ? "–" : eintrag.sterne)));
+      zeile.appendChild(element("span", null, eintrag.bonus ? "🌟 " + (eintrag.bonusRichtig || 0) : ""));
       karten.appendChild(zeile);
     });
     inhalt.appendChild(karten);
   }
 }
 
-/* Die Gutscheine: alle bisher abgeholten, mit Umtausch-Knopf.
-   Nichts wird gelöscht – getauschte Gutscheine bleiben mit Vermerk stehen. */
 function zeigeGeschenkeInhalt() {
   const inhalt = document.getElementById("geschenkeInhalt");
   inhalt.textContent = "";
   const daten = speicher.daten();
 
-  const erklaerung = element("div", "sterne-karte");
-  erklaerung.appendChild(element("h3", null, "🎁 Meine Gutscheine"));
-  erklaerung.appendChild(element("p", null, daten.geschenke.length === 0
-    ? "Noch ist kein Gutschein abgeholt. Fünf Bonussterne 🌟 sind ein Geschenk – such dir dann etwas aus!"
-    : "Du hast " + daten.geschenke.length + " Gutschein" + (daten.geschenke.length === 1 ? "" : "e") +
-      " abgeholt. Offene Gutscheine kannst du jederzeit umtauschen."));
-  inhalt.appendChild(erklaerung);
-
-  if (daten.geschenke.length > 0) {
+  if (daten.bonusStufenOffen.length) {
+    const abholen = element("button", "knopf primaer", "Gutschein abholen");
+    abholen.type = "button";
+    abholen.addEventListener("click", function () { geschenkAuswahlOeffnen(); });
+    inhalt.appendChild(abholen);
+  }
+  if (daten.geschenke.length === 0 && !daten.bonusStufenOffen.length) {
+    inhalt.appendChild(element("p", null, "Hier erscheinen deine Gutscheine, sobald du einen abgeholt hast."));
+  } else {
     daten.geschenke.slice().reverse().forEach(function (geschenk) {
       const karte = element("div", "gutschein-karte");
       const kopf = element("div", "gutschein-kopf");
@@ -3023,7 +3010,7 @@ function importiereSpielstand(text) {
     zeigeImportMeldung("Diese Datei kann nicht geladen werden: " + pruefung.grund);
     return;
   }
-  const teile = [pruefung.sterne + (pruefung.sterne === 1 ? " Stern" : " Sterne"),
+  const teile = [pruefung.sterne + (pruefung.sterne === 1 ? " Bonusstern" : " Bonussterne"),
     pruefung.runden + (pruefung.runden === 1 ? " Runde" : " Runden"),
     pruefung.geschenke + (pruefung.geschenke === 1 ? " Gutschein" : " Gutscheine")];
   zeigeFrage({
@@ -3052,7 +3039,7 @@ function fuehreSpielstaendeZusammen(text) {
     return;
   }
   const teile = [vorschau.runden + (vorschau.runden === 1 ? " Runde" : " Runden"),
-    vorschau.sterne + (vorschau.sterne === 1 ? " Stern" : " Sterne"),
+    vorschau.sterne + (vorschau.sterne === 1 ? " Bonusstern" : " Bonussterne"),
     vorschau.geschenke + (vorschau.geschenke === 1 ? " Gutschein" : " Gutscheine")];
   zeigeFrage({
     titel: "Spielstände zusammenführen?",
@@ -3123,8 +3110,7 @@ function zeigeSpielstandInhalt() {
   const stand = element("div", "sterne-karte");
   stand.appendChild(element("h3", null, "Aktueller Stand auf diesem Gerät"));
   stand.appendChild(element("p", null,
-    gesamtSterne() + (gesamtSterne() === 1 ? " Stern" : " Sterne") + " · 🌟 " +
-    daten.bonusGesamt + " Bonussterne · 🎁 " + daten.geschenke.length +
+    "🌟 " + daten.bonusGesamt + " Bonussterne · 🎁 " + daten.geschenke.length +
     (daten.geschenke.length === 1 ? " Gutschein" : " Gutscheine") + " · " +
     daten.runden.length + (daten.runden.length === 1 ? " Runde" : " Runden") +
     (daten.tagesSet ? " · Tagesrunde von " + datumText(daten.tagesSet.datum) : "")));
@@ -3243,10 +3229,6 @@ function datumText(iso) {
   return teile[2] + "." + teile[1] + "." + teile[0];
 }
 
-function aktualisiereSternenAnzeige() {
-  document.getElementById("sterneGesamt").textContent = String(gesamtSterne());
-}
-
 /* ------------- Statistik (zweiter Reiter im Fortschritts-Bereich) ------------- */
 
 function zeigeStatistikInhalt() {
@@ -3259,40 +3241,62 @@ function zeigeStatistikInhalt() {
     return;
   }
 
-  // Übersicht
-  let gesamtAufgaben = 0;
-  let gesamtRichtige = 0;
+  const gruppen = {
+    quiz: { titel: "Quiz", anzahl: 0, aufgaben: 0, richtig: 0 },
+    bonus: { titel: "Bonusquiz", anzahl: 0, aufgaben: 0, richtig: 0 }
+  };
   daten.runden.forEach(function (eintrag) {
-    gesamtAufgaben += eintrag.gesamt || 0;
-    gesamtRichtige += eintrag.richtig || 0;
+    const zeiten = eintrag.uebezeiten || {};
+    const istQuiz = eintrag.wiederholung !== true && zeiten.wiederholung === undefined &&
+      (eintrag.wiederholung === false || Object.keys(BEREICH_NAMEN).some(bereich => zeiten[bereich] !== undefined));
+    if (!eintrag.bonus && !istQuiz) { return; }
+    const gruppe = eintrag.bonus ? gruppen.bonus : gruppen.quiz;
+    gruppe.anzahl += 1;
+    gruppe.aufgaben += eintrag.gesamt || 0;
+    gruppe.richtig += eintrag.richtig || 0;
   });
+  const eingeloesteGutscheine = daten.geschenke.filter(geschenk => geschenk.eingeloestAm).length;
   const uebersicht = element("div", "sterne-karte");
-  uebersicht.appendChild(element("h3", null, "Bis jetzt gerechnet"));
+  uebersicht.appendChild(element("h3", null, "Zusammenfassung"));
+  const liste = element("ul");
+  Object.values(gruppen).forEach(function (gruppe) {
+    if (!gruppe.anzahl) { return; }
+    const zeile = element("li");
+    zeile.appendChild(element("strong", null, gruppe.titel));
+    const ergebnis = gruppe.aufgaben
+      ? " · " + gruppe.richtig + " von " + gruppe.aufgaben + " Aufgaben richtig (" +
+        Math.round(gruppe.richtig / gruppe.aufgaben * 100) + " %)"
+      : "";
+    zeile.appendChild(element("span", null, " · " + gruppe.anzahl + " abgeschlossen" + ergebnis));
+    liste.appendChild(zeile);
+  });
+  uebersicht.appendChild(liste);
   uebersicht.appendChild(element("p", null,
-    "Runden: " + daten.runden.length +
-    " · Aufgaben: " + gesamtAufgaben +
-    " · richtig: " + gesamtRichtige + " (" + (gesamtAufgaben ? Math.round(gesamtRichtige / gesamtAufgaben * 100) : "–") + " %)" +
-    " · 🌟 " + daten.bonusGesamt + " Bonussterne" +
-    " · 🎁 " + daten.geschenke.length + " Geschenke"));
-  uebersicht.appendChild(element("p", "rand", "Nichts wird überschrieben – jede Runde wird angehängt. Mit „Statistik herunterladen“ bekommst du immer eine neue Datei für Excel."));
+    "🌟 " + daten.bonusGesamt + " Bonussterne" +
+    " · 🎁 " + daten.geschenke.length + (daten.geschenke.length === 1 ? " Gutschein" : " Gutscheine") +
+    " (" + eingeloesteGutscheine + " eingelöst)"));
   inhalt.appendChild(uebersicht);
   inhalt.appendChild(baueZeitstatistik(daten.runden));
 
   // Übe-Kalender der letzten 28 Tage
   inhalt.appendChild(baueKalender(daten));
 
-  // Verlauf der letzten Runden als Balken
-  inhalt.appendChild(baueVerlauf(daten));
-
-  // Tabelle: pro Bereich gesamt
+  // Jede Runde mit Ergebnissen in diesem Bereich zählt als eine Übung.
   const tabelle = element("div", "sterne-karte");
   tabelle.appendChild(element("h3", null, "In welchem Bereich bist du schon stark?"));
+  tabelle.appendChild(element("p", "rand", "Dein Durchschnitt aus bis zu 10 Übungen pro Bereich. Es zählen die neuesten Übungen."));
   Object.keys(BEREICH_NAMEN).forEach(function (bereich) {
-    const punkt = daten.bereichPunkte[bereich];
-    if (!punkt || punkt.gesamt === 0) {
-      return;
+    let anzahl = 0;
+    let summe = 0;
+    for (let i = daten.runden.length - 1; i >= 0 && anzahl < 10; i -= 1) {
+      const runde = daten.runden[i];
+      const punkt = runde.bereiche && runde.bereiche[bereich];
+      if (runde.bonus || !punkt || !(punkt.gesamt > 0)) { continue; }
+      summe += punkt.richtig / punkt.gesamt;
+      anzahl += 1;
     }
-    const anteil = Math.round(punkt.richtig / punkt.gesamt * 100);
+    if (anzahl === 0) { return; }
+    const anteil = Math.round(summe / anzahl * 100);
     const zeile = element("div", "bereich-zeile");
     zeile.appendChild(element("span", null, BEREICH_NAMEN[bereich]));
     const balken = element("div", "bereich-balken");
@@ -3334,30 +3338,36 @@ function baueKalender(daten) {
   const karte = element("div", "sterne-karte");
   karte.appendChild(element("h3", null, "An welchen Tagen hast du geübt?"));
 
-  /* Pro Tag: höchste Sternzahl (für die Färbung) und ob überhaupt geübt wurde.
-     Bonusrunden haben sterne = 0, ein reiner Knobeltag ist aber geübt. */
+  /* Pro Tag: Bonussterne und ob überhaupt geübt wurde. */
   const tage = {};
   const geuebtAm = {};
   daten.runden.forEach(function (eintrag) {
     if (eintrag.datum) {
-      tage[eintrag.datum] = Math.max(tage[eintrag.datum] || 0, eintrag.sterne || 0);
+      tage[eintrag.datum] = (tage[eintrag.datum] || 0) + (eintrag.bonus ? eintrag.bonusRichtig || 0 : 0);
       geuebtAm[eintrag.datum] = true;
     }
   });
 
   const raster = element("div", "kalender");
   const heute = heutigesDatum();
+  const tagesmaximum = EINSTELLUNGEN.bonusSterneProTag;
   let streak = 0;
   let anzahlGeuebt = 0;
   for (let rückwaerts = 27; rückwaerts >= 0; rückwaerts--) {
     const schlüssel = verschiebeKalendertag(heute, -rückwaerts);
     const sterne = tage[schlüssel] || 0;
     const istGeuebt = geuebtAm[schlüssel] === true;
+    const istHeute = schlüssel === heute;
     const punkt = element("div", "kalender-punkt" +
-        (istGeuebt ? " geuebt" + (sterne > 0 ? " n" + sterne : "") : ""),
-        String(Number(schlüssel.slice(-2))));
+      (istGeuebt ? " geuebt" : "") +
+      (sterne >= tagesmaximum ? " tagesmaximum" : "") +
+      (istHeute ? " heute" : ""));
+    punkt.appendChild(element("span", "kalender-datum", istHeute ? "Heute" : datumText(schlüssel).slice(0, 6)));
+    if (istHeute) { punkt.setAttribute("aria-current", "date"); }
+    if (istGeuebt) { punkt.appendChild(element("span", "kalender-sterne", "🌟 " + sterne)); }
     punkt.title = istGeuebt
-      ? datumText(schlüssel) + ": " + (sterne > 0 ? sterne + " Sterne" : "Bonusrunde geübt")
+      ? datumText(schlüssel) + ": " + sterne + (sterne === 1 ? " Bonusstern" : " Bonussterne") +
+        (sterne >= tagesmaximum ? " · Tagesmaximum erreicht" : "")
       : datumText(schlüssel) + ": nicht geübt";
     raster.appendChild(punkt);
     if (istGeuebt) {
@@ -3365,6 +3375,11 @@ function baueKalender(daten) {
     }
   }
   karte.appendChild(raster);
+  const legende = element("div", "kalender-legende");
+  legende.appendChild(element("span", "kalender-punkt", "Nicht geübt"));
+  legende.appendChild(element("span", "kalender-punkt geuebt", "Geübt"));
+  legende.appendChild(element("span", "kalender-punkt tagesmaximum", tagesmaximum + " Bonussterne = Tagesmaximum"));
+  karte.appendChild(legende);
 
   // Streak zählen (aufeinanderfolgende Tage, bis heute oder gestern)
   const datenFuerStreak = {};
@@ -3387,26 +3402,6 @@ function baueKalender(daten) {
   return karte;
 }
 
-function baueVerlauf(daten) {
-  const karte = element("div", "sterne-karte");
-  karte.appendChild(element("h3", null, "So war es in deinen letzten Runden"));
-  const reihe = element("div", "verlauf");
-  daten.runden.slice(-14).forEach(function (eintrag) {
-    const anteil = eintrag.gesamt ? Math.round(eintrag.richtig / eintrag.gesamt * 100) : 0;
-    const saule = element("div", "verlauf-saule");
-    const balken = element("div", "verlauf-balken");
-    balken.style.height = Math.max(6, anteil) + "%";
-    balken.title = datumText(eintrag.datum) + (eintrag.uhrzeit ? " " + eintrag.uhrzeit + " Uhr" : "") +
-      ": " + (eintrag.richtig === undefined ? "–" : eintrag.richtig) + " von " +
-      (eintrag.gesamt === undefined ? "–" : eintrag.gesamt) + " (" + anteil + " %)";
-    saule.appendChild(balken);
-    saule.appendChild(element("span", "verlauf-label", String(anteil)));
-    reihe.appendChild(saule);
-  });
-  karte.appendChild(reihe);
-  return karte;
-}
-
 /* Statistik als CSV herunterladen – jedes Mal eine neue Datei, nichts wird überschrieben. */
 function csvZelle(wert) {
   let text = String(wert === undefined || wert === null ? "" : wert);
@@ -3421,7 +3416,7 @@ function csvHerunterladen() {
   zeilen.push("Stand;" + new Date().toLocaleString("de-DE", { timeZone: "Europe/Vienna" }));
   zeilen.push("");
   const zeitbereiche = Object.keys(ZEITBEREICHE);
-  zeilen.push("TYP;DATUM;UHRZEIT;MODUS;RICHTIG;GESAMT;STERNE;BONUS RICHTIG;ADDITION;SUBTRAKTION;MULTIPLIKATION;DIVISION;ZAHLENRAETSEL;GESCHICHTEN;ÜBEZEIT (SEK);" +
+  zeilen.push("TYP;DATUM;UHRZEIT;MODUS;RICHTIG;GESAMT;BONUSSTERNE;ADDITION;SUBTRAKTION;MULTIPLIKATION;DIVISION;ZAHLENRAETSEL;GESCHICHTEN;ÜBEZEIT (SEK);" +
     zeitbereiche.map(bereich => ZEITBEREICHE[bereich].toUpperCase() + " (SEK)").join(";"));
   daten.runden.forEach(function (eintrag) {
     function spalte(bereich) {
@@ -3430,7 +3425,7 @@ function csvHerunterladen() {
     }
     zeilen.push([
       eintrag.bonus ? "BONUSRUNDE" : "RUNDE", eintrag.datum || "", eintrag.uhrzeit || "", eintrag.modus || "",
-      eintrag.richtig, eintrag.gesamt, eintrag.sterne, eintrag.bonusRichtig || 0,
+      eintrag.richtig, eintrag.gesamt, eintrag.bonus ? eintrag.bonusRichtig || 0 : "",
       spalte("add"), spalte("sub"), spalte("mul"), spalte("div"), spalte("raetsel"), spalte("geschichte"),
       eintrag.uebezeiten ? Math.floor(uebezeitSumme(eintrag.uebezeiten) / 1000) : "",
       ...zeitbereiche.map(function (bereich) {
@@ -3441,7 +3436,7 @@ function csvHerunterladen() {
   });
   zeilen.push("");
   zeilen.push("BONUSSTERNE;insgesamt gesammelt;" + daten.bonusGesamt);
-  zeilen.push("BONUSSTERNE;offen für nächstes Geschenk;" + daten.bonussterne);
+  zeilen.push("BONUSSTERNE;nächste Stufe;" + naechsteBonusStufe(daten.bonusGesamt));
   zeilen.push("BONUSSTERNE;höchstens pro Tag;" + EINSTELLUNGEN.bonusSterneProTag);
   zeilen.push("");
   zeilen.push("GUTSCHEIN;DATUM;GETAUSCHT AM;UMGETAUSCHT ZU;TEXT;EINGELÖST AM");
@@ -3870,7 +3865,7 @@ function startBonusWelt(welt) {
   }
   if (!weltHeuteFreigeschaltet(welt)) {
     window.alert("Die Bonuswelt " + WELT_NAMEN[welt] + " öffnet sich, sobald du in " +
-      WELT_NAMEN[welt] + " mindestens die Hälfte einer Runde schaffst. Du schaffst das!");
+      WELT_NAMEN[welt] + " mindestens 45 von 50 Aufgaben richtig löst. Du schaffst das!");
     return;
   }
   const neueRunde = baueBonusRunde(welt);
@@ -3905,10 +3900,9 @@ function zeigeStartErgebnis() {
   } else {
     kasten.appendChild(element("p", "ergebnis-zeile",
       "Letzte Runde: " + letzteZusammenfassung.richtig + " von " + letzteZusammenfassung.gesamt + " richtig"));
-    kasten.appendChild(element("p", "sterne-reihe", sterneZeichen(letzteZusammenfassung.sterne)));
   }
   kasten.appendChild(element("p", "ergebnis-lob", "Insgesamt hast du schon " + gesamtSterne() +
-    " Sterne und 🌟 " + speicher.daten().bonussterne + " Bonussterne."));
+    " Bonussterne."));
 }
 
 /* ------------- Knöpfe verbinden ------------- */
@@ -4037,6 +4031,9 @@ document.getElementById("abbruchKnopf").addEventListener("click", function () {
 document.getElementById("sterneKnopf").addEventListener("click", function () {
   zeigeFortschritt("sterne");
 });
+document.getElementById("gutscheinZaehlerKnopf").addEventListener("click", function () {
+  zeigeFortschritt("geschenke");
+});
 document.getElementById("statistikKnopf").addEventListener("click", function () {
   zeigeFortschritt("statistik");
 });
@@ -4085,7 +4082,6 @@ document.getElementById("geschenkWegKnopf").addEventListener("click", function (
 
 document.body.dataset.thema = modus;
 setzeModus(modus);
-aktualisiereSternenAnzeige();
 aktualisiereBonusAnzeige();
 aktualisiereGutscheinAnzeige();
 zeigeStartErgebnis();

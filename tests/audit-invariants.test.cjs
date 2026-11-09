@@ -34,17 +34,12 @@ function spieleRunde(g, richtig) {
 
 function pruefeGrundInvarianten(g, kontext) {
   const d = g.data();
-  // Lebenszeitsterne == Summe der regulären Rundensterne (unter 1000 Zeilen)
+  assert.equal(d.sterneGesamt, undefined);
   if (d.runden.length < 1000) {
-    assert.equal(d.sterneGesamt, summe(d.runden.filter(r => !r.bonus), r => r.sterne || 0),
-      kontext + ": Lebenszeitsterne weichen von der Rundenhistorie ab");
+    assert.equal(d.bonusGesamt, summe(d.runden.filter(r => r.bonus), r => r.bonusRichtig));
   }
-  // Bonusguthaben: verdient minus ausgegeben ist immer ein Vielfaches von 5
-  assert.equal((d.bonusGesamt - d.bonussterne) % 5, 0,
-    kontext + ": Bonusguthaben passt nicht zu den verdienten Bonussternen");
-  assert(d.bonussterne >= 0, kontext + ": negatives Bonusguthaben");
-  assert(d.bonusGesamt >= d.bonussterne, kontext + ": mehr Guthaben als verdient");
-  assert(d.bonusTag.verteilt >= 0 && d.bonusTag.verteilt <= 3, kontext + ": Tageskontingent verletzt");
+  assert(d.bonusStufenOffen.every(stufe => stufe % 25 === 0 && stufe <= d.bonusGesamt));
+  assert(d.bonusTag.verteilt >= 0 && d.bonusTag.verteilt <= 5, kontext + ": Tageskontingent verletzt");
   assert.equal(new Set(d.bonusWelten).size, d.bonusWelten.length, kontext + ": doppelte Bonuswelt");
   for (const welt of d.bonusWelten) assert(["bluey", "gabby", "doozie"].includes(welt), kontext + ": unbekannte Welt");
   // Gutscheine: Kennungen eindeutig, kein zweiter Eintrag für einen Umtausch
@@ -72,7 +67,7 @@ test("AUDIT Zustand: 20 Spieltage mit Neustarts halten alle Invarianten", () => 
     const welt = ["bluey", "gabby", "doozie"][tag % 3];
 
     g.run(`setzeModus('${welt}'); zeigeRunde(neuesTagesSet())`);
-    spieleRunde(g, tag % 2 ? 50 : 25);
+    spieleRunde(g, tag % 2 ? 50 : 45);
     assert.equal(g.run("fertigAnsicht"), true);
     pruefeGrundInvarianten(g, `Tag ${tag} nach Tagesrunde`);
     assert.equal(g.run(`weltHeuteFreigeschaltet('${welt}')`), true, `Tag ${tag}: Welt nicht freigeschaltet`);
@@ -83,7 +78,7 @@ test("AUDIT Zustand: 20 Spieltage mit Neustarts halten alle Invarianten", () => 
     g.fill(g.run("runde.karten.length"));
     g.run("pruefeRunde()");
     pruefeGrundInvarianten(g, `Tag ${tag} nach Bonusrunde`);
-    assert.equal(g.data().bonusTag.verteilt, 3, `Tag ${tag}: Bonuskontingent nicht ausgeschöpft`);
+    assert.equal(g.data().bonusTag.verteilt, 5, `Tag ${tag}: Bonuskontingent nicht ausgeschöpft`);
 
     // Neustart: identischer Stand
     g = neuLaden(g, jetzt);
@@ -91,10 +86,9 @@ test("AUDIT Zustand: 20 Spieltage mit Neustarts halten alle Invarianten", () => 
     gespeichert = g.saved();
   }
   assert.equal(gespeichert.runden.length, 40);
-  assert.equal(gespeichert.bonusGesamt, 60);
-  assert.equal(gespeichert.bonussterne, 60);
+  assert.equal(gespeichert.bonusGesamt, 100);
+  assert.deepEqual(gespeichert.bonusStufenOffen, [25, 50, 75, 100]);
   assert.equal(gespeichert.geschenke.length, 0);
-  assert.equal(gespeichert.sterneGesamt, summe(gespeichert.runden.filter(r => !r.bonus), r => r.sterne));
 });
 
 test("AUDIT Zustand: Speichern und Neuladen ist verlustfrei und idempotent", () => {
@@ -180,7 +174,7 @@ test("AUDIT Zustand: Blättern durch alle Abschnitte bewertet nichts", () => {
   // Erst der letzte Klick bewertet genau einmal.
   for (let i = 0; i < 6; i++) g.nodes.get("pruefenKnopf").emit("click");
   assert.equal(g.data().runden.length, 1);
-  assert.equal(g.run("gesamtSterne()"), 5);
+  assert.equal(g.run("gesamtSterne()"), 0);
   assert.equal(g.data().runden[0].gesamt, 50);
 });
 
@@ -217,26 +211,25 @@ test("AUDIT Zustand: Bonussterne einmalig, Tagesdeckel und Welten getrennt", () 
   g.run("zeigeRunde(neuesTagesSet())"); g.fill(50); g.run("pruefeRunde()");
   g.run("zeigeRunde(baueBonusRunde('bluey'))");
   const anzahl = g.run("runde.karten.length");
-  assert.equal(anzahl, 3);
+  assert.equal(anzahl, 5);
   g.fill(anzahl);
   g.run("pruefeRunde(); pruefeRunde(); pruefeRunde()");
-  assert.equal(g.data().bonussterne, 3, "Bonussterne mehrfach vergeben");
-  assert.equal(g.data().bonusGesamt, 3);
+  assert.equal(g.data().bonusGesamt, 5);
   assert.equal(g.data().runden.filter(r => r.bonus).length, 1, "mehrere Bonus-Statistikzeilen");
   assert.equal(g.run("bonusPlaetzeHeute()"), 0, "Tagesdeckel nicht erreicht");
   // Keine weitere Bonusrunde über die Startseite möglich
   g.run("startBonusWelt('gabby')");
   assert.equal(g.run("runde.bereichsArt"), "bonus");
-  assert.equal(g.data().bonusGesamt, 3);
+  assert.equal(g.data().bonusGesamt, 5);
   // Nächster Tag: neues Kontingent, alte Sterne bleiben
   g.time("2026-11-02T12:00:00Z");
-  assert.equal(g.run("bonusPlaetzeHeute()"), 3);
-  assert.equal(g.data().bonusGesamt, 3);
+  assert.equal(g.run("bonusPlaetzeHeute()"), 5);
+  assert.equal(g.data().bonusGesamt, 5);
   assert.deepEqual(plain(g.data().bonusWelten), []);
 });
 
 test("AUDIT Zustand: Tageswechsel erzeugt neue Aufgaben und behält Sterne und Gutscheine", () => {
-  const g = game({ geschenke: [{ id: "alt", datum: "2026-10-31", text: "Gift" }] }, { now: "2026-10-31T12:00:00Z" });
+  const g = game({ bonusGesamt: 5, geschenke: [{ id: "alt", datum: "2026-10-31", text: "Gift" }] }, { now: "2026-10-31T12:00:00Z" });
   g.run("zeigeRunde(neuesTagesSet())");
   const alteKeys = g.run("runde.karten.map(k => k.schluessel)");
   g.fill(50);
@@ -284,7 +277,7 @@ test("AUDIT Zustand: neuerer Stand eines anderen Fensters bleibt erhalten", () =
 });
 
 test("AUDIT Zustand: Schreibfehler sind sichtbar und werden nachgeholt", () => {
-  const g = game({ sterneGesamt: 7 });
+  const g = game({ bonusGesamt: 7 });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(2);
   assert.equal(g.nodes.get("speicherHinweis").hidden, true);
@@ -297,7 +290,7 @@ test("AUDIT Zustand: Schreibfehler sind sichtbar und werden nachgeholt", () => {
   g.run("speicher.speichere()");
   assert.equal(g.nodes.get("speicherHinweis").hidden, true, "Hinweis bleibt nach Erfolg stehen");
   assert.equal(Object.keys(g.saved().tagesSet.antworten).length, 2);
-  assert.equal(g.saved().sterneGesamt, 7);
+  assert.equal(g.saved().bonusGesamt, 7);
 });
 
 test("AUDIT Zustand: Umtausch ändert den Wunsch am ursprünglichen Platz", () => {
@@ -340,11 +333,11 @@ test("AUDIT Zustand: Alte Umtauschkette wird beim Laden am ursprünglichen Platz
 });
 
 test("AUDIT Zustand: Statistikgrenze erhält Lebenszeitwerte nach Neuladen", () => {
-  const g = game({ geschenke: [{ id: "g1", text: "Bleibt" }] });
-  for (let i = 0; i < 1005; i++) g.run("speichernRunde(1, 1, 5, {add: {richtig: 1, gesamt: 1}}, 0, false)");
+  const g = game({ bonusGesamt: 5100, geschenke: [{ id: "g1", text: "Bleibt" }] });
+  for (let i = 0; i < 1005; i++) g.run("speichernRunde(1, 1, {add: {richtig: 1, gesamt: 1}}, 0, false)");
   const g2 = neuLaden(g);
   assert.equal(g2.data().runden.length, 1000);
-  assert.equal(g2.run("gesamtSterne()"), 5025);
+  assert.equal(g2.run("gesamtSterne()"), 5100);
   assert.equal(g2.data().bereichPunkte.add.gesamt, 1005);
   assert.equal(g2.data().geschenke[0].text, "Bleibt");
 });

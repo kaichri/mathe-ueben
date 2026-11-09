@@ -40,7 +40,7 @@ function meldung(g) {
 
 /* Baut einen Spielstand mit Fortschritt (5 Sterne, 1 Runde, 1 Gutschein). */
 function spielstandMitFortschritt() {
-  const g = game({ geschenke: [{ id: "g1", datum: "2026-10-30", text: "Filmabend" }] }, { now: JETZT });
+  const g = game({ bonusGesamt: 5, geschenke: [{ id: "g1", datum: "2026-10-30", text: "Filmabend" }] }, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(50);
   g.run("pruefeRunde()");
@@ -65,7 +65,7 @@ test("SPIELSTAND: Sichern erzeugt eine Datei mit dem aktuellen Stand", async () 
   const inhalt = JSON.parse(await datei.blob.text());
   assert.equal(inhalt.format, "mathe-sicherung");
   assert.equal(typeof inhalt.originalSpeicher, "string");
-  assert.equal(inhalt.daten.sterneGesamt, 5);
+  assert.equal(inhalt.daten.bonusGesamt, 5);
   assert.equal(inhalt.daten.runden.length, 1);
   assert.equal(inhalt.daten.geschenke.length, 1);
 });
@@ -88,7 +88,7 @@ test("SPIELSTAND: Reiter zeigt den aktuellen Stand und beide Knöpfe", () => {
   assert.equal(g.nodes.get("spielstandInhalt").hidden, false);
   assert(imSpielstandTab(g, "spielstandSichernKnopf"));
   assert(imSpielstandTab(g, "spielstandLadenKnopf"));
-  assert.match(g.nodes.get("spielstandInhalt").textContent, /5 Sterne/);
+  assert.match(g.nodes.get("spielstandInhalt").textContent, /5 Bonussterne/);
   // Beim Wechsel auf einen anderen Reiter wird der Inhalt geräumt.
   g.run("zeigeFortschritt('sterne')");
   assert.equal(g.nodes.get("spielstandInhalt").hidden, true);
@@ -105,13 +105,12 @@ test("SPIELSTAND: Sichern und auf einem leeren Gerät laden stellt alles wieder 
   assert.equal(ziel.run("gesamtSterne()"), 0, "Zielgerät startet leer");
   importiere(ziel, text);
   assert.equal(frageOffen(ziel), true, "Vor dem Ersetzen muss gefragt werden");
-  assert.match(ziel.nodes.get("frageText").textContent, /5 Sterne/);
+  assert.match(ziel.nodes.get("frageText").textContent, /5 Bonussterne/);
   assert.match(ziel.nodes.get("frageText").textContent, /1 Runde/);
   assert.match(ziel.nodes.get("frageText").textContent, /1 Gutschein/);
   ziel.nodes.get("frageJaKnopf").emit("click");
 
   const gespeichert = ziel.saved();
-  assert.equal(gespeichert.sterneGesamt, erwartet.sterneGesamt);
   assert.equal(gespeichert.bonusGesamt, erwartet.bonusGesamt);
   assert.equal(gespeichert.runden.length, erwartet.runden.length);
   assert.deepEqual(plain(gespeichert.geschenke), plain(erwartet.geschenke));
@@ -130,7 +129,7 @@ test("SPIELSTAND: ein roher Spielstand ohne Sicherungsrahmen wird akzeptiert", (
   importiere(ziel, quelle.raw());
   assert.equal(frageOffen(ziel), true);
   ziel.nodes.get("frageJaKnopf").emit("click");
-  assert.equal(ziel.saved().sterneGesamt, 5);
+  assert.equal(ziel.saved().bonusGesamt, 5);
 });
 
 /* -------------------------------------------------------------- Rückfrage */
@@ -138,7 +137,7 @@ test("SPIELSTAND: ein roher Spielstand ohne Sicherungsrahmen wird akzeptiert", (
 test("SPIELSTAND: ohne Bestätigung wird nichts überschrieben", () => {
   const quelle = spielstandMitFortschritt();
   const ziel = game({}, { now: JETZT });
-  ziel.run("speicher.daten().sterneGesamt = 2; speicher.speichere()");
+  ziel.run("speicher.daten().bonusGesamt = 2; speicher.speichere()");
   const vorher = ziel.raw();
 
   importiere(ziel, sicherungVon(quelle));
@@ -149,13 +148,13 @@ test("SPIELSTAND: ohne Bestätigung wird nichts überschrieben", () => {
   ziel.nodes.get("frageNeinKnopf").emit("click");
   assert.equal(ziel.raw(), vorher, "Abbrechen darf nichts ändern");
   assert.equal(ziel.reloads(), 0);
-  assert.equal(ziel.run("speicher.daten().sterneGesamt"), 2);
+  assert.equal(ziel.run("speicher.daten().bonusGesamt"), 2);
 });
 
 test("SPIELSTAND: der bisherige Stand wird vor dem Ersetzen gesichert", async () => {
   const quelle = spielstandMitFortschritt();
   const ziel = game({}, { now: JETZT });
-  ziel.run("speicher.daten().sterneGesamt = 3; speicher.daten().geschenke.push({id: 'alt', datum: '2026-10-29', text: 'Alter Gutschein'}); speicher.speichere()");
+  ziel.run("speicher.daten().bonusGesamt = 3; speicher.daten().geschenke.push({id: 'alt', datum: '2026-10-29', text: 'Alter Gutschein'}); speicher.speichere()");
 
   importiere(ziel, sicherungVon(quelle));
   ziel.nodes.get("frageJaKnopf").emit("click");
@@ -163,9 +162,9 @@ test("SPIELSTAND: der bisherige Stand wird vor dem Ersetzen gesichert", async ()
   assert.equal(ziel.downloads.length, 1, "Es muss genau eine Rettungssicherung geben");
   assert.match(ziel.downloads[0].name, /^mathe-vor-import-\d{4}-\d{2}-\d{2}\.json$/);
   const rettung = JSON.parse(await ziel.downloads[0].blob.text());
-  assert.equal(rettung.daten.sterneGesamt, 3);
+  assert.equal(rettung.daten.bonusGesamt, 3);
   assert.equal(rettung.daten.geschenke[0].text, "Alter Gutschein");
-  assert.equal(ziel.saved().sterneGesamt, 5, "Danach gilt der importierte Stand");
+  assert.equal(ziel.saved().bonusGesamt, 5, "Danach gilt der importierte Stand");
 });
 
 test("SPIELSTAND: ohne Rettungssicherung wird nicht importiert", () => {
@@ -173,13 +172,13 @@ test("SPIELSTAND: ohne Rettungssicherung wird nicht importiert", () => {
   // Downloads sind blockiert -> die Sicherung des alten Standes ist nicht möglich.
   const ziel = game({}, { now: JETZT, failDownload: true });
   oeffneSpielstand(ziel);
-  ziel.run("speicher.daten().sterneGesamt = 2; speicher.speichere()");
+  ziel.run("speicher.daten().bonusGesamt = 2; speicher.speichere()");
   const vorher = ziel.raw();
   importiere(ziel, sicherungVon(quelle));
   ziel.nodes.get("frageJaKnopf").emit("click");
   assert.equal(ziel.raw(), vorher, "Ohne Sicherung darf der Stand nicht ersetzt werden");
   assert.equal(ziel.reloads(), 0, "Kein Neustart ohne Sicherung");
-  assert.equal(ziel.run("speicher.daten().sterneGesamt"), 2);
+  assert.equal(ziel.run("speicher.daten().bonusGesamt"), 2);
   assert.match(meldung(ziel), /abgebrochen/);
 });
 
@@ -193,13 +192,13 @@ test("SPIELSTAND: ungültige Dateien werden abgelehnt und nichts wird geändert"
     ["null", "null"],
     ["ohne bekannte Felder", '{"foo":"bar"}'],
     ["Sicherungsrahmen ohne Daten", '{"format":"mathe-sicherung"}'],
-    ["Zukunftsversion", JSON.stringify({ version: 99, sterneGesamt: 50, runden: [] })],
-    ["kaputte Runde", JSON.stringify({ sterneGesamt: 1, runden: [{ sterne: -1 }] })]
+    ["Zukunftsversion", JSON.stringify({ version: 99, bonusGesamt: 50, runden: [] })],
+    ["kaputte Runde", JSON.stringify({ bonusGesamt: 1, runden: [{ sterne: -1 }] })]
   ];
   for (const [name, text] of faelle) {
     const ziel = game({}, { now: JETZT });
     oeffneSpielstand(ziel);
-    ziel.run("speicher.daten().sterneGesamt = 7; speicher.speichere()");
+    ziel.run("speicher.daten().bonusGesamt = 7; speicher.speichere()");
     const vorher = ziel.raw();
     importiere(ziel, text);
     assert.equal(frageOffen(ziel), false, name + ": es darf kein Bestätigungsdialog erscheinen");
@@ -220,7 +219,7 @@ test("SPIELSTAND: ein geschützter/beschädigter Speicher kann durch Import gere
   importiere(ziel, sicherungVon(quelle));
   assert.equal(frageOffen(ziel), true, "Der Import muss trotz Schreibsperre möglich sein");
   ziel.nodes.get("frageJaKnopf").emit("click");
-  assert.equal(ziel.saved().sterneGesamt, 5, "Der gerettete Stand muss geschrieben sein");
+  assert.equal(ziel.saved().bonusGesamt, 5, "Der gerettete Stand muss geschrieben sein");
   assert.equal(ziel.reloads(), 1);
 });
 
@@ -237,7 +236,7 @@ test("SPIELSTAND: alte Spielstände (Version 1) werden beim Import übernommen",
   assert.equal(frageOffen(ziel), true);
   ziel.nodes.get("frageJaKnopf").emit("click");
   const geladen = game({}, { now: JETZT, raw: ziel.raw() });
-  assert.equal(geladen.run("gesamtSterne()"), 5);
+  assert.equal(geladen.run("gesamtSterne()"), 9);
   assert.equal(geladen.data().bonusGesamt, 9);
   assert.equal(geladen.data().geschenke[0].text, "Alter Gutschein");
   assert.equal(geladen.run("speicher.meldung()"), "");

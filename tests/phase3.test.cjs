@@ -196,7 +196,7 @@ test("an exception during migration never commits a partial state over the origi
 });
 
 test("write denial is visible, retains in-memory answers and permits later retry", () => {
-  const options={failWrite:true};const g=game({sterneGesamt:12},options);
+  const options={failWrite:true};const g=game({bonusGesamt:12},options);
   assert.equal(g.nodes.get("speicherHinweis").hidden,false);
   g.run("zeigeRunde(neuesTagesSet())");g.fill(3);g.run("sichereTagesAntworten()");
   assert(Object.keys(g.data().tagesSet.antworten).length===3);
@@ -214,7 +214,7 @@ test("corrupt nested rows are isolated and all source data stays protected", () 
     bonusTag:{datum:'2026-11-01',verteilt:'oops'},modus:42};
   const raw=JSON.stringify(saved);const g=game({}, {raw});
   g.run("zeigeFortschritt('statistik'); zeigeFortschritt('geschenke'); zeigeFortschritt('sterne')");
-  assert.equal(g.run("gesamtSterne()"),20);
+  assert.equal(g.run("gesamtSterne()"),7);
   assert.equal(g.data().geschenke.length,1);
   assert.equal(g.data().bereichPunkte.add.richtig,8);
   assert.equal(g.raw(),raw);
@@ -238,9 +238,9 @@ test("damaged daily task, answer and section data cannot crash or overwrite stor
 });
 
 test("missing optional fields migrate without losing valid history or vouchers", () => {
-  const g=game({runden:[{sterne:4}],geschenke:[{text:'Gift'}]});
+  const g=game({runden:[{bonus:true,bonusRichtig:4}],geschenke:[{text:'Gift'}]});
   assert.equal(g.run("gesamtSterne()"),4);
-  assert.equal(g.saved().runden[0].sterne,4);
+  assert.equal(g.saved().runden[0].bonusRichtig,4);
   assert.equal(g.saved().geschenke[0].text,'Gift');
   assert(g.saved().geschenke[0].id);
   assert.equal(g.run("speicher.meldung()"),'');
@@ -255,7 +255,7 @@ test("backup download includes current session and exact damaged source, then re
   assert.equal(g.downloads.length,1);
   const backup=JSON.parse(await g.downloads[0].blob.text());
   assert.equal(backup.originalSpeicher,'{broken');
-  assert.equal(backup.daten.version,2);
+  assert.equal(backup.daten.version,3);
   assert.match(g.downloads[0].name,/\.json$/);
   g.flush();assert.deepEqual(g.revoked,[g.downloads[0].href]);
 });
@@ -351,10 +351,10 @@ test("results have a polite live region and announce real scoring", () => {
 });
 
 test("selecting a gift and exchanging a voucher close the dialog and leave usable focus", () => {
-  const g=game({bonussterne:5,bonusGesamt:5});const opener=g.nodes.get('losKnopf');opener.focus();
+  const g=game({version:3,bonusGesamt:25,bonusStufenOffen:[25]});const opener=g.nodes.get('losKnopf');opener.focus();
   g.run("geschenkAuswahlOeffnen()");
   g.document.activeElement.emit('click');
-  assert.equal(g.data().geschenke.length,1);assert.equal(g.data().bonussterne,0);
+  assert.equal(g.data().geschenke.length,1);assert.equal(g.data().bonusGesamt,25);
   assert.equal(g.nodes.get('geschenkUeberlagerung').hidden,true);
   assert.equal(g.document.activeElement,opener);
   g.run("zeigeFortschritt('geschenke'); tauschGutscheinOeffnen(speicher.daten().geschenke[0].id)");

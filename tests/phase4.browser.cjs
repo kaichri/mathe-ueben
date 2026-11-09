@@ -49,6 +49,11 @@ async function fillCorrect(page,count=50){
     }));
   },count);
 }
+async function loeseBonus(page, count=5){
+  await page.evaluate(()=>zeigeRunde(baueBonusRunde(modus)));
+  await fillCorrect(page,count);
+  await page.locator('#pruefenKnopf').click();
+}
 async function layout(page){return page.evaluate(()=>{
   const visible=n=>n.getClientRects().length && getComputedStyle(n).visibility!=='hidden';
   const scope=document.querySelector('.ueberlagerung:not([hidden])') || document;
@@ -128,14 +133,14 @@ async function layout(page){return page.evaluate(()=>{
       assert.match(await page.locator('#ergebnisKasten').innerText(),/50 von 50/);
       assert.equal(await page.locator('#uebungsBildschirm iframe').count(),0);
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),1);
-      assert.equal(await page.evaluate(()=>gesamtSterne()),5);
+      assert.equal(await page.evaluate(()=>gesamtSterne()),0);
       await page.locator('#abbruchKnopf').click();
       assert.equal(await page.locator('.themen-knopf').count(),3);
       assert.match(await page.locator('.themen-knopf[data-modus="gabby"] .thema-titel').innerText(),/Bonuswelt/);
-      await page.evaluate(()=>Object.assign(speicher.daten(), {bonussterne: 2, bonusGesamt: 2}));
-      await page.locator('#losKnopf').click();await fillCorrect(page,3);
+      await page.evaluate(()=>speicher.daten().bonusGesamt = 20);
+      await page.locator('#losKnopf').click();await fillCorrect(page,5);
       await page.locator('#pruefenKnopf').click();
-      assert.equal(await page.evaluate(()=>speicher.daten().bonussterne),5);
+      assert.equal(await page.evaluate(()=>speicher.daten().bonusGesamt),25);
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),2);
       await page.keyboard.press('Enter');assert(await page.locator('#geschenkUeberlagerung').isHidden());
       await page.locator('#abbruchKnopf').click();await page.locator('#sterneKnopf').click();
@@ -150,7 +155,7 @@ async function layout(page){return page.evaluate(()=>{
       assert(fs.readFileSync(path.join(output,engine+'-statistics.csv'),'utf8').includes('BONUSRUNDE'));
       const [json]=await Promise.all([page.waitForEvent('download'),page.evaluate(()=>sichereDatenDownload())]);
       await json.saveAs(path.join(output,engine+'-backup.json'));
-      assert.equal(JSON.parse(fs.readFileSync(path.join(output,engine+'-backup.json'),'utf8')).daten.sterneGesamt,5);
+      assert.equal(JSON.parse(fs.readFileSync(path.join(output,engine+'-backup.json'),'utf8')).daten.bonusGesamt,25);
     });
 
     await check(engine,'Spielstand sichern und auf einem zweiten Browser laden',async()=>{
@@ -161,7 +166,8 @@ async function layout(page){return page.evaluate(()=>{
       await p.locator('#losKnopf').click();await fillCorrect(p);
       await p.locator('.abschnitts-punkt').last().click();await p.locator('#pruefenKnopf').dblclick();
 
-      const sterne=await p.evaluate(()=>speicher.daten().sterneGesamt);
+      await loeseBonus(p);
+      const sterne=await p.evaluate(()=>speicher.daten().bonusGesamt);
       assert.equal(sterne,5);
       await p.locator('#sterneKnopf').click();
       await p.locator('[data-reiter="daten"]').click();
@@ -171,26 +177,26 @@ async function layout(page){return page.evaluate(()=>{
       assert.match(download.suggestedFilename(),/^mathe-spielstand-\d{4}-\d{2}-\d{2}\.json$/);
       const gesichert=JSON.parse(fs.readFileSync(datei,'utf8'));
       assert.equal(gesichert.format,'mathe-sicherung');
-      assert.equal(gesichert.daten.sterneGesamt,5);
+      assert.equal(gesichert.daten.bonusGesamt,5);
       await quelle.close();
 
       // "Neuer PC": leerer Speicher, Datei laden, Rückfrage bestätigen.
       const ziel=await browser.newContext({acceptDownloads:true});
       const q=await ziel.newPage();await q.goto(url);
-      assert.equal(await q.evaluate(()=>speicher.daten().sterneGesamt),0);
+      assert.equal(await q.evaluate(()=>speicher.daten().bonusGesamt),0);
       const downloads=[];q.on('download',d=>downloads.push(d.suggestedFilename()));
       await q.locator('#sterneKnopf').click();
       await q.locator('[data-reiter="daten"]').click();
-      assert.match(await q.locator('#spielstandInhalt').innerText(),/0 Sterne/);
+      assert.match(await q.locator('#spielstandInhalt').innerText(),/0 Bonussterne/);
       await q.locator('#spielstandDatei').setInputFiles(datei);
       await q.locator('#frageUeberlagerung').waitFor({state:'visible',timeout:5000});
-      assert.match(await q.locator('#frageText').innerText(),/5 Sterne/);
+      assert.match(await q.locator('#frageText').innerText(),/5 Bonussterne/);
       await q.locator('#frageJaKnopf').click().catch(()=>{});
       await q.waitForTimeout(900);
       await q.reload();
-      assert.equal(await q.evaluate(()=>speicher.daten().sterneGesamt),5,'Spielstand wurde nicht übernommen');
+      assert.equal(await q.evaluate(()=>speicher.daten().bonusGesamt),5,'Spielstand wurde nicht übernommen');
       assert.equal(await q.evaluate(()=>speicher.meldung()),'');
-      assert.equal(await q.evaluate(()=>speicher.daten().runden.length),1);
+      assert.equal(await q.evaluate(()=>speicher.daten().runden.length),2);
       assert(downloads.some(n=>/^mathe-vor-import-/.test(n)),'Rettungssicherung vor dem Import fehlt');
       await ziel.close();
       return {sterne,rettung:downloads};
@@ -211,10 +217,12 @@ async function layout(page){return page.evaluate(()=>{
         assert.equal(await p.evaluate(()=>speicher.daten().runden.length),1);
         return {ctx,p};
       }
-      const A=await spiele(50);   // 5 Sterne
-      const B=await spiele(25);   // 2 Sterne (50 %)
-      assert.equal(await A.p.evaluate(()=>speicher.daten().sterneGesamt),5);
-      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),2);
+      const A=await spiele(50);
+      const B=await spiele(25);
+      await A.p.evaluate(()=>{speicher.daten().bonusGesamt=5;speicher.speichere();});
+      await B.p.evaluate(()=>{speicher.daten().bonusGesamt=2;speicher.speichere();});
+      assert.equal(await A.p.evaluate(()=>speicher.daten().bonusGesamt),5);
+      assert.equal(await B.p.evaluate(()=>speicher.daten().bonusGesamt),2);
 
       // Gerät A sichert, Gerät B führt zusammen.
       await A.p.locator('#sterneKnopf').click();await A.p.locator('[data-reiter="daten"]').click();
@@ -227,16 +235,16 @@ async function layout(page){return page.evaluate(()=>{
       await B.p.locator('#spielstandMergeDatei').setInputFiles(datei);
       await B.p.locator('#frageUeberlagerung').waitFor({state:'visible',timeout:5000});
       assert.match(await B.p.locator('#frageText').innerText(),/1 Runde/);
-      assert.match(await B.p.locator('#frageText').innerText(),/5 Sterne/);
+      assert.match(await B.p.locator('#frageText').innerText(),/3 Bonussterne/);
       await B.p.locator('#frageJaKnopf').click().catch(()=>{});
       await B.p.waitForTimeout(900);
       await B.p.reload();
       assert.equal(await B.p.evaluate(()=>speicher.daten().runden.length),2,'Runden wurden nicht vereinigt');
-      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),7,'Sterne wurden nicht vereinigt');
+      assert.equal(await B.p.evaluate(()=>speicher.daten().bonusGesamt),5,'Bonussterne wurden nicht vereinigt');
       assert.equal(await B.p.evaluate(()=>speicher.meldung()),'');
       assert(downloads.some(n=>/^mathe-vor-merge-/.test(n)),'Sicherung vor dem Zusammenführen fehlt');
       await B.ctx.close();
-      return {runden:2,sterne:7,downloads};
+      return {runden:2,bonussterne:5,downloads};
     });
 
     await check(engine,'Spielstand über GitHub synchronisieren',async()=>{
@@ -277,8 +285,8 @@ async function layout(page){return page.evaluate(()=>{
       const A=await geraet();
       await A.p.locator('#losKnopf').click();await fillCorrect(A.p,50);
       await A.p.locator('.abschnitts-punkt').last().click();await A.p.locator('#pruefenKnopf').dblclick();
-
-      assert.equal(await A.p.evaluate(()=>speicher.daten().sterneGesamt),5);
+      await loeseBonus(A.p);
+      assert.equal(await A.p.evaluate(()=>speicher.daten().bonusGesamt),5);
       await A.p.locator('#sterneKnopf').click();await A.p.locator('[data-reiter="daten"]').click();
       assert(await A.p.locator('#syncRepo').count()===1,'Synchronisierungsfelder fehlen');
       await A.p.locator('#syncRepo').fill('kaichri/mathe-sync');
@@ -287,8 +295,8 @@ async function layout(page){return page.evaluate(()=>{
       await A.p.waitForFunction(()=>/gespeichert|Abgeglichen/i.test(sync.status().text),null,{timeout:15000});
       assert.notEqual(github.text,null,'Gerät A hat nichts geschrieben');
       const vonA=JSON.parse(github.text);
-      assert.equal(vonA.sterneGesamt,5);
-      assert.equal(vonA.runden.length,1);
+      assert.equal(vonA.bonusGesamt,5);
+      assert.equal(vonA.runden.length,2);
       // Das Token darf nicht im Spielstand landen.
       const spielstandA=await A.p.evaluate(()=>localStorage.getItem('mathe-ueben-fuer-emma'));
       assert(!spielstandA.includes('ghp_browsertest'),'Token steht im Spielstand');
@@ -298,18 +306,18 @@ async function layout(page){return page.evaluate(()=>{
 
       // Gerät B: leer, gleiche Zugangsdaten -> Start gleicht ab und übernimmt.
       const B=await geraet();
-      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),0);
+      assert.equal(await B.p.evaluate(()=>speicher.daten().bonusGesamt),0);
       await B.p.locator('#sterneKnopf').click();await B.p.locator('[data-reiter="daten"]').click();
       await B.p.locator('#syncRepo').fill('kaichri/mathe-sync');
       await B.p.locator('#syncToken').fill('ghp_browsertest');
       await B.p.locator('#syncSpeichernKnopf').click().catch(()=>{});
       await B.p.waitForTimeout(1500);
       await B.p.reload();
-      assert.equal(await B.p.evaluate(()=>speicher.daten().sterneGesamt),5,'Gerät B hat den Stand nicht übernommen');
-      assert.equal(await B.p.evaluate(()=>speicher.daten().runden.length),1);
+      assert.equal(await B.p.evaluate(()=>speicher.daten().bonusGesamt),5,'Gerät B hat den Stand nicht übernommen');
+      assert.equal(await B.p.evaluate(()=>speicher.daten().runden.length),2);
       assert.equal(await B.p.evaluate(()=>speicher.meldung()),'');
       await B.ctx.close();
-      return {vonA:vonA.sterneGesamt,beiB:5};
+      return {vonA:vonA.bonusGesamt,beiB:5};
     });
 
     await page.evaluate(()=>{const rows=speicher.daten().runden;if(rows.length) while(rows.length<14)rows.push({...rows[0]});});
@@ -344,8 +352,7 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(await page.evaluate(()=>runde.karten.length),1);
       await fillCorrect(page,1);await page.locator('#pruefenKnopf').click();
       assert.match(await page.locator('#ergebnisKasten').innerText(),/1 von 1/);
-      // Wiederholungsrunde: eine richtige Aufgabe = genau ein Stern.
-      assert.match(await page.locator('#ergebnisKasten').innerText(),/1 Stern/);
+      assert.doesNotMatch(await page.locator('#ergebnisKasten').innerText(),/1 Stern/);
 
     });
 
@@ -355,9 +362,9 @@ async function layout(page){return page.evaluate(()=>{
       await a.evaluate(()=>{speicher.daten().sound='aus';musik.umschalten();});
       await a.locator('#losKnopf').click();await fillCorrect(a);
       await a.locator('.abschnitts-punkt').last().click();await a.locator('#pruefenKnopf').click();
-      const before=await a.evaluate(()=>JSON.parse(localStorage.getItem(SPEICHER_NAME)).sterneGesamt);
+      const before=await a.evaluate(()=>JSON.parse(localStorage.getItem(SPEICHER_NAME)).runden.length);
       await b.locator('[data-modus="gabby"]').click();
-      const after=await a.evaluate(()=>JSON.parse(localStorage.getItem(SPEICHER_NAME)).sterneGesamt);
+      const after=await a.evaluate(()=>JSON.parse(localStorage.getItem(SPEICHER_NAME)).runden.length);
       const warned=await b.locator('#speicherHinweis').isVisible();
       await shared.close();
       assert.equal(after,before,'second window overwrote lifetime stars');assert(warned,'missing conflict warning');
