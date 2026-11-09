@@ -266,6 +266,35 @@ test("synchronous play failure also permits a retry", async () => {
   assert.equal(g.audios[0].plays, 2);
 });
 
+test("a click can start paused music before the initial autoplay request settles", async () => {
+  let reject;
+  const g = game({ sound: "an" }, { audio: [() => new Promise((resolve, no) => { reject = no; }), "resolve"] });
+  const audio = g.audios[0];
+  assert.equal(audio.volume, 0.32);
+  audio.paused = true;
+  g.click();
+  await Promise.resolve();
+  reject(new Error("late autoplay rejection"));
+  await Promise.resolve();
+  g.click();
+  assert.equal(g.audios.length, 1);
+  assert.equal(audio.plays, 2);
+  assert.equal(audio.paused, false);
+});
+
+test("the music button starts blocked autoplay before it acts as an off switch", async () => {
+  const g = game({ sound: "an" }, { audio: ["reject", "resolve"] });
+  const audio = g.audios[0];
+  audio.paused = true;
+  await Promise.resolve();
+  g.run("musik.umschalten()");
+  assert.equal(audio.plays, 2);
+  assert.equal(g.data().sound, "an");
+  g.run("musik.umschalten()");
+  assert.equal(audio.paused, true);
+  assert.equal(g.data().sound, "aus");
+});
+
 test("the local date uses Vienna calendar days across DST", () => {
   const g = game({}, {now: "2026-03-30T22:30:00Z"});
   assert.equal(g.run("heutigesDatum()"), "2026-03-31");

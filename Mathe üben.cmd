@@ -2,6 +2,11 @@
 setlocal
 pushd "%~dp0" || exit /b 1
 
+set "CHROME_EXE="
+for %%I in ("%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" "%LocalAppData%\Google\Chrome\Application\chrome.exe") do (
+  if not defined CHROME_EXE if exist "%%~I" set "CHROME_EXE=%%~I"
+)
+
 rem Read this block before Git can replace the starter during an update.
 (
   set "GIT_TERMINAL_PROMPT=0"
@@ -16,7 +21,11 @@ rem Read this block before Git can replace the starter during an update.
     pause
     exit /b 1
   )
-  start "" "%CD%\index.html" || exit /b 1
+  if defined CHROME_EXE (
+    start "" "%CHROME_EXE%" --autoplay-policy=no-user-gesture-required "%CD%\index.html" || exit /b 1
+  ) else (
+    start "" "%CD%\index.html" || exit /b 1
+  )
   popd
   exit /b 0
 )

@@ -96,9 +96,12 @@ Beim Umtausch eines offenen Gutscheins bleiben Datum und Platz erhalten.
 
 Im App-Ordner einmal **`Desktop-Symbol erstellen.bat`** doppelklicken. Sie
 erstellt oder aktualisiert das Desktop-Symbol **Mathe üben**, das den
-Update-Starter `Mathe üben.cmd` aufruft. Damit der bestehende
-Spielstand verfügbar bleibt, muss sich die App im bisherigen Ordner befinden
-und derselbe Browser muss als Windows-Standardbrowser eingestellt sein.
+Update-Starter `Mathe üben.cmd` aufruft. Der Starter öffnet die App im
+bestehenden Chrome-Profil. Wenn Chrome vollständig beendet war, erlaubt der
+Startparameter die automatische Musikwiedergabe. Läuft Chrome bereits, kann
+weiterhin ein Klick nötig sein. Ohne Chrome öffnet der Starter den
+Windows-Standardbrowser. Für den bisherigen Spielstand müssen App-Pfad und
+Browserprofil gleich bleiben.
 
 Der Starter holt verfügbare Updates von `origin/main`, wenn Git installiert
 ist, der Ordner auf `main` steht und die verwalteten Dateien unverändert sind.

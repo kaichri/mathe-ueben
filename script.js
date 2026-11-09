@@ -18,7 +18,7 @@ const EINSTELLUNGEN = {
   bonusSterneProTag: 5,
   bonusAbAnteil: 0.9,
   hintergrundMusikAn: true,   // Standard, falls noch nichts gespeichert ist
-  musikLautstaerke: 0.16,     // 0 = ganz leise, 1 = voll
+  musikLautstaerke: 0.32,     // 0 = stumm, 1 = voll
   syncVerzoegerungMs: 60000,  // beim Tippen höchstens einmal pro Minute zu GitHub
   spaessig: true,             // Maskottchen, Sprünge und Sternenregen an?
   zeigerSpur: true            // kleine Welt-Symbole folgen der Maus?
@@ -3475,6 +3475,7 @@ const musik = (function () {
   let abspielVersuch = 0;
   let abspielVersuchLaeuft = false;
   let gestartet = false;
+  let ersterMusikKlick = true;
   let doozieFehlt = false;
 
   function aktuellesAudio() {
@@ -3546,8 +3547,9 @@ const musik = (function () {
     }, 750);
   }
 
-  function spieleAudio(knoten) {
-    if (!an || audioKnoten !== knoten || abspielVersuchLaeuft) {
+  function spieleAudio(knoten, durchKlick) {
+    if (!an || audioKnoten !== knoten ||
+        (abspielVersuchLaeuft && !(durchKlick && knoten.paused))) {
       return;
     }
     const versuch = ++abspielVersuch;
@@ -3571,14 +3573,14 @@ const musik = (function () {
     }
   }
 
-  function starteHintergrund() {
+  function starteHintergrund(durchKlick) {
     if (!an) {
       return;
     }
     const datei = aktuellesAudio();
     if (audioKnoten && audioDatei === datei) {
-      if (wartetAufKlick) {
-        spieleAudio(audioKnoten);
+      if (wartetAufKlick || (durchKlick && audioKnoten.paused)) {
+        spieleAudio(audioKnoten, durchKlick);
       }
       return;
     }
@@ -3627,6 +3629,12 @@ const musik = (function () {
   }
 
   function umschalten() {
+    const wartetAufStart = ersterMusikKlick && an && audioKnoten && audioKnoten.paused;
+    ersterMusikKlick = false;
+    if (wartetAufStart) {
+      starteHintergrund(true);
+      return;
+    }
     an = !an;
     speicher.daten().sound = an ? "an" : "aus";
     speicher.speichere();
@@ -3638,20 +3646,25 @@ const musik = (function () {
     }
   }
 
-  /* Für jeden ersten Klick auf der Seite: Musik anwerfen, falls der
-     Browser beim ersten Versuch nein gesagt hat. */
+  /* Die Freigabe des Browsers gilt direkt im Klick-Handler, auch wenn
+     der Wiedergabeversuch beim Laden noch nicht beantwortet wurde. */
   function horchtAufErstenKlick() {
-    document.addEventListener("click", function () {
+    document.addEventListener("click", function (ereignis) {
       if (!an) {
         return;
       }
-      if ((!audioKnoten && !rueckfallTimer) || wartetAufKlick) {
-        starteHintergrund();
+      const ziel = ereignis && ereignis.target;
+      if (ziel && document.getElementById("musikKnopf").contains(ziel)) {
+        return;
+      }
+      ersterMusikKlick = false;
+      if (!rueckfallTimer) {
+        starteHintergrund(true);
       }
       if (audioKontext && audioKontext.state === "suspended" && audioKontext.resume) {
         audioKontext.resume().catch(function () {});
       }
-    });
+    }, true);
   }
 
   return {
