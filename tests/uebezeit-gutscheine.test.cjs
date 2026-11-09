@@ -11,8 +11,6 @@ test("Übezeit bleibt pro Abschnitt erhalten und zählt im Hintergrund nicht wei
   const g = game({ version: 2, runden: [alt] }, { now: START });
   g.nodes.get("losKnopf").emit("click");
   g.time("2026-11-02T15:00:12Z");
-  g.run("zeigeUebezeit()");
-  assert.match(g.nodes.get("uebezeit").textContent, /0:12/);
   g.nodes.get("pruefenKnopf").emit("click");
   g.time("2026-11-02T15:00:20Z");
   g.visibility();
@@ -21,7 +19,6 @@ test("Übezeit bleibt pro Abschnitt erhalten und zählt im Hintergrund nicht wei
 
   const neu = game(g.saved(), { now: "2026-11-02T15:05:00Z" });
   neu.nodes.get("losKnopf").emit("click");
-  assert.match(neu.nodes.get("uebezeit").textContent, /0:20/);
   neu.time("2026-11-02T15:05:04Z");
   neu.fill(50);
   neu.run("pruefeRunde()");

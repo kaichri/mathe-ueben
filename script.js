@@ -1417,7 +1417,6 @@ function istTagesRunde() {
 }
 
 let uebezeitSegment = null;
-let uebezeitIntervall = null;
 
 function uebezeitJetzt() {
   return window.performance ? Math.floor(window.performance.now()) : Date.now();
@@ -1428,21 +1427,12 @@ function dauerText(ms) {
   return Math.floor(sekunden / 60) + ":" + String(sekunden % 60).padStart(2, "0") + " min";
 }
 
-function zeigeUebezeit() {
-  const anzeige = document.getElementById("uebezeit");
-  if (!anzeige || !runde) { return; }
-  const laufend = uebezeitSegment ? Math.max(0, uebezeitJetzt() - uebezeitSegment.seit) : 0;
-  anzeige.textContent = "Übezeit: " + dauerText(uebezeitSumme(runde.uebezeiten) + laufend);
-  anzeige.hidden = false;
-}
-
+/* Die Übezeit läuft unsichtbar mit und ist nur in der Statistik zu sehen. */
 function starteUebezeit() {
   if (!runde || fertigAnsicht || runde.zeitBeendet || uebezeitSegment ||
       document.visibilityState === "hidden" || document.getElementById("uebungsBildschirm").hidden) { return; }
   const bereich = runde.bereiche[abschnittZeiger].bereich;
   uebezeitSegment = { bereich: bereich, seit: uebezeitJetzt() };
-  zeigeUebezeit();
-  uebezeitIntervall = window.setInterval(zeigeUebezeit, 1000);
 }
 
 function bucheUebezeit() {
@@ -1458,8 +1448,6 @@ function pausiereUebezeit() {
   if (!uebezeitSegment) { return; }
   bucheUebezeit();
   uebezeitSegment = null;
-  window.clearInterval(uebezeitIntervall);
-  zeigeUebezeit();
   if (istTagesRunde()) { sichereTagesAntworten(); }
   const bonusStatistik = runde.bonusAuswertung && runde.bonusAuswertung.statistik;
   if (bonusStatistik) {
@@ -1708,7 +1696,6 @@ function zeigeRunde(neueRunde) {
   document.getElementById("ergebnisKasten").hidden = true;
   document.getElementById("ergebnisKasten").textContent = "";
   aktualisiereFortschritt();
-  zeigeUebezeit();
   zeigeBildschirm("uebungsBildschirm");
 }
 
