@@ -130,9 +130,10 @@ async function layout(page){return page.evaluate(()=>{
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),1);
       assert.equal(await page.evaluate(()=>gesamtSterne()),5);
       await page.locator('#abbruchKnopf').click();
-      assert(await page.locator('.bonus-welt-knopf[data-welt="gabby"]').isEnabled());
+      assert.equal(await page.locator('.themen-knopf').count(),3);
+      assert.match(await page.locator('.themen-knopf[data-modus="gabby"] .thema-titel').innerText(),/Bonuswelt/);
       await page.evaluate(()=>Object.assign(speicher.daten(), {bonussterne: 2, bonusGesamt: 2}));
-      await page.locator('.bonus-welt-knopf[data-welt="gabby"]').click();await fillCorrect(page,3);
+      await page.locator('#losKnopf').click();await fillCorrect(page,3);
       await page.locator('#pruefenKnopf').click();
       assert.equal(await page.evaluate(()=>speicher.daten().bonussterne),5);
       assert.equal(await page.evaluate(()=>speicher.daten().runden.length),2);
@@ -372,7 +373,7 @@ async function layout(page){return page.evaluate(()=>{
       const mediaContext=await browser.newContext();const p=await mediaContext.newPage();
       await p.goto(url);
       await p.locator('#losKnopf').click();
-      await p.waitForFunction(()=>document.getElementById('musikZustand').textContent==='Musik an');
+      await p.waitForFunction(()=>document.getElementById('musikKnopf').getAttribute('aria-pressed')==='true');
       // Audio is intentionally detached from the DOM; observe the real elements without replacing them.
       await mediaContext.close();
       const observed=await browser.newContext();
@@ -437,7 +438,7 @@ async function layout(page){return page.evaluate(()=>{
           const mix=(a,b,t)=>a.slice(0,3).map((v,i)=>v*t+b[i]*(1-t));
           function background(n){if(!n)return[255,255,255];const parent=background(n.parentElement),c=rgb(getComputedStyle(n).backgroundColor);return mix(c,parent,c[3]);}
           const lum=c=>c.map(v=>{v/=255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;}).reduce((sum,v,i)=>sum+v*[0.2126,0.7152,0.0722][i],0);
-          return ['#musikZustand','.meilenstein.leer','.sterne-summe','.reiter.aktiv','.kopf-zeile'].map(selector=>{
+          return ['#musikKnopf','.meilenstein.leer','.sterne-summe','.reiter.aktiv','.kopf-zeile'].map(selector=>{
             const n=document.querySelector(selector),s=getComputedStyle(n);let fg=rgb(s.color).slice(0,3),bg=background(n);
             let fade=n;while(fade&&Number(getComputedStyle(fade).opacity)===1)fade=fade.parentElement;
             if(fade){const outer=background(fade.parentElement),alpha=Number(getComputedStyle(fade).opacity);fg=mix(fg,outer,alpha);bg=mix(bg,outer,alpha);}

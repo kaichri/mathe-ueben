@@ -396,10 +396,33 @@ test("BEFUND-8: Meldungen nennen das eingestellte Tageskontingent", () => {
   const text = g.run("bonusTagesText()");
   assert.match(text, /5 neue/);
   assert.doesNotMatch(text, /3 neue/);
-  g.run("aktualisiereBonusweltKnoepfe()");
-  const knopf = g.run("document.querySelectorAll('.bonus-welt-knopf')[0]");
-  assert.match(knopf.querySelector(".bonus-welt-status").textContent, /5 neue/);
-  assert.doesNotMatch(knopf.querySelector(".bonus-welt-status").textContent, /Bonus-kontingent/);
+  g.run("schalteWeltFrei('bluey'); aktualisiereWeltwahl()");
+  const knopf = g.run("document.querySelectorAll('.themen-knopf')[0]");
+  assert.match(knopf.querySelector(".thema-bonusstatus").textContent, /5 neue/);
+  assert.doesNotMatch(knopf.querySelector(".thema-bonusstatus").textContent, /Bonus-kontingent/);
+});
+
+test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt", () => {
+  const g = game({}, { now: JETZT });
+  const karte = g.run("document.querySelectorAll('.themen-knopf')[1]");
+  karte.emit("click");
+  assert.equal(g.nodes.get("homeHaus").attributes.href, "#haus-gabby");
+  g.nodes.get("losKnopf").emit("click");
+  g.fill(50);
+  g.run("pruefeRunde()");
+  g.nodes.get("abbruchKnopf").emit("click");
+
+  assert.match(karte.querySelector(".thema-titel").textContent, /Bonuswelt Gabbys Puppenhaus/);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf').length"), 3);
+  assert.equal(g.run("document.querySelectorAll('.themen-bonus').length"), 1);
+  g.nodes.get("losKnopf").emit("click");
+  assert.equal(g.run("runde.bereichsArt"), "bonus");
+  assert.equal(g.run("runde.welt"), "gabby");
+
+  g.time("2026-11-01T15:00:00Z");
+  g.nodes.get("abbruchKnopf").emit("click");
+  assert.equal(karte.querySelector(".thema-titel").textContent, "Gabbys Puppenhaus");
+  assert.equal(karte.querySelector(".thema-bonusstatus").hidden, true);
 });
 
 /* ---------------------------------------------------------------- BEFUND-9 */

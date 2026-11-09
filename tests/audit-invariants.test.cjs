@@ -47,11 +47,10 @@ function pruefeGrundInvarianten(g, kontext) {
   assert(d.bonusTag.verteilt >= 0 && d.bonusTag.verteilt <= 3, kontext + ": Tageskontingent verletzt");
   assert.equal(new Set(d.bonusWelten).size, d.bonusWelten.length, kontext + ": doppelte Bonuswelt");
   for (const welt of d.bonusWelten) assert(["bluey", "gabby", "doozie"].includes(welt), kontext + ": unbekannte Welt");
-  // Gutscheine: Kennungen eindeutig, Umtausch 1:1
+  // Gutscheine: Kennungen eindeutig, kein zweiter Eintrag für einen Umtausch
   const ids = d.geschenke.map(x => x.id);
   assert.equal(new Set(ids).size, ids.length, kontext + ": doppelte Gutschein-Kennung");
-  assert.equal(d.geschenke.filter(x => x.umgetauschtAm).length,
-    d.geschenke.filter(x => x.umgetauschtVon).length, kontext + ": Umtauschvermerke passen nicht zusammen");
+  assert(!d.geschenke.some(x => x.umgetauschtAm || x.umgetauschtVon), kontext + ": alter Umtauschvermerk");
   for (const gs of d.geschenke) assert.equal(typeof gs.text, "string", kontext + ": Gutschein ohne Text");
   // Tagesrunde: 50 Aufgaben, eindeutige Kennungen
   if (d.tagesSet) {
@@ -301,7 +300,7 @@ test("AUDIT Zustand: Schreibfehler sind sichtbar und werden nachgeholt", () => {
   assert.equal(g.saved().sterneGesamt, 7);
 });
 
-test("AUDIT Zustand: Gutschein überlebt Neuladen und Umtausch löscht nichts", () => {
+test("AUDIT Zustand: Umtausch ändert den Wunsch am ursprünglichen Platz", () => {
   let g = game({ bonusGesamt: 5, geschenke: [{ id: "g1", datum: "2026-10-31", text: "Filmabend" }] },
     { now: "2026-10-31T12:00:00Z" });
   g = neuLaden(g, "2026-10-31T12:00:00Z");
@@ -312,16 +311,32 @@ test("AUDIT Zustand: Gutschein überlebt Neuladen und Umtausch löscht nichts", 
   const dlg = g.nodes.get("geschenkUeberlagerung");
   const karte = kartenKnoten(dlg, n => /geschenk-karte/.test(n.className));
   karte.emit("click");
-  assert.equal(g.data().geschenke.length, 2, "Umtausch löscht den alten Gutschein");
-  assert.equal(g.data().geschenke[0].text, "Filmabend");
-  assert.match(g.data().geschenke[0].umgetauschtAm, /^\d{4}-\d{2}-\d{2}$/);
-  assert.equal(g.data().geschenke[1].umgetauschtVon, "g1");
+  assert.equal(g.data().geschenke.length, 1);
+  assert.notEqual(g.data().geschenke[0].text, "Filmabend");
+  assert.equal(g.data().geschenke[0].id, "g1");
+  assert.equal(g.data().geschenke[0].datum, "2026-10-31");
   assert.equal(g.data().bonusGesamt, 5, "Umtausch verändert die Lebenszeitbonussterne");
   g.time("2026-11-09T12:00:00Z");
-  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[1])"), true,
+  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[0])"), true,
     "Ein offener Gutschein bleibt nach mehr als einer Woche tauschbar");
-  assert.equal(g.run("geschenkIstTauschbar(speicher.daten().geschenke[0])"), false,
-    "Der bereits umgetauschte Eintrag bleibt geschlossen");
+});
+
+test("AUDIT Zustand: Alte Umtauschkette wird beim Laden am ursprünglichen Platz repariert", () => {
+  const g = game({ version: 2, bonusGesamt: 10, geschenke: [
+    { id: "g1", datum: "2026-10-10", text: "Filmabend", umgetauschtAm: "2026-10-12", neuerText: "Picknick" },
+    { id: "g2", datum: "2026-10-11", text: "Spieleabend" },
+    { id: "g3", datum: "2026-10-12", text: "Picknick", umgetauschtVon: "g1",
+      umgetauschtAm: "2026-10-13", neuerText: "Ausflug" },
+    { id: "g4", datum: "2026-10-13", text: "Ausflug", umgetauschtVon: "g3", eingeloestAm: "2026-10-15" }
+  ] });
+  const gespeichert = g.saved().geschenke;
+  assert.deepEqual(gespeichert.map(g => [g.id, g.datum, g.text]), [
+    ["g1", "2026-10-10", "Ausflug"], ["g2", "2026-10-11", "Spieleabend"]
+  ]);
+  assert.equal(gespeichert[0].eingeloestAm, "2026-10-15");
+  assert.equal(gespeichert[0].umgetauschtAm, undefined);
+  assert.equal(g.saved().bonusGesamt, 10);
+  assert.deepEqual(neuLaden(g, "2026-11-01T12:00:00Z").saved().geschenke, gespeichert);
 });
 
 test("AUDIT Zustand: Statistikgrenze erhält Lebenszeitwerte nach Neuladen", () => {

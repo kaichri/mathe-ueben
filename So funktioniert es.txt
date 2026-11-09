@@ -64,9 +64,8 @@ Das Tages-Quiz (ein Aufgaben-Set pro Tag)
 
 Die Bonuswelten (Knobeln mit Bonussternen)
 ------------------------------------------
-Unter den drei Welt-Knöpfen sind drei weitere Knöpfe:
-"Bonuswelt Bluey", "Bonuswelt Gabby" und "Bonuswelt Doozie".
-Die sind erst grau und werden golden, wenn Emma sich frei gerechnet hat:
+Sobald Emma eine Bonuswelt öffnet, erscheint sie an der Stelle ihrer
+normalen Welt. Mit dem Haus oben geht es zurück zur Startseite.
 
   * Sie hat eine reguläre Runde in DIESE Welt gespielt und mindestens
     die Hälfte (25 von 50) richtig - dann öffnet sich die Bonuswelt
@@ -79,8 +78,8 @@ Die sind erst grau und werden golden, wenn Emma sich frei gerechnet hat:
     Programm die letzten Rätsel, damit nicht bald dasselbe kommt.
     Hier wird nichts rot - es heißt höchstens "Knobel weiter!".
   * Höchstens 3 Bonussterne 🌟 gibt es pro Tag über ALLE Welten
-    zusammen. Sind die 3 schon geholt, werden alle Bonusknöpfe für den
-    Tag wieder grau und zeigen: "Morgen warten 3 neue."
+    zusammen. Sind die 3 schon geholt, steht bei den offenen Bonuswelten:
+    "Morgen warten 3 neue Bonussterne."
   * Teilweiser Ertrag bleibt: hat sie heute schon 2 Sterne geholt,
     bekommt sie in der nächsten Bonuswelt nur noch 1 Aufgabe - und
     danach ist Pause für heute.
@@ -90,10 +89,9 @@ goldenen Anzeige). Bei fünf Bonussternen öffnet sich ein Fenster, und
 Emma sucht sich SELBST ihr Geschenk aus (auch "Wunsch frei"). Fünf
 Bonussterne werden abgezogen, der Rest bleibt erhalten.
 
-Gutschein umtauschen: Unter "Mein Fortschritt" -> Gutscheine kann Emma
-jeden offenen Gutschein jederzeit umtauschen. Der alte
-Gutschein bleibt dabei stehen (durchgestrichen, mit dem Vermerk
-"umgetauscht am ...") und der neue kommt dazu - nichts verschwindet.
+Gutschein umtauschen: Unter "Einstellungen" -> "Gutscheine" kann Emma
+jeden offenen Gutschein jederzeit umtauschen. Der neue Wunsch steht
+danach am selben Platz und trägt das ursprüngliche Datum.
 Erhaltene Geschenke lassen sich dort als eingelöst markieren.
 
 In script.js lässt sich das bei EINSTELLUNGEN verstellen:
@@ -144,20 +142,20 @@ Ist am nächsten Tag noch eine angefangene Runde von gestern gespeichert,
 fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
 
 
-Mein Fortschritt
+Einstellungen
 ----------------
-Ein Klick auf die Sternen-Anzeige oben (oder den Bonus-/Statistik-Knopf)
-öffnet "Mein Fortschritt" mit vier Reitern:
+Ein Klick auf die Sterne-Anzeige oder das Zahnrad oben öffnet
+"Einstellungen" mit vier Reitern:
 
-  Sterne     - alle Sterne, Meilensteine, Bonussterne und die letzten Runden
+  Sterne     - Sterne, Meilensteine und Bonussterne
+  Gutscheine - alle Gutscheine mit ihrem aktuellen Wunsch
   Statistik  - Runden-, Kalender- und Bereichs-Auswertung. Nichts wird
                überschrieben: jede Runde wird angehängt gespeichert.
                Mit "Statistik herunterladen" (Knopf erscheint nur in diesem Reiter)
                 entsteht immer eine neue CSV-
                Datei mit Zeitstempel (z. B. mathe-statistik-2026-10-28-1530.csv),
                die sich in Excel öffnen lässt. Darin stehen auch die Bonus-
-               runden (BONUSRUNDE) und alle Gutscheine mit Umtausch-Vermerk.
-  Gutscheine - alle abgeholten Gutscheine, mit Umtausch-Knopf (siehe oben).
+               runden (BONUSRUNDE) und alle Gutscheine mit dem aktuellen Wunsch.
   Spielstand - "Spielstand sichern (Datei)", "Spielstand laden (Datei)"
                und "Spielstand zusammenführen (Datei)" für den Umzug auf
                einen anderen PC bzw. zum Vereinigen zweier Stände; dazu die
@@ -168,13 +166,13 @@ Auf einem anderen PC weiterspielen
 ---------------------------------
 Der Spielstand liegt nur im Browser des jeweiligen PCs. Zum Übertragen:
 
-  1. Auf dem alten PC: "Mein Fortschritt" -> "Spielstand" ->
+  1. Auf dem alten PC: "Einstellungen" -> "Spielstand" ->
      "Spielstand sichern (Datei)". Es entsteht eine Datei wie
      mathe-spielstand-2026-11-03.json - diese Datei mitnehmen
      (E-Mail, USB-Stick, Cloud-Ordner).
   2. Auf dem neuen PC: Spiel im GLEICHEN Browser und über dieselbe
      Adresse öffnen (am besten derselbe Ordner wie bisher), dann
-     "Mein Fortschritt" -> "Spielstand" -> "Spielstand laden (Datei)"
+     "Einstellungen" -> "Spielstand" -> "Spielstand laden (Datei)"
      und die Datei auswählen.
   3. Das Programm zeigt, was in der Datei steht (Sterne, Runden,
      Gutscheine, Datum), und fragt vor dem Ersetzen nach. Mit
@@ -188,7 +186,7 @@ Zwei Spielstände zusammenführen (wenn auf beiden PCs gespielt wurde)
 -------------------------------------------------------------------
 Statt zu ersetzen kann man die Stände auch vereinigen:
 
-  "Mein Fortschritt" -> "Spielstand" -> "Spielstand zusammenführen (Datei)"
+  "Einstellungen" -> "Spielstand" -> "Spielstand zusammenführen (Datei)"
   und die Sicherungsdatei des anderen PCs auswählen.
 
   Das Programm zeigt vorher, was dazukommt, z. B. "+2 Runden, +9 Sterne,
@@ -218,7 +216,7 @@ dorthin geschrieben.
      -> Personal access tokens -> Fine-grained tokens): nur dieses
      Repository, nur das Recht "Contents: Read and write", mit
      Ablaufdatum.
-  3. Im Spiel: "Mein Fortschritt" -> "Spielstand", Repository
+  3. Im Spiel: "Einstellungen" -> "Spielstand", Repository
      (besitzer/name) und Token eintragen, "Speichern & prüfen".
      Beim ersten Mal wird die Datei angelegt.
 
@@ -309,7 +307,7 @@ Wenn die Werte nach dem Neustart weg sind: im Browser prüfen, ob
 "Websites Daten speichern" erlaubt ist, und die Seite immer mit dem-
 selben Browser öffnen.
 
-Auf einen anderen PC übertragen: "Mein Fortschritt" -> "Spielstand"
+Auf einen anderen PC übertragen: "Einstellungen" -> "Spielstand"
 -> "Spielstand sichern (Datei)" und dort wieder laden (siehe oben).
 Ohne diese Datei hat jeder PC seinen eigenen Spielstand.
 

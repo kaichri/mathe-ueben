@@ -359,6 +359,6 @@ test("selecting a gift and exchanging a voucher close the dialog and leave usabl
   assert.equal(g.document.activeElement,opener);
   g.run("zeigeFortschritt('geschenke'); tauschGutscheinOeffnen(speicher.daten().geschenke[0].id)");
   g.document.activeElement.emit('click');
-  assert.equal(g.data().geschenke.length,2);
+  assert.equal(g.data().geschenke.length,1);
   assert.equal(g.document.activeElement,g.nodes.get('fortschrittZurueckKnopf'));
 });

@@ -71,7 +71,56 @@ function uebezeitSumme(zeiten) {
 /* ------------- Speicher (Sterne, Bonussterne, Gutscheine, Merkzettel) ------ */
 
 function geschenkIstTauschbar(geschenk) {
-  return !geschenk.eingeloestAm && !geschenk.umgetauschtAm;
+  return !geschenk.eingeloestAm;
+}
+
+/* Frühere Umtausche haben einen Nachfolger angelegt. Dessen Wunsch und
+   Einlösestatus gehören jetzt wieder zum Gutschein am ursprünglichen Platz. */
+function migriereGutscheinUmtausch(geschenke) {
+  const nachfolger = new Map();
+  geschenke.forEach(function (geschenk) {
+    if (!geschenk.umgetauschtVon) { return; }
+    const gruppe = nachfolger.get(geschenk.umgetauschtVon) || [];
+    gruppe.push(geschenk);
+    nachfolger.set(geschenk.umgetauschtVon, gruppe);
+  });
+  const verbindungen = new Map();
+  const ersatzEintraege = new Set();
+  geschenke.forEach(function (geschenk) {
+    if (!geschenk.id || !geschenk.umgetauschtAm) { return; }
+    const kandidaten = (nachfolger.get(geschenk.id) || []).filter(g => g !== geschenk);
+    const passend = kandidaten.filter(g => g.text === geschenk.neuerText);
+    const ersatz = passend.length === 1 ? passend[0] : kandidaten.length === 1 ? kandidaten[0] : null;
+    if (ersatz) {
+      verbindungen.set(geschenk, ersatz);
+      ersatzEintraege.add(ersatz);
+    }
+  });
+  const entfernt = new Set();
+  const repariert = new Map();
+  geschenke.forEach(function (original) {
+    if (ersatzEintraege.has(original) || !original.umgetauschtAm) { return; }
+    const gutschein = { ...original };
+    if (!gutschein.id || gutschein.id.startsWith("alt-")) {
+      gutschein.urspruenglicherWunsch = original.urspruenglicherWunsch ?? original.text;
+    }
+    let aktuell = original;
+    while (aktuell.umgetauschtAm) {
+      const ersatz = verbindungen.get(aktuell);
+      gutschein.text = ersatz ? ersatz.text : aktuell.neuerText || aktuell.text;
+      gutschein.wunschGeaendertAm = ersatz && ersatz.zeitpunkt ||
+        aktuell.umgetauschtAm + "T00:00:00.000Z";
+      if (!ersatz || entfernt.has(ersatz)) { break; }
+      entfernt.add(ersatz);
+      if (ersatz.eingeloestAm) { gutschein.eingeloestAm = ersatz.eingeloestAm; }
+      aktuell = ersatz;
+    }
+    delete gutschein.umgetauschtAm;
+    delete gutschein.umgetauschtVon;
+    delete gutschein.neuerText;
+    repariert.set(original, gutschein);
+  });
+  return geschenke.filter(g => !entfernt.has(g)).map(g => repariert.get(g) || g);
 }
 
 const speicher = (function () {
@@ -152,9 +201,11 @@ const speicher = (function () {
     });
     liste("geschenke", function (g) {
       return objekt(g) && typeof g.text === "string" && optionaleTexte(g,
-        ["id", "datum", "zeitpunkt", "umgetauschtAm", "neuerText", "umgetauschtVon", "eingeloestAm"]) &&
+        ["id", "datum", "zeitpunkt", "umgetauschtAm", "neuerText", "umgetauschtVon", "eingeloestAm",
+          "wunschGeaendertAm", "urspruenglicherWunsch"]) &&
         ["datum", "umgetauschtAm", "eingeloestAm"].every(function (name) { return !g[name] || datum(g[name]); });
     });
+    if (neu.geschenke) { neu.geschenke = migriereGutscheinUmtausch(neu.geschenke); }
     ["zuletzt", "knobelZuletzt", "vortagSchluessel"].forEach(function (name) {
       liste(name, function (wert) { return typeof wert === "string"; });
     });
@@ -492,7 +543,7 @@ function verschmelzeSpielstande(lokal, fremd) {
     // Erzeugte Kennungen ("g...") sind eindeutig; alte "alt-N" hängen an der
     // Reihenfolge und taugen nicht zum Vergleich.
     if (typeof id === "string" && id.indexOf("alt-") !== 0) { return "id:" + id; }
-    return "inhalt:" + [g && g.text, g && g.datum, g && g.zeitpunkt, g && g.umgetauschtAm].join("|");
+    return "inhalt:" + [g.urspruenglicherWunsch ?? g.text, g.datum, g.zeitpunkt].join("|");
   }
   function vereinigeRunden(a, b) {
     const karte = new Map();
@@ -521,9 +572,9 @@ function verschmelzeSpielstande(lokal, fremd) {
       const k = gutscheinKennung(g);
       const alt = karte.get(k);
       if (!alt) { karte.set(k, g); return; }
-      // Bei gleicher Kennung den Eintrag mit Umtauschvermerk behalten.
-      if (!alt.umgetauschtAm && g.umgetauschtAm) { karte.set(k, g); }
-      else if (!alt.umgetauschtAm && !alt.eingeloestAm && g.eingeloestAm) { karte.set(k, g); }
+      const neuer = (g.wunschGeaendertAm || "") > (alt.wunschGeaendertAm || "") ? g : alt;
+      const eingeloestAm = neuer.eingeloestAm || alt.eingeloestAm || g.eingeloestAm;
+      karte.set(k, eingeloestAm && !neuer.eingeloestAm ? { ...neuer, eingeloestAm } : neuer);
     });
     return Array.from(karte.values()).sort(function (x, y) {
       const u = String((x && (x.zeitpunkt || x.datum)) || "");
@@ -1199,9 +1250,32 @@ function themenSymbol() {
 }
 
 const FIGURENBILDER = {
-  hund: "bluey", bingo: "bingo", gabbykopf: "gabby",
-  panda: "pandy", dooziekopf: "doozie", puggie: "puggie"
+  hund: "bluey", bingo: "bingo", chilli: "chilli", bandit: "bandit",
+  gabbykopf: "gabby", panda: "pandy", kuchi: "kuchi", meerkatze: "meerkatze",
+  carlita: "carlita", ratkatz: "ratkatz", dooziekopf: "doozie", puggie: "puggie",
+  paillette: "paillette", traumpfoetchen: "traumpfoetchen",
+  pixiepfoetchen: "pixiepfoetchen", spielpfoetchen: "spielpfoetchen", swenny: "swenny",
+  sahnepfoetchen: "sahnepfoetchen"
 };
+
+const DOOZIE_GESCHICHTENFIGUREN = new Map([
+  ["paillette", "paillette"], ["seaquin", "paillette"],
+  ["traumpfötchen", "traumpfoetchen"], ["dreampup", "traumpfoetchen"],
+  ["pixiepfötchen", "pixiepfoetchen"], ["pixiepup", "pixiepfoetchen"],
+  ["spielpfötchen", "spielpfoetchen"], ["gamepup", "spielpfoetchen"],
+  ["swenny", "swenny"], ["swaggy", "swenny"],
+  ["sahnepfötchen", "sahnepfoetchen"], ["creampup", "sahnepfoetchen"]
+]);
+
+function geschichtenFigur(karte) {
+  const woerter = karte.text.toLowerCase().split(/[^\p{L}]+/u);
+  if (modus === "doozie") {
+    for (const wort of woerter) {
+      if (DOOZIE_GESCHICHTENFIGUREN.has(wort)) { return DOOZIE_GESCHICHTENFIGUREN.get(wort); }
+    }
+  }
+  return mascottchenAuswahl().find(figur => woerter.includes(FIGURENBILDER[figur])) || themenSymbol();
+}
 
 function figurBild(figur, klassen) {
   const datei = FIGURENBILDER[figur];
@@ -1234,6 +1308,26 @@ function lokalesDatum(zeitpunkt) {
 
 function heutigesDatum() {
   return lokalesDatum(new Date());
+}
+
+function initialisiereWintermodus() {
+  const knopf = document.getElementById("winterKnopf");
+  const schnee = document.getElementById("winterSchnee");
+  for (let i = 0; i < 15; i += 1) {
+    const flocke = symbol("schneeflocke", "winter-flocke");
+    flocke.setAttribute("style", "left:" + (5 + (i * 37) % 90) + "%;" +
+      "--flocken-groesse:" + (7 + (i * 7) % 20) + "px;" +
+      "--fallzeit:" + (16 + (i * 3) % 11) + "s;" +
+      "--fallstart:-" + (i * 7 % 19) + "s");
+    schnee.appendChild(flocke);
+  }
+  function setzeWinter(aktiv) {
+    schnee.hidden = !aktiv;
+    knopf.setAttribute("aria-pressed", String(aktiv));
+  }
+  const monat = wienerDatumTeile().month;
+  setzeWinter(monat === "12" || monat === "01");
+  knopf.addEventListener("click", function () { setzeWinter(schnee.hidden); });
 }
 
 function verschiebeKalendertag(datum, tage) {
@@ -1949,9 +2043,7 @@ function baueGeschichte(karte) {
   const kopf = element("div", "geschichte-kopf");
   const bild = element("span", "geschichte-bild");
   bild.setAttribute("aria-hidden", "true");
-  const figuren = mascottchenAuswahl();
-  const figur = figuren.find(name => new RegExp("\\b" + FIGURENBILDER[name] + "\\b", "i").test(karte.text));
-  bild.appendChild(figurBild(figur || themenSymbol()));
+  bild.appendChild(figurBild(geschichtenFigur(karte)));
   const vorlage = typeof karte.vorlage === "string" ? karte.vorlage : "";
   const motiv = GESCHICHTEN_MOTIVE[vorlage] ||
     (vorlage.startsWith("uhr-") ? "motiv-uhr" : vorlage.startsWith("geld-") ? "motiv-geld" : "motiv-basteln");
@@ -2161,7 +2253,7 @@ function pruefeRunde() {
   if (sterne >= 5 && EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
-  aktualisiereBonusweltKnoepfe();
+  aktualisiereWeltwahl();
 }
 
 /* --- die Bonuswelt prüfen: nie rot, nie Meckern, Sterne bis zum Tagesdeckel --- */
@@ -2272,7 +2364,7 @@ function pruefeBonusRunde() {
   kasten.appendChild(element("p", "bonus-hinweis", bonusTagesText()));
   kasten.scrollIntoView({ block: "start" });
 
-  aktualisiereBonusweltKnoepfe();
+  aktualisiereWeltwahl();
   // "Neue Aufgaben" verschwindet, sobald das Tageskontingent erschöpft ist.
   aktualisiereKnopfLeiste();
   meldeRueckmeldung(vergeben + " neue Bonussterne. " + bonusTagesText());
@@ -2433,7 +2525,7 @@ function zeigeZusammenfassung(richtig, gesamt, sterne, lob, falschKarten, hinwei
   if (hinweise && hinweise.ebenFreigeschaltet) {
     kasten.appendChild(element("p", "bonus-hinweis",
       "🌟 Super! Die Bonuswelt " + WELT_NAMEN[modus] + " ist jetzt für heute offen – " +
-      "schau auf der Startseite nach dem großen Bonus-Knopf!"));
+      "auf der Startseite steht jetzt deine Bonuswelt!"));
   } else if (offen) {
     kasten.appendChild(element("p", "bonus-hinweis",
       "🌟 Die Bonuswelt " + WELT_NAMEN[modus] + " ist heute weiterhin offen."));
@@ -2648,6 +2740,7 @@ function geschenkGewaehlt(text) {
   speicher.speichere();
   dialogSchliessen("geschenkUeberlagerung");
   aktualisiereBonusAnzeige();
+  aktualisiereGutscheinAnzeige();
   sync.nachAenderung(true);
 
   const kasten = document.getElementById("ergebnisKasten");
@@ -2660,8 +2753,7 @@ function geschenkGewaehlt(text) {
   }
 }
 
-/* Umtausch: der alte Gutschein bleibt stehen und bekommt einen
-   Vermerk; der neue kommt einfach dazu. Nichts wird gelöscht. */
+/* Umtausch: Der Gutschein behält Kennung, Datum und Position. */
 function tauschGutscheinOeffnen(geschenkId) {
   const geschenk = findeGutschein(geschenkId);
   if (!geschenk || !geschenkIstTauschbar(geschenk)) {
@@ -2682,24 +2774,20 @@ function findeGutschein(geschenkId) {
 }
 
 function tauschGutscheinEin(geschenkId, neueText) {
-  const daten = speicher.daten();
   const alte = findeGutschein(geschenkId);
   if (!alte || !geschenkIstTauschbar(alte)) {
     return;
   }
-  const neuer = {
-    id: "g" + Date.now() + "-" + Math.floor(Math.random() * 1000),
-    zeitpunkt: new Date().toISOString(),
-    datum: heutigesDatum(),
-    text: neueText,
-    umgetauschtVon: alte.id
-  };
-  alte.umgetauschtAm = heutigesDatum();
-  alte.neuerText = neueText;
-  daten.geschenke.push(neuer);
-  speicher.speichere();
+  if (alte.text !== neueText) {
+    if (alte.id.startsWith("alt-")) {
+      alte.urspruenglicherWunsch = alte.urspruenglicherWunsch ?? alte.text;
+    }
+    alte.text = neueText;
+    alte.wunschGeaendertAm = new Date().toISOString();
+    speicher.speichere();
+    sync.nachAenderung(true);
+  }
   dialogSchliessen("geschenkUeberlagerung");
-  sync.nachAenderung(true);
   if (EINSTELLUNGEN.spaessig) {
     sternenRegen();
   }
@@ -2711,12 +2799,17 @@ function aktualisiereBonusAnzeige() {
   document.getElementById("bonusSterne").textContent = String(speicher.daten().bonussterne);
 }
 
-/* ------------- Der Fortschritts-Bereich (Sterne / Statistik / Gutscheine / Spielstand) ------------- */
+function aktualisiereGutscheinAnzeige() {
+  const offen = speicher.daten().geschenke.filter(geschenkIstTauschbar).length;
+  document.getElementById("offeneGutscheine").textContent = String(offen);
+}
+
+/* ------------- Einstellungen ------------- */
 
 const FORTSCHRITT_TABS = {
   sterne: "Sterne",
-  statistik: "Statistik",
   geschenke: "Gutscheine",
+  statistik: "Statistik",
   daten: "Spielstand"
 };
 
@@ -2748,7 +2841,7 @@ function zeigeFortschritt(tab) {
   Object.keys(inhalte).forEach(function (name) {
     const knoten = inhalte[name];
     knoten.hidden = name !== aktuellerTab;
-    if (name !== aktuellerTab) {
+    if (knoten.hidden) {
       knoten.textContent = "";
     }
   });
@@ -2834,14 +2927,11 @@ function zeigeGeschenkeInhalt() {
 
   if (daten.geschenke.length > 0) {
     daten.geschenke.slice().reverse().forEach(function (geschenk) {
-      const karte = element("div", "gutschein-karte" + (geschenk.umgetauschtAm ? " getauscht" : ""));
+      const karte = element("div", "gutschein-karte");
       const kopf = element("div", "gutschein-kopf");
       kopf.appendChild(element("span", "gutschein-datum", datumText(geschenk.datum)));
       const status = element("span", "gutschein-status");
-      if (geschenk.umgetauschtAm) {
-        status.textContent = "🔄 umgetauscht am " + datumText(geschenk.umgetauschtAm) +
-          (geschenk.neuerText ? " → „" + geschenk.neuerText + "“" : "");
-      } else if (geschenk.eingeloestAm) {
+      if (geschenk.eingeloestAm) {
         status.textContent = "✓ Eingelöst am " + datumText(geschenk.eingeloestAm);
       } else {
         status.textContent = "offen · tauschbar";
@@ -2849,9 +2939,6 @@ function zeigeGeschenkeInhalt() {
       kopf.appendChild(status);
       karte.appendChild(kopf);
       karte.appendChild(element("p", "gutschein-text", "🎁 " + geschenk.text));
-      if (geschenk.umgetauschtVon) {
-        karte.appendChild(element("p", "rand", "aus einem Umtausch entstanden"));
-      }
       if (geschenkIstTauschbar(geschenk)) {
         const tausch = element("button", "knopf klein", "🔄 Anderes aussuchen");
         tausch.type = "button";
@@ -2859,8 +2946,6 @@ function zeigeGeschenkeInhalt() {
           tauschGutscheinOeffnen(geschenk.id);
         });
         karte.appendChild(tausch);
-      }
-      if (geschenkIstTauschbar(geschenk)) {
         const einloesen = element("button", "knopf klein", "Als eingelöst markieren");
         einloesen.type = "button";
         einloesen.addEventListener("click", function () {
@@ -2871,9 +2956,10 @@ function zeigeGeschenkeInhalt() {
             nein: "Abbrechen",
             dann: function () {
               const aktuell = findeGutschein(geschenk.id);
-              if (!aktuell || aktuell.eingeloestAm || aktuell.umgetauschtAm) { return; }
+              if (!aktuell || !geschenkIstTauschbar(aktuell)) { return; }
               aktuell.eingeloestAm = heutigesDatum();
               speicher.speichere();
+              aktualisiereGutscheinAnzeige();
               sync.nachAenderung(true);
               zeigeGeschenkeInhalt();
               meldeRueckmeldung("Gutschein als eingelöst markiert.");
@@ -3543,7 +3629,6 @@ const musik = (function () {
     const knopf = document.getElementById("musikKnopf");
     knopf.setAttribute("aria-pressed", String(an));
     knopf.classList.toggle("musik-aus", !an);
-    document.getElementById("musikZustand").textContent = an ? "Musik an" : "Musik aus";
   }
 
   function umschalten() {
@@ -3624,12 +3709,12 @@ const musik = (function () {
 
 function mascottchenAuswahl() {
   if (modus === "bluey") {
-    return ["hund", "bingo"];
+    return ["hund", "bingo", "chilli", "bandit"];
   }
   if (modus === "gabby") {
-    return ["gabbykopf", "panda"];
+    return ["gabbykopf", "panda", "kuchi", "meerkatze", "carlita", "ratkatz"];
   }
-  return ["dooziekopf", "puggie"];
+  return ["dooziekopf", "puggie", "sahnepfoetchen", "paillette", "swenny", "pixiepfoetchen"];
 }
 
 function fuelleMaskottchen() {
@@ -3638,7 +3723,7 @@ function fuelleMaskottchen() {
   mascottchenAuswahl().forEach(function (figur) {
     const knopf = element("button", "maskottchen");
     knopf.type = "button";
-    const name = FIGURENBILDER[figur];
+    const name = FIGURENBILDER[figur].replace("pfoetchen", "pfötchen");
     knopf.title = name[0].toUpperCase() + name.slice(1) + " antippen";
     knopf.appendChild(figurBild(figur));
     knopf.addEventListener("click", function () {
@@ -3674,7 +3759,10 @@ function sternenRegen() {
 
 /* ------------- Maus-Spur: die Welt malt Symbole hinter dem Zeiger her ------------- */
 
-const SPUR_ZEICHEN = { bluey: "\u{1F43E}", gabby: "\u2728", doozie: "\u{1F3BE}" }; // 🐾 ✨ 🎾
+const SPUR_MOTIVE = {
+  gabby: { haupt: "spur-katze", extra: "spur-glitzer", farben: ["#f4a4ca", "#c1a1ed", "#f7bbdd"] },
+  doozie: { haupt: "spur-keks", extra: "spur-cupcake", farben: ["#f5b076", "#eaa0bb", "#91cbd5"] }
+};
 
 function starteZeigerSpur() {
   if (!EINSTELLUNGEN.zeigerSpur) {
@@ -3692,6 +3780,7 @@ function starteZeigerSpur() {
   let letzterY = -999;
   let letzteZeit = 0;
   let unterwegs = 0;
+  let spurNummer = 0;
 
   document.addEventListener("mousemove", function (ereignis) {
     if (unterwegs >= 18) {
@@ -3707,7 +3796,13 @@ function starteZeigerSpur() {
     letzterY = ereignis.clientY;
     letzteZeit = jetzt;
 
-    const teilchen = element("span", "zeiger-teilchen", SPUR_ZEICHEN[modus] || "\u2605");
+    const motiv = SPUR_MOTIVE[modus];
+    const teilchen = element("span", "zeiger-teilchen", motiv ? "" : "🐾");
+    if (motiv) {
+      spurNummer += 1;
+      teilchen.style.color = motiv.farben[spurNummer % motiv.farben.length];
+      teilchen.appendChild(symbol(spurNummer % 6 === 0 ? motiv.extra : motiv.haupt));
+    }
     teilchen.style.left = (ereignis.clientX + Math.random() * 16 - 8) + "px";
     teilchen.style.top = (ereignis.clientY + Math.random() * 16 - 8) + "px";
     teilchen.style.transform = "rotate(" + (Math.random() * 50 - 25) + "deg)";
@@ -3727,6 +3822,7 @@ function starteZeigerSpur() {
 function setzeModus(neuerModus) {
   modus = neuerModus;
   document.body.dataset.thema = neuerModus;
+  document.getElementById("homeHaus").setAttribute("href", "#haus-" + neuerModus);
   document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
     knopf.setAttribute("aria-pressed", String(knopf.dataset.modus === neuerModus));
   });
@@ -3734,33 +3830,35 @@ function setzeModus(neuerModus) {
   speicher.speichere();
   fuelleMaskottchen();
   musik.modusWechsel();
+  aktualisiereWeltwahl();
 }
 
-/* Die drei Bonuswelt-Knöpfe auf der Startseite: erst grau, dann offen. */
-function aktualisiereBonusweltKnoepfe() {
-  document.querySelectorAll(".bonus-welt-knopf").forEach(function (knopf) {
-    const welt = knopf.dataset.welt;
-    const offen = bonusPlaetzeHeute();
-    const frei = weltHeuteFreigeschaltet(welt) && offen > 0;
-    knopf.classList.toggle("frei", frei);
-    knopf.classList.toggle("zu", !frei);
-    knopf.disabled = !frei;
-    let text;
-    if (offen <= 0) {
-      text = "Heute ist dein Bonuskontingent geschafft – morgen warten " +
-        EINSTELLUNGEN.bonusSterneProTag + " neue! 🌟";
-    } else if (weltHeuteFreigeschaltet(welt)) {
-      text = "Offen! Noch " + offen + " von " + EINSTELLUNGEN.bonusSterneProTag +
-        " Bonussternen heute zu holen.";
-    } else {
-      text = "Noch zu. Rechne eine Runde in " + WELT_NAMEN[welt] +
-        " – ab der Hälfte öffnet sich die Bonuswelt.";
-    }
-    const anzeige = knopf.querySelector(".bonus-welt-status");
-    if (anzeige) {
-      anzeige.textContent = text;
-    }
+function aktualisiereWeltwahl() {
+  const offen = bonusPlaetzeHeute();
+  const welten = speicher.daten().bonusWelten;
+  const bonusText = offen > 0
+    ? "Noch " + offen + (offen === 1 ? " Bonusstern" : " Bonussterne") + " für heute!"
+    : "Morgen warten " + EINSTELLUNGEN.bonusSterneProTag + " neue Bonussterne.";
+  document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
+    const welt = knopf.dataset.modus;
+    const bonus = welten.includes(welt);
+    knopf.classList.toggle("themen-bonus", bonus);
+    knopf.querySelector(".thema-titel").textContent =
+      bonus ? "Bonuswelt " + WELT_NAMEN[welt] + " 🌟" : WELT_NAMEN[welt];
+    knopf.querySelector(".thema-text").hidden = bonus;
+    const status = knopf.querySelector(".thema-bonusstatus");
+    status.hidden = !bonus;
+    status.textContent = bonus ? bonusText : "";
   });
+
+  const los = document.getElementById("losKnopf");
+  const set = speicher.daten().tagesSet;
+  const heute = set && set.datum === heutigesDatum();
+  const bonus = welten.includes(modus);
+  los.disabled = bonus && offen === 0;
+  los.textContent = bonus ? (offen > 0 ? "Bonuswelt spielen!" : "Bonus für heute geschafft!")
+    : heute ? (set.fertig ? "Neues Quiz für heute!" : "Weiterspielen!") : "Los geht's!";
+  document.getElementById("matheWeiterKnopf").hidden = !(bonus && heute && !set.fertig);
 }
 
 function startBonusWelt(welt) {
@@ -3787,17 +3885,7 @@ function startBonusWelt(welt) {
 }
 
 function zeigeStartErgebnis() {
-  /* Der Startknopf passt sich an: weiterspielen, neues Quiz oder los geht's. */
-  const los = document.getElementById("losKnopf");
-  const set = speicher.daten().tagesSet;
-  const heute = heutigesDatum();
-  if (set && set.datum === heute && set.fertig) {
-    los.textContent = "Neues Quiz für heute!";
-  } else if (set && set.datum === heute) {
-    los.textContent = "Weiterspielen!";
-  } else {
-    los.textContent = "Los geht's!";
-  }
+  aktualisiereWeltwahl();
 
   const kasten = document.getElementById("startErgebnis");
   kasten.textContent = "";
@@ -3834,13 +3922,7 @@ document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
   });
 });
 
-document.querySelectorAll(".bonus-welt-knopf").forEach(function (knopf) {
-  knopf.addEventListener("click", function () {
-    startBonusWelt(knopf.dataset.welt);
-  });
-});
-
-document.getElementById("losKnopf").addEventListener("click", function () {
+function starteMatheVonStart() {
   const set = speicher.daten().tagesSet;
   const heute = heutigesDatum();
   if (set && set.datum === heute && set.fertig) {
@@ -3871,6 +3953,16 @@ document.getElementById("losKnopf").addEventListener("click", function () {
     }
   }
   zeigeRunde(starteTagesRunde());
+}
+
+document.getElementById("matheWeiterKnopf").addEventListener("click", starteMatheVonStart);
+document.getElementById("losKnopf").addEventListener("click", function () {
+  aktualisiereWeltwahl();
+  if (weltHeuteFreigeschaltet(modus)) {
+    startBonusWelt(modus);
+  } else {
+    starteMatheVonStart();
+  }
 });
 
 /* Unterwegs gilt: erst „Weiter" (ohne jede Bewertung), und ganz am Ende „Fertig". */
@@ -3945,9 +4037,6 @@ document.getElementById("abbruchKnopf").addEventListener("click", function () {
 document.getElementById("sterneKnopf").addEventListener("click", function () {
   zeigeFortschritt("sterne");
 });
-document.getElementById("bonusKnopf").addEventListener("click", function () {
-  zeigeFortschritt("sterne");
-});
 document.getElementById("statistikKnopf").addEventListener("click", function () {
   zeigeFortschritt("statistik");
 });
@@ -3998,9 +4087,9 @@ document.body.dataset.thema = modus;
 setzeModus(modus);
 aktualisiereSternenAnzeige();
 aktualisiereBonusAnzeige();
-holBonusTag();
-aktualisiereBonusweltKnoepfe();
+aktualisiereGutscheinAnzeige();
 zeigeStartErgebnis();
+initialisiereWintermodus();
 musik.start();
 starteZeigerSpur();
 zeigeBildschirm("startBildschirm");
@@ -4027,6 +4116,7 @@ document.addEventListener("visibilitychange", function () {
     if (sync.istKonfiguriert()) { sync.schieben().catch(function () {}); }
   } else {
     starteUebezeit();
+    if (!document.getElementById("startBildschirm").hidden) { aktualisiereWeltwahl(); }
   }
 });
 aktualisiereSpeicherHinweis();

@@ -10,10 +10,13 @@ Die Anwendung besteht aus HTML, CSS und JavaScript. Zum Spielen sind weder
 ein Benutzerkonto noch eine Installation oder ein Build-Schritt erforderlich.
 Das Spiel funktioniert lokal ohne Internet.
 
-Die Figurenbilder im Ordner `bilder/` stammen von den offiziellen Seiten
-zu [Bluey und Bingo](https://www.bluey.tv/characters/),
-[Gabbys Puppenhaus](https://www.gabbysdollhouse.com/uk/characters) und
-[Doozies Hundehaus](https://prod.dreamworks.com/shows/doozies-doghouse).
+Die Figurenbilder für Bluey und Gabbys Puppenhaus stammen von den offiziellen Seiten
+zu [Bluey](https://www.bluey.tv/characters/) und
+[Gabbys Puppenhaus](https://www.gabbysdollhouse.com/uk/characters).
+Die freigestellten Hunde wurden mit Imagegen anhand offizieller
+[Figuren- und Musikclips](https://www.youtube.com/@GabbysDollhouseDeutschland)
+und des Serienposters erstellt.
+Doozies freigestellte Figur stammt aus [„Doozie“ von marybethmaria1423](https://www.deviantart.com/marybethmaria1423/art/Doozie-1400008346).
 
 ## Funktionen und Spielregeln
 
@@ -75,6 +78,8 @@ Antworten öffnet die Bonuswelt ihrer Themenwelt für diesen Tag.
 Wiederholungsrunden können keine Bonuswelt freischalten.
 
 In den Bonuswelten gibt es Knobelaufgaben mit freundlicher Rückmeldung.
+Eine freigeschaltete Bonuswelt nimmt bis zum nächsten Tag den Platz ihrer
+normalen Welt in der Auswahl ein. Das Haus oben führt zurück zur Startseite.
 Jede gelöste Bonuskarte vergibt ihren Stern einmal. Noch ungelöste Karten
 können weiter bearbeitet werden. Insgesamt sind **höchstens drei Bonussterne
 pro Tag über alle Welten zusammen** möglich.
@@ -82,8 +87,9 @@ pro Tag über alle Welten zusammen** möglich.
 **Fünf Bonussterne ergeben einen auswählbaren Gutschein.** Das verfügbare
 Guthaben wird entsprechend vermindert; die insgesamt verdienten Bonussterne
 bleiben separat gespeichert. Offene Gutscheine können jederzeit umgetauscht
-oder als eingelöst markiert werden. Die Einträge bleiben mit Umtauschvermerk
-oder Einlösedatum im Verlauf.
+oder als eingelöst markiert werden. Beim Umtausch ändert sich der Wunsch.
+Datum und Platz des Gutscheins bleiben erhalten. Beim Laden werden frühere
+Umtauschpaare zu einem Gutschein zusammengeführt.
 
 ### Weitere Funktionen
 
@@ -93,7 +99,7 @@ oder Einlösedatum im Verlauf.
 - Optionaler automatischer Abgleich über ein privates GitHub-Repository
   (Zusammenführen statt Überschreiben).
 - Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als
-  JSON-Datei (Umzug auf einen anderen PC, „Mein Fortschritt → Spielstand“).
+  JSON-Datei (Umzug auf einen anderen PC, „Einstellungen → Spielstand“).
 - Hintergrundmusik und synthetische Ersatzmelodie bei fehlenden Dateien.
 - Tastaturbedienung mit Tab, Enter und Pfeiltasten sowie Dialognavigation mit
   Tab/Umschalt+Tab und Escape.
@@ -173,7 +179,7 @@ unter anderem:
 
 - Tagesaufgaben, eingegebene Antworten und aktueller Abschnitt;
 - reguläre Lebenszeitsterne, Bonusguthaben und insgesamt verdiente Bonussterne;
-- Gutscheine einschließlich Umtauschvermerken;
+- Gutscheine mit ihrem aktuellen Wunsch und gegebenenfalls dem Einlösedatum;
 - Rundenhistorie, Bereichssummen, Tagesfreischaltungen und Einstellungen.
 
 Optional liegen die Zugangsdaten für die GitHub-Synchronisierung unter einem
@@ -213,7 +219,7 @@ kann gespeicherte Fortschritte entfernen.
 
 ### Spielstand sichern, laden und zusammenführen
 
-Unter **„Mein Fortschritt“ → „Spielstand“** stehen drei Knöpfe:
+Unter **„Einstellungen“ → „Spielstand“** stehen drei Knöpfe:
 
 - **„Spielstand sichern (Datei)“** lädt eine JSON-Datei
   (`mathe-spielstand-JJJJ-MM-TT.json`) mit dem aktuellen Sitzungsstand unter
@@ -251,7 +257,7 @@ eigenen Stand mit der Datei:
 | Runden der Historie | Vereinigung ohne Doppelung (Schlüssel ist der Zeitstempel), nach Zeit sortiert, neueste 1.000 bleiben |
 | Lebenszeitsterne | sichtbare Rundensterne werden exakt addiert; der nicht mehr sichtbare Rest (abgeschnittene Historie) wird als Maximum übernommen |
 | Bereichssummen | gleiche Rechnung je Bereich über die Runden hinweg |
-| Gutscheine | Vereinigung ohne Doppelung; ein Umtauschvermerk bleibt erhalten |
+| Gutscheine | Vereinigung ohne Doppelung; der zuletzt geänderte Wunsch und der Einlösestatus bleiben erhalten |
 | Bonussterne | verdiente Sterne werden vereinigt, das Guthaben ist konservativ das Maximum (es entstehen keine Sterne) |
 | Tagesrunde | eine abgeschlossene Runde gewinnt vor einer offenen (verhindert Doppelbewertung), sonst das neuere Datum |
 | Merkzettel, Ausschlusslisten | Vereinigung, gekappt |
@@ -281,7 +287,7 @@ GitHub dient nur als Ablage (es wird kein Code dorthin geschrieben).
 2. Feingranulares Token anlegen: *Settings → Developer settings → Personal access
    tokens → Fine-grained tokens*, **nur dieses Repository**, Recht
    **Contents: Read and write**, mit Ablaufdatum.
-3. Im Spiel unter **„Mein Fortschritt“ → „Spielstand“** Repository
+3. Im Spiel unter **„Einstellungen“ → „Spielstand“** Repository
    (`besitzer/name`) und Token eintragen, „Speichern & prüfen“ drücken. Beim
    ersten Mal wird die Datei angelegt.
 
@@ -331,7 +337,7 @@ CSV-Exporte werden durch `.gitignore` von der Versionsverwaltung ausgeschlossen.
 
 ### Statistik als CSV
 
-Unter **„Mein Fortschritt“ → „Statistik“ → „Statistik herunterladen“** entsteht
+Unter **„Einstellungen“ → „Statistik“ → „Statistik herunterladen“** entsteht
 eine CSV-Datei mit Runden, Bereichswerten, Bonusdaten und Gutscheinen.
 Sonderzeichen, Anführungszeichen und Zeilenumbrüche werden für CSV behandelt.
 Die Datei dient der Auswertung und ist kein automatisch wiederherstellbarer
@@ -449,7 +455,7 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
 
 ### 1.0.3 — Spielstand sichern und laden (Umzug auf einen anderen PC)
 
-- Neuer Reiter **„Mein Fortschritt → Spielstand“** mit „Spielstand sichern
+- Neuer Reiter **„Einstellungen → Spielstand“** mit „Spielstand sichern
   (Datei)“ und „Spielstand laden (Datei)“.
 - Import prüft die Datei mit derselben Logik wie der Start, fragt vor dem
   Ersetzen nach, sichert den bisherigen Stand automatisch als

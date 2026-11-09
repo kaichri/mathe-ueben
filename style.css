@@ -96,9 +96,11 @@ body {
 /* ---------------- Kopfzeile ---------------- */
 
 .kopf {
-  display: flex;
+  --kopf-knopf-hoehe: 44px;
+  --kopf-symbol-groesse: 24px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
   padding: 18px 22px;
   background: var(--weiss);
@@ -133,17 +135,21 @@ body {
   background: var(--akzent-hell);
   border: 2px solid var(--akzent);
   border-radius: 999px;
-  padding: 8px 18px;
+  min-height: var(--kopf-knopf-hoehe);
+  padding: 0 14px;
   cursor: pointer;
 }
 
 .sterne-anzeige:hover { background: var(--weiss); }
 
-.sterne-anzeige .symbol {
-  width: 26px;
-  height: 26px;
+.kopf .symbol {
+  width: var(--kopf-symbol-groesse);
+  height: var(--kopf-symbol-groesse);
   color: var(--akzent);
 }
+
+.stern-zaehler { display: inline-flex; align-items: center; gap: 4px; }
+.stern-zaehler + .stern-zaehler { border-left: 1px solid currentColor; padding-left: 8px; }
 
 /* ---------------- Seiten ---------------- */
 
@@ -204,6 +210,25 @@ main {
   border-color: var(--akzent);
   background: var(--akzent-hell);
   box-shadow: 0 2px 0 var(--akzent);
+}
+
+.themen-knopf.themen-bonus {
+  border-color: #c48c20;
+  background: #fff6dd;
+  color: #5c4409;
+}
+
+.themen-knopf.themen-bonus[aria-pressed="true"] {
+  box-shadow: 0 3px 0 #9e6a18;
+}
+
+.knopf.home-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--kopf-knopf-hoehe);
+  padding: 0 12px;
+  border: 0;
 }
 
 /* ---------------- Bereichs-Navigation (ein Abschnitt nach dem anderen) ---------------- */
@@ -640,21 +665,13 @@ main {
 
 .meilenstein.leer { border-style: dashed; }
 
-/* ---------------- Fußzeile ---------------- */
-
-.fusszeile {
-  text-align: center;
-  color: var(--text-mild);
-  font-size: 15px;
-  padding: 10px 0 24px;
-}
-
 /* ---------------- Für den Ausdruck ---------------- */
 
 @media print {
   body { background: #ffffff; font-size: 14px; }
-  .werkzeug-leiste, .sterne-anzeige, .fusszeile, .start-info,
-  .kopf-knoepfe, .regen, .ueberlagerung, .maskottchen-reihe, .zeiger-spur-feld { display: none; }
+  .kopf { display: block; }
+  .werkzeug-leiste, .sterne-anzeige, .start-info,
+  .kopf-knoepfe, .kopf .home-knopf, .regen, .winter-schnee, .ueberlagerung, .maskottchen-reihe, .zeiger-spur-feld { display: none; }
   .bereich { break-inside: avoid; border-color: #999999; }
   .eingabe { border-color: #666666; }
 }
@@ -666,6 +683,7 @@ main {
 .kopf-knoepfe {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -673,7 +691,9 @@ main {
 .kopf-knopf {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  width: var(--kopf-knopf-hoehe);
+  height: var(--kopf-knopf-hoehe);
   font: inherit;
   font-size: 16px;
   font-weight: 700;
@@ -681,26 +701,55 @@ main {
   background: var(--akzent-hell);
   border: 2px solid var(--akzent);
   border-radius: 999px;
-  padding: 8px 14px;
+  padding: 0;
   cursor: pointer;
 }
 
 .kopf-knopf:hover { background: var(--weiss); }
 
-.kopf-knopf .symbol { width: 22px; height: 22px; color: var(--akzent); }
+.schalter-strich { display: none; }
 
-.kopf-knopf.musik-aus .symbol { opacity: .55; }
-
-.bonus-knopf {
-  background: #fff6dd;
-  border-color: #d8a723;
-  color: #7a5c11;
+.kopf-knopf.musik-aus {
+  background: #ededed;
+  border-color: #858585;
+  color: #4c4c4c;
 }
 
-.bonus-zeichen { font-size: 19px; }
+.kopf-knopf.musik-aus .symbol { color: inherit; }
+.kopf-knopf[aria-pressed="false"] .schalter-strich { display: inline; }
+
+.winter-knopf[aria-pressed="false"] {
+  background: #ededed;
+  border-color: #858585;
+  color: #4c4c4c;
+}
+
+.winter-knopf .symbol { color: inherit; }
+
+.winter-schnee {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.winter-schnee .winter-flocke {
+  position: absolute;
+  top: -24px;
+  width: var(--flocken-groesse);
+  height: var(--flocken-groesse);
+  color: #6899bd;
+  opacity: .42;
+  animation: winter-fallen var(--fallzeit) linear var(--fallstart) infinite;
+}
+
+@keyframes winter-fallen {
+  to { transform: translate(24px, calc(100vh + 48px)) rotate(85deg); }
+}
 
 /* =========================================================
-   Maskottchen (selbst gezeichnet, zum Anklicken)
+   Maskottchen zum Anklicken
    ========================================================= */
 
 .begruessung-zeile {
@@ -711,7 +760,7 @@ main {
   flex-wrap: wrap;
 }
 
-.maskottchen-reihe { display: flex; gap: 8px; }
+.maskottchen-reihe { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .maskottchen {
   width: 76px;
@@ -730,6 +779,7 @@ main {
 
 .ergebnis-maskottchen {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
   margin: 6px 0 2px;
@@ -910,6 +960,8 @@ main {
   animation: zeiger-treiben .95s ease-out;
 }
 
+.zeiger-teilchen .symbol { width: 20px; height: 20px; }
+
 @keyframes zeiger-treiben {
   0%   { opacity: .95; translate: 0 0; scale: 1.1; }
   100% { opacity: 0; translate: 0 -26px; scale: .55; }
@@ -987,54 +1039,6 @@ main {
 
 .bereich-fuellung { height: 100%; background: var(--gut); }
 
-/* =========================================================
-   Bonuswelten auf der Startseite
-   ========================================================= */
-
-.bonus-wahl {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-bottom: 26px;
-}
-
-.bonus-welt-knopf {
-  font: inherit;
-  text-align: center;
-  border-radius: 18px;
-  border: 3px dashed #c9c2b2;
-  background: #f1eee6;
-  color: #6b6558;
-  padding: 16px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: not-allowed;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.bonus-welt-knopf .bonus-welt-zeichen { width: 48px; height: 48px; filter: grayscale(1); opacity: .55; }
-.bonus-welt-knopf .bonus-welt-titel { font-size: 20px; font-weight: 800; }
-.bonus-welt-knopf .bonus-welt-status { font-size: 15px; line-height: 1.35; }
-
-/* wenn Emma sich die Bonuswelt verdient hat: bunt und golden */
-.bonus-welt-knopf.frei {
-  border-style: solid;
-  border-color: #d8a723;
-  background: #fff6dd;
-  color: #5c4409;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(184, 134, 11, .35);
-}
-
-.bonus-welt-knopf.frei .bonus-welt-zeichen { filter: none; opacity: 1; }
-
-.bonus-welt-knopf.frei:hover {
-  background: #ffedbd;
-  transform: translateY(-3px);
-}
-
 .bonus-start-hinweis {
   background: #fff6dd;
   border: 3px dashed #d8a723;
@@ -1088,15 +1092,6 @@ main {
   margin: 12px 0;
 }
 
-.gutschein-karte.getauscht {
-  border-style: dashed;
-  border-color: #c9c2b2;
-  background: #f4f1ea;
-  color: #6b6558;
-}
-
-.gutschein-karte.getauscht .gutschein-text { text-decoration: line-through; }
-
 .gutschein-kopf {
   display: flex;
   justify-content: space-between;
@@ -1116,7 +1111,28 @@ main {
 
 @media (max-width: 640px) {
   body { font-size: 18px; }
-  .kopf h1 { font-size: 24px; }
+  .kopf { --kopf-knopf-hoehe: 36px; --kopf-symbol-groesse: 18px; padding: 10px 12px; gap: 6px; }
+  .kopf h1 { font-size: 20px; }
+  .kopf-zeile { font-size: 13px; }
+  .kopf .home-knopf { padding: 0 8px; }
+  .home-knopf span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .kopf-knoepfe { gap: 4px; }
+  .kopf-knoepfe .sterne-anzeige {
+    gap: 3px;
+    padding: 0 6px;
+    font-size: 15px;
+  }
+  .stern-zaehler { gap: 2px; }
+  .kopf-knoepfe .sterne-anzeige { max-width: 100%; flex-wrap: wrap; }
+  .stern-zaehler + .stern-zaehler { padding-left: 4px; }
+  .winter-flocke:nth-child(n+11) { display: none; }
   .rechnung { font-size: 26px; }
   .eingabe { width: 82px; font-size: 24px; }
   .eingabe.geld-teil { width: 62px; font-size: 22px; }
@@ -1134,6 +1150,7 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+  .winter-schnee { display: none; }
 }
 
 /* =========================================================

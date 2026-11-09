@@ -155,18 +155,21 @@ test("MERGE: Gutscheine werden ohne Doppelung vereinigt", () => {
   assert.deepEqual(ergebnis.vorschau.geschenke, 1);
 });
 
-test("MERGE: Umtauschvermerk bleibt erhalten", () => {
+test("MERGE: Ein früherer Umtausch aktualisiert den ursprünglichen Gutschein", () => {
   const getauscht = { id: "g1", zeitpunkt: "2026-10-28T10:00:00.000Z", datum: "2026-10-28",
     text: "Filmabend", umgetauschtAm: "2026-10-29", neuerText: "Picknick" };
   const frisch = { id: "g1", zeitpunkt: "2026-10-28T10:00:00.000Z", datum: "2026-10-28", text: "Filmabend" };
   // Der lokale Stand kennt den Umtausch noch nicht, die Datei schon.
   const lokal = spielstand({ geschenke: [frisch] });
-  const fremd = spielstand({ geschenke: [getauscht] });
+  const ersatz = { id: "g2", datum: "2026-10-29", text: "Picknick", umgetauschtVon: "g1" };
+  const fremd = spielstand({ geschenke: [getauscht, ersatz] });
   const g = game(lokal, { now: JETZT });
   const ergebnis = zusammenfuehren(g, sicherung(fremd));
   assert.equal(ergebnis.daten.geschenke.length, 1);
-  assert.equal(ergebnis.daten.geschenke[0].umgetauschtAm, "2026-10-29",
-    "Der Umtauschvermerk darf nicht verloren gehen");
+  assert.equal(ergebnis.daten.geschenke[0].text, "Picknick");
+  assert.equal(ergebnis.daten.geschenke[0].id, "g1");
+  assert.equal(ergebnis.daten.geschenke[0].datum, "2026-10-28");
+  assert.equal(ergebnis.daten.geschenke[0].umgetauschtAm, undefined);
 });
 
 /* --------------------------------------------------------------- Tagesrunde */

@@ -37,6 +37,7 @@ test("Übezeit bleibt pro Abschnitt erhalten und zählt im Hintergrund nicht wei
 test("Einlösen speichert das Datum und sperrt Umtausch auch nach erneutem Laden", () => {
   const gutschein = { id: "g1", text: "Spieleabend", datum: "2026-07-01" };
   const g = game({ version: 2, geschenke: [gutschein] }, { now: START });
+  assert.equal(g.nodes.get("offeneGutscheine").textContent, "1");
   g.run("zeigeFortschritt('geschenke')");
   const inhalt = g.nodes.get("geschenkeInhalt");
   assert.match(inhalt.textContent, /Anderes aussuchen/);
@@ -46,6 +47,7 @@ test("Einlösen speichert das Datum und sperrt Umtausch auch nach erneutem Laden
   assert.equal(g.data().geschenke[0].eingeloestAm, undefined);
   knopf.emit("click");
   g.nodes.get("frageJaKnopf").emit("click");
+  assert.equal(g.nodes.get("offeneGutscheine").textContent, "0");
   const neu = game(g.saved(), { now: START });
   neu.run("zeigeFortschritt('geschenke')");
   const text = neu.nodes.get("geschenkeInhalt").textContent;

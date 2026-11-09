@@ -47,9 +47,9 @@
     },
     doozie: {
       mit: ["Doozie", "Puggie", "Sahnepf\u00F6tchen", "Bastelpf\u00F6tchen", "Pogi",
-        "Crouton", "Seaquin", "DreamPup", "PixiePup", "GamePup", "Swaggy"],
+        "Crouton", "Paillette", "Traumpfötchen", "Pixiepfötchen", "Spielpfötchen", "Swenny"],
       freunde: ["Doozie", "Puggie", "Sahnepf\u00F6tchen", "Bastelpf\u00F6tchen", "Pogi",
-        "Crouton", "Seaquin", "DreamPup", "PixiePup", "GamePup", "Swaggy",
+        "Crouton", "Paillette", "Traumpfötchen", "Pixiepfötchen", "Spielpfötchen", "Swenny",
         "Gabby", "Pandy", "Kuchi", "Kitty Fee", "Hamsterh\u00FCndchen"]
     }
   };
