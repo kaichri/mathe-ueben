@@ -92,6 +92,21 @@ Beim Umtausch eines offenen Gutscheins bleiben Datum und Platz erhalten.
 3. **`index.html` in Chrome oder Edge öffnen**, beispielsweise per Doppelklick.
 4. Eine Welt auswählen und „Los geht's!“ drücken.
 
+### Windows-Starter mit automatischen Updates
+
+Im App-Ordner einmal **`Desktop-Symbol erstellen.bat`** doppelklicken. Sie
+erstellt oder aktualisiert das Desktop-Symbol **Mathe üben**, das den
+Update-Starter `Mathe üben.cmd` aufruft. Damit der bestehende
+Spielstand verfügbar bleibt, muss sich die App im bisherigen Ordner befinden
+und derselbe Browser muss als Windows-Standardbrowser eingestellt sein.
+
+Der Starter holt verfügbare Updates von `origin/main`, wenn Git installiert
+ist, der Ordner auf `main` steht und die verwalteten Dateien unverändert sind.
+Für ein privates Repository braucht Git einen bereits eingerichteten Zugang.
+Ohne Internet, bei lokalen Änderungen oder wenn Git fehlt, öffnet der Starter
+die vorhandene Version. Eine entpackte ZIP-Kopie lässt sich damit öffnen,
+Updates setzen aber eine Git-Kopie voraus.
+
 Alternativ kann das Verzeichnis mit einem lokalen statischen HTTP-Server
 bereitgestellt werden. Dafür ist kein Anwendungsserver erforderlich.
 
