@@ -144,6 +144,7 @@ const speicher = (function () {
   let daten = {
     version: 3, modus: "bluey", runden: [], zuletzt: [],
     knobelZuletzt: [], // die letzten Knobelaufgaben – damit nicht bald dasselbe Rätsel kommt
+    bonusSet: null,
     tagesSet: null,    // { datum, welt, fertig, runde, antworten, abschnitt } – das heutige Quiz
     vortagSchluessel: [], // die Aufgaben von gestern: nur zum Ausschluss beim Bauen
     bonusGesamt: 0, bonusStufenOffen: [], geschenke: [], bereichPunkte: {}, sound: null,
@@ -162,7 +163,7 @@ const speicher = (function () {
        Spielstand (z. B. "runde" statt "runden"): nicht als leerer Stand
        behandeln, sondern wie beschädigte Daten schützen. */
     const BEKANNTE_FELDER = ["version", "sterneGesamt", "modus", "runden", "zuletzt",
-      "knobelZuletzt", "tagesSet", "vortagSchluessel", "bonussterne", "bonusGesamt",
+      "knobelZuletzt", "tagesSet", "bonusSet", "vortagSchluessel", "bonussterne", "bonusGesamt",
       "geschenke", "bereichPunkte", "sound", "bonusTag", "bonusWelten", "bonusStufenOffen"];
     if (!BEKANNTE_FELDER.some(function (name) {
       return Object.prototype.hasOwnProperty.call(geladen, name);
@@ -196,7 +197,7 @@ const speicher = (function () {
       });
     }
     liste("runden", function (r) {
-      return objekt(r) && optionaleTexte(r, ["zeit", "datum", "uhrzeit", "modus"]) &&
+      return objekt(r) && optionaleTexte(r, ["zeit", "datum", "uhrzeit", "modus", "bonusId"]) &&
         ["sterne", "richtig", "gesamt", "bonusRichtig"].every(function (name) {
         return r[name] === undefined || zahl(r[name]);
         }) && (r.bonus === undefined || typeof r.bonus === "boolean") &&
@@ -268,26 +269,37 @@ const speicher = (function () {
       }
       return f.typ !== "geld" || (objekt(f.geld) && zahl(f.geld.cent));
     }
-    if (neu.tagesSet !== undefined && neu.tagesSet !== null) {
-      const set = neu.tagesSet;
+    for (const name of ["tagesSet", "bonusSet"]) {
+      const set = neu[name];
+      if (set === undefined || set === null) { continue; }
+      const istBonus = name === "bonusSet";
+      const bereichGueltig = bereich => istBonus ? bereich === "bonus" : Object.hasOwn(BEREICH_NAMEN, bereich);
       const kennungen = new Set();
       const gueltig = objekt(set) && datum(set.datum) &&
         ["bluey", "gabby", "doozie"].includes(set.welt) && typeof set.fertig === "boolean" &&
+        (!istBonus || (typeof set.id === "string" && set.id.length > 0)) &&
         objekt(set.runde) && Array.isArray(set.runde.bereiche) && set.runde.bereiche.length > 0 &&
         set.runde.bereiche.every(function (b) {
-          return objekt(b) && Object.prototype.hasOwnProperty.call(BEREICH_NAMEN, b.bereich) && typeof b.titel === "string" &&
+          return objekt(b) && bereichGueltig(b.bereich) && typeof b.titel === "string" &&
             typeof b.untertitel === "string" && Array.isArray(b.aufgaben) && b.aufgaben.length > 0 &&
             b.aufgaben.every(function (k) {
               if (!objekt(k) || typeof k.ident !== "string" || !/^[\w-]+$/.test(k.ident) || kennungen.has(k.ident)) { return false; }
               kennungen.add(k.ident);
-              return Object.prototype.hasOwnProperty.call(BEREICH_NAMEN, k.bereich) && typeof k.darstellung === "string" &&
+              return bereichGueltig(k.bereich) && typeof k.darstellung === "string" &&
                 ["einfach", "rest", "luecke", "text"].includes(k.layout) && optionaleTexte(k, ["text", "frage"]) &&
                 Array.isArray(k.felder) && k.felder.length > 0 && k.felder.every(feldGueltig) &&
                 (k.layout !== "rest" || k.felder.length === 2);
             });
         });
-      if (!gueltig) { problem(); neu.tagesSet = null; }
+      if (!gueltig) { problem(); neu[name] = null; }
       else {
+        if (istBonus) {
+          if (typeof set.antwortenZeit !== "number" || !Number.isFinite(set.antwortenZeit)) {
+            delete set.antwortenZeit;
+          }
+          set.belohnt = Array.isArray(set.belohnt)
+            ? [...new Set(set.belohnt.filter(id => kennungen.has(id)))] : [];
+        }
         if (!gueltigeUebezeiten(set.uebezeiten)) { delete set.uebezeiten; }
         if (!objekt(set.antworten)) { if (set.antworten !== undefined) { problem(); } set.antworten = {}; }
         Object.keys(set.antworten).forEach(function (id) {
@@ -321,6 +333,7 @@ const speicher = (function () {
             runden: Array.isArray(geladen.runden) ? geladen.runden : [],
             zuletzt: Array.isArray(geladen.zuletzt) ? geladen.zuletzt : [],
             knobelZuletzt: Array.isArray(geladen.knobelZuletzt) ? geladen.knobelZuletzt : [],
+            bonusSet: geladen.bonusSet || null,
             tagesSet: (geladen.tagesSet && typeof geladen.tagesSet === "object" &&
               geladen.tagesSet.runde) ? geladen.tagesSet : null,
             vortagSchluessel: Array.isArray(geladen.vortagSchluessel) ? geladen.vortagSchluessel : [],
@@ -544,6 +557,7 @@ function verschmelzeSpielstande(lokal, fremd) {
       (eintrag && eintrag.datum ? eintrag.datum + "T" + (eintrag.uhrzeit || "00:00") : ""));
   }
   function rundenKennung(r) {
+    if (r?.bonus && r.bonusId) { return "bonus:" + r.bonusId; }
     if (r && typeof r.zeit === "string" && r.zeit) { return "zeit:" + r.zeit; }
     return "alt:" + [r && r.datum, r && r.uhrzeit, r && r.modus, r && r.richtig,
       r && r.gesamt, r && r.bonus, r && r.bonusRichtig].join("|");
@@ -639,6 +653,16 @@ function verschmelzeSpielstande(lokal, fremd) {
     return antworten(b) > antworten(a) ? b : a;
   }
 
+  function waehleBonusSet(a, b) {
+    if (!a || !b || a.datum !== b.datum) { return waehleTagesSet(a, b); }
+    if (a.id !== b.id) { return a.id > b.id ? a : b; }
+    if (a.belohnt.length !== b.belohnt.length) { return a.belohnt.length > b.belohnt.length ? a : b; }
+    if (a.fertig === b.fertig && a.antwortenZeit !== b.antwortenZeit) {
+      return (a.antwortenZeit || 0) > (b.antwortenZeit || 0) ? a : b;
+    }
+    return waehleTagesSet(a, b);
+  }
+
   const rundenAlle = vereinigeRunden(A.runden, B.runden);
   /* Die Summen werden aus der vollständigen Vereinigung berechnet, nicht aus der
      auf 1.000 gekürzten Liste – sonst gingen die Sterne abgeschnittener Runden
@@ -695,6 +719,7 @@ function verschmelzeSpielstande(lokal, fremd) {
     zuletzt: vereinigeTexte(B.zuletzt, A.zuletzt, EINSTELLUNGEN.merkzettelGroesse),
     knobelZuletzt: vereinigeTexte(B.knobelZuletzt, A.knobelZuletzt, EINSTELLUNGEN.knobelMerken),
     tagesSet: waehleTagesSet(A.tagesSet, B.tagesSet),
+    bonusSet: waehleBonusSet(A.bonusSet, B.bonusSet),
     vortagSchluessel: vereinigeTexte(B.vortagSchluessel, A.vortagSchluessel, 300),
     bonusGesamt: bonusGesamt,
     bonusStufenOffen: offeneStufenOhneGutschein(liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen)), geschenke),
@@ -1472,7 +1497,7 @@ function pausiereUebezeit() {
   if (!uebezeitSegment) { return; }
   bucheUebezeit();
   uebezeitSegment = null;
-  if (istTagesRunde()) { sichereTagesAntworten(); }
+  sichereTagesAntworten();
   const bonusStatistik = runde.bonusAuswertung && runde.bonusAuswertung.statistik;
   if (bonusStatistik) {
     bonusStatistik.uebezeiten = { ...runde.uebezeiten };
@@ -1593,18 +1618,16 @@ function starteTagesRunde() {
 
 /* Alle jetzigen Eingaben der Tagesrunde im Speicher ablegen. */
 function sichereTagesAntworten(aufgeschoben) {
-  if (!istTagesRunde()) {
-    return;
-  }
   const daten = speicher.daten();
-  const set = daten.tagesSet;
-  if (!set || set !== runde.tagesSet) {
+  const set = runde?.bonusSet ? daten.bonusSet : daten.tagesSet;
+  if (!set || (set !== runde?.tagesSet && set !== runde?.bonusSet)) {
     return;
   }
   bucheUebezeit();
   if (runde.uebezeiten) { set.uebezeiten = { ...runde.uebezeiten }; }
   const antworten = (set.antworten && typeof set.antworten === "object")
     ? set.antworten : (set.antworten = {});
+  let geaendert = false;
   runde.karten.forEach(function (karte) {
     const teile = kartenEingaben.get(karte.ident);
     if (!teile) {
@@ -1619,11 +1642,15 @@ function sichereTagesAntworten(aufgeschoben) {
       return wert;
     });
     if (alleLeer) {
+      if (Object.hasOwn(antworten, karte.ident)) { geaendert = true; }
       delete antworten[karte.ident];
     } else {
+      const alt = antworten[karte.ident];
+      if (!alt || alt.length !== werte.length || werte.some((wert, i) => wert !== alt[i])) { geaendert = true; }
       antworten[karte.ident] = werte;
     }
   });
+  if (runde.bonusSet && geaendert) { set.antwortenZeit = Date.now(); }
   set.abschnitt = abschnittZeiger;
   speicher.speichere(aufgeschoben === true);
   // Beim Tippen nur geplant (höchstens einmal pro Minute), nicht sofort.
@@ -1632,21 +1659,25 @@ function sichereTagesAntworten(aufgeschoben) {
 
 /* --- die Bonuswelt: nur Knobelaufgaben, nie mehr als die offenen Plätze --- */
 
-function baueBonusRunde(welt) {
+function baueBonusRunde(welt, neuerVersuch = false) {
   const offen = bonusPlaetzeHeute();
   if (offen <= 0) {
     // Tageskontingent erschöpft: keine belohnungslose Bonusrunde bauen.
     return null;
   }
-  const anzahl = offen;
-  const aufgaben = window.AUFGABEN.erzeugeBonus(anzahl, welt, speicher.daten().knobelZuletzt);
-  // merken, welche Knobelaufgaben Emma gerade bekam – die kommen so schnell nicht wieder
   const daten = speicher.daten();
+  const heute = heutigesDatum();
+  const vorhanden = daten.bonusSet;
+  if (!neuerVersuch && vorhanden?.datum === heute && vorhanden.welt === welt && !vorhanden.fertig) {
+    return rundeAusBonusSet(vorhanden, daten.runden);
+  }
+  const anzahl = offen;
+  const aufgaben = window.AUFGABEN.erzeugeBonus(anzahl, welt, daten.knobelZuletzt);
+  // merken, welche Knobelaufgaben Emma gerade bekam – die kommen so schnell nicht wieder
   daten.knobelZuletzt = aufgaben
     .map(function (aufgabe) { return aufgabe.schluessel; })
     .concat(daten.knobelZuletzt || [])
     .slice(0, EINSTELLUNGEN.knobelMerken);
-  speicher.speichere();
   const bereiche = [{
     bereich: "bonus",
     titel: "Bonuswelt " + WELT_NAMEN[welt],
@@ -1656,14 +1687,28 @@ function baueBonusRunde(welt) {
       " Bonussternen zu holen.",
     aufgaben: aufgaben
   }];
-  return {
-    bereichsArt: "bonus",
-    bonusDatum: heutigesDatum(),
-    welt: welt,
-    bereiche: bereiche,
-    karten: aufgaben,
-    anzahl: aufgaben.length
+  const set = {
+    id: new Date().toISOString() + "-" + Math.random().toString(36).slice(2),
+    datum: heute, welt: welt, fertig: false,
+    runde: { bereiche: bereiche }, antworten: {}, abschnitt: 0, belohnt: []
   };
+  daten.bonusSet = set;
+  speicher.speichere();
+  sync.nachAenderung(true);
+  return rundeAusBonusSet(set, daten.runden);
+}
+
+function rundeAusBonusSet(set, historie) {
+  const spielrunde = rundeAusSet(set);
+  delete spielrunde.tagesSet;
+  spielrunde.bereichsArt = "bonus";
+  spielrunde.bonusDatum = set.datum;
+  spielrunde.bonusSet = set;
+  spielrunde.bonusAuswertung = {
+    belohnt: new Set(set.belohnt),
+    statistik: historie.find(eintrag => eintrag.bonus && eintrag.bonusId === set.id) || null
+  };
+  return spielrunde;
 }
 
 /* ------------- Aufgaben auf der Seite anzeigen ------------- */
@@ -1697,8 +1742,8 @@ function zeigeRunde(neueRunde) {
     return behaelter.appendChild(baueBereich(bereich));
   });
 
-  /* Bei der Tagesrunde: die gespeicherten Antworten wieder eintragen. */
-  const set = istTagesRunde() ? speicher.daten().tagesSet : null;
+  /* Gespeicherte Antworten wieder eintragen. */
+  const set = runde.tagesSet || runde.bonusSet;
   if (set && set.antworten) {
     runde.karten.forEach(function (karte) {
       const werte = set.antworten[karte.ident];
@@ -1707,6 +1752,7 @@ function zeigeRunde(neueRunde) {
         werte.forEach(function (wert, stelle) {
           if (teile[stelle]) {
             teile[stelle].value = wert;
+            if (runde.bonusAuswertung?.belohnt.has(karte.ident)) { teile[stelle].disabled = true; }
           }
         });
       }
@@ -1739,9 +1785,7 @@ function zeigeAbschnitt(stelle) {
   aktualisiereAbschnittsNav();
   aktualisiereKnopfLeiste();
   aktualisiereFortschritt();
-  if (istTagesRunde()) {
-    sichereTagesAntworten();
-  }
+  sichereTagesAntworten();
   if (typeof window.scrollTo === "function") {
     window.scrollTo(0, 0);
   }
@@ -2347,6 +2391,12 @@ function pruefeBonusRunde() {
     }
   });
 
+  if (runde.bonusSet) {
+    runde.bonusSet.belohnt = [...auswertung.belohnt];
+    runde.bonusSet.fertig = bonusRichtig === runde.karten.length || bonusPlaetzeHeute() === 0;
+    sichereTagesAntworten(true);
+  }
+
   // Genau ein Statistikdatensatz pro Bonusrunde, auch bei späteren Korrekturen.
   bucheUebezeit();
   if (!auswertung.statistik) {
@@ -2468,6 +2518,7 @@ function speichernRunde(richtig, gesamt, bereichErgebnis, bonusRichtig, istBonus
     gesamt: gesamt,
     modus: runde && runde.welt ? runde.welt : modus,
     bonus: !!istBonus,
+    ...(istBonus && runde?.bonusSet && { bonusId: runde.bonusSet.id }),
     ...(!istBonus && runde && { wiederholung: runde.bereichsArt === "uebungen" }),
     bonusRichtig: bonusRichtig || 0,
     bereiche: bereichErgebnis,
@@ -4131,7 +4182,7 @@ document.getElementById("neuKnopf").addEventListener("click", function (ereignis
       zeigeRunde(neuesTagesSet());
     });
   } else if (runde && runde.bereichsArt === "bonus") {
-    const neueBonusRunde = baueBonusRunde(runde.welt);
+    const neueBonusRunde = baueBonusRunde(runde.welt, true);
     if (neueBonusRunde) {
       zeigeRunde(neueBonusRunde);
     } else {

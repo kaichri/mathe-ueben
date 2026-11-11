@@ -73,6 +73,40 @@ test("Zusammenführen behält Zeitmessung und Einlösedatum aus dem neueren Stan
   }
 });
 
+test("Die Bonusrunde bleibt mit Antworten, Übezeit und vergebenen Sternen beim Abgleich erhalten", () => {
+  const g = game({}, { now: START });
+  g.run("schalteWeltFrei('bluey'); startBonusWelt('bluey')");
+  g.fill(1);
+  g.time("2026-11-02T15:00:10Z");
+  g.run("sichereTagesAntworten()");
+  const vorPruefung = g.saved();
+  assert.equal(Object.keys(vorPruefung.bonusSet.antworten).length, 1);
+  assert.equal(vorPruefung.bonusSet.uebezeiten.bonus, 10000);
+
+  const zweiterPC = game({}, { now: START });
+  const abgleich = zweiterPC.run("speicher.zusammenfuehren(" + JSON.stringify(JSON.stringify(vorPruefung)) + ")");
+  assert.equal(abgleich.ok, true, abgleich.grund);
+  const fortgesetzt = game(abgleich.daten, { now: START });
+  fortgesetzt.run("startBonusWelt('bluey')");
+  assert.equal(fortgesetzt.run("runde.bonusSet.id"), vorPruefung.bonusSet.id);
+  assert.deepEqual(fortgesetzt.saved().bonusSet.antworten, vorPruefung.bonusSet.antworten);
+  fortgesetzt.run("pruefeRunde()");
+  assert.equal(fortgesetzt.saved().bonusGesamt, 1);
+
+  const nachPruefung = game(fortgesetzt.saved(), { now: START });
+  nachPruefung.run("startBonusWelt('bluey')");
+  assert.equal(nachPruefung.run("kartenEingaben.get(runde.karten[0].ident)[0].disabled"), true);
+  nachPruefung.run("pruefeRunde()");
+  assert.equal(nachPruefung.saved().bonusGesamt, 1);
+  assert.equal(nachPruefung.saved().runden.length, 1);
+
+  g.run("pruefeRunde()");
+  const zusammen = nachPruefung.run("speicher.zusammenfuehren(" + JSON.stringify(JSON.stringify(g.saved())) + ")");
+  assert.equal(zusammen.ok, true, zusammen.grund);
+  assert.equal(zusammen.daten.bonusGesamt, 1);
+  assert.equal(zusammen.daten.runden.length, 1);
+});
+
 test("Alte Bonussterne bleiben erhalten und nur die nächste Stufe bringt einen Gutschein", () => {
   const alt = {
     version: 2, sterneGesamt: 500, bonussterne: 4, bonusGesamt: 74,
