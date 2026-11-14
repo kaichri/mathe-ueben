@@ -527,6 +527,19 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.1.2 — Spur der Deutsch-Welten und bessere Stimmprobe
+
+- Die **Maus-Spur** folgt jetzt auch im Deutsch-Bereich der gewählten Welt:
+  Hunde-Welt hinterlässt Pfoten und Knochen, Hamster-Welt Hamstergesichter
+  und Sonnenblumenkerne, die Weihnachtswelt Tannenbäume und Schneeflocken
+  (die Mathe-Welten behalten ihre bisherigen Motive).
+- Die **Stimmprobe** unter „Einstellungen → Ton & Vorlesen" schaltet nun wie
+  der Vorlese-Knopf zwischen Play, Pause und Weiter um (zweiter Klick
+  pausiert, dritter setzt an derselben Stelle fort). Beim Wechseln der
+  Stimme stoppt eine laufende Probe und die nächste startet in der neuen
+  Stimme.
+- 27 Tests (`tests/sprechtraining.test.cjs`), Suitensumme 212.
+
 ### 1.1.1 — Vorlese-Knopf mit Pause und Zurück-Blättern
 
 - Der 🔊-Vorlese-Knopf ist jetzt ein **Wiedergabe-Schalter**: erster Klick

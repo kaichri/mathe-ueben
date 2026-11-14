@@ -222,6 +222,28 @@ test("SPRECH: Zuhören spielt die eingebettete Thorsten-Stimme", () => {
   assert.equal(g.run("sprechAudio.aktuell()"), null);
 });
 
+test("SPRECH: eine späte Absage der unterbrochenen Wiedergabe setzt nichts zurück", async () => {
+  const g = game({}, { now: JETZT, audio: [
+    () => new Promise((loesen, abweisen) => { g.späteAbsage = abweisen; })
+  ] });
+  g.run("sprech.oeffnen()");
+  offneEinheitMitSatz(g, 1, 1);
+  const vorlesen = () => g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0];
+  vorlesen().emit("click"); // das erste play() bleibt wie im echten Browser beim Laden hängen
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
+  vorlesen().emit("click"); // Pause: bricht das play() im Browser mit AbortError ab
+  assert.equal(g.run("sprechAudio.pausiert()"), true);
+  vorlesen().emit("click"); // Weiter ab derselben Stelle
+  assert.equal(g.audios[0].plays, 2);
+  assert.equal(vorlesen().textContent, "⏸ Pause");
+  g.späteAbsage(new Error("AbortError")); // die alte Zusicherung wird erst jetzt abgewiesen
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text",
+    "die späte Absage zerstört die laufende Wiedergabe nicht");
+  assert.equal(vorlesen().textContent, "⏸ Pause");
+});
+
 test("SPRECH: Verstehen – Antworten für die Begleitung sind verbergbar", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
@@ -399,6 +421,20 @@ test("DEUTSCH: das entfernte legami wird still auf hunde umgestellt", () => {
   assert(g.writes() > 0, "der Spielstand wird normal weitergeschrieben, nichts ist gesperrt");
 });
 
+test("DEUTSCH: die Zeigerspur malt Motive der Deutsch-Welten", () => {
+  const g = game({}, { now: JETZT });
+  for (const welt of ["hunde", "hamster", "weihnachten"]) {
+    const motiv = plain(g.run(`SPUR_MOTIVE['${welt}']`));
+    assert(motiv && motiv.haupt && motiv.extra && motiv.farben.length >= 3,
+      "die Welt " + welt + " braucht Hauptmotiv, Extra-Motiv und Farben");
+  }
+  const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+  for (const id of ["spur-pfote", "spur-knochen", "spur-hamster", "spur-korn",
+    "spur-tannenbaum", "spur-schneeflocke"]) {
+    assert(html.includes(`id="${id}"`), "SVG-Symbol fehlt: " + id);
+  }
+});
+
 test("DEUTSCH: Welt-Figuren begleiten die Einheit und der Abschluss lobt die Welt", () => {
   const g = game({ deutschWelt: "weihnachten" }, { now: JETZT });
   g.run("sprech.oeffnen()");
@@ -448,6 +484,32 @@ test("TON: Stimmenwechsel und Regler werden gespeichert", () => {
 
   g.run("zeigeFortschritt('statistik')");
   assert.equal(g.nodes.get("tonInhalt").hidden, true);
+});
+
+test("TON: die Stimmprobe schaltet zwischen Play, Pause und Weiter um", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeFortschritt('ton')");
+  const probe = () => g.nodes.get("tonInhalt").querySelectorAll("button")
+    .find(b => /Stimmprobe|Pause|Weiter/.test(b.textContent));
+  probe().emit("click");
+  assert.equal(g.audios[0].src, "audio/sprechtraining/thorsten/tag01-text.mp3");
+  assert.equal(g.audios[0].plays, 1);
+  assert.equal(probe().textContent, "⏸ Pause");
+  probe().emit("click"); // Pause
+  assert.equal(g.run("sprechAudio.pausiert()"), true);
+  assert.equal(g.audios[0].paused, true);
+  assert.equal(probe().textContent, "▶ Weiter");
+  probe().emit("click"); // Weiter ab derselben Stelle
+  assert.equal(g.audios.length, 1, "derselbe Clip läuft weiter");
+  assert.equal(g.audios[0].plays, 2);
+  assert.equal(probe().textContent, "⏸ Pause");
+  // Ein Stimmenwechsel stoppt die Probe; die nächste startet in der neuen Stimme.
+  g.nodes.get("tonInhalt").querySelectorAll(".ton-stimme")[1].emit("click"); // Ramona
+  assert.equal(g.run("sprechAudio.aktuell()"), null);
+  const naechste = g.nodes.get("tonInhalt").querySelectorAll("button")
+    .find(b => /Stimmprobe/.test(b.textContent));
+  naechste.emit("click");
+  assert.equal(g.audios[1].src, "audio/sprechtraining/ramona/tag01-text.mp3");
 });
 
 /* ------------------------------------------------------------------ Merge */

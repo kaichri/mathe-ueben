@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.1.2";
 const VERSION_STAND = "14. November 2026";
 
 const EINSTELLUNGEN = {
@@ -3067,6 +3067,7 @@ function zeigeVersionInhalt() {
 function zeigeTonInhalt() {
   const inhalt = document.getElementById("tonInhalt");
   inhalt.textContent = "";
+  sprechAudio.ohneHoerer();
 
   const stimmeKarte = element("div", "sterne-karte");
   stimmeKarte.appendChild(element("h3", null, "Vorlesestimme (Sprechtraining)"));
@@ -3082,6 +3083,7 @@ function zeigeTonInhalt() {
       wahl[1] + "\u00A0· " + wahl[2]);
     knopf.type = "button";
     knopf.addEventListener("click", function () {
+      sprechAudio.stoppe();
       speicher.daten().vorleseStimme = wahl[0];
       speicher.speichere();
       zeigeTonInhalt();
@@ -3111,6 +3113,7 @@ function zeigeTonInhalt() {
         liste.appendChild(eintrag);
       });
       liste.addEventListener("change", function () {
+        sprechAudio.stoppe();
         speicher.daten().vorleseSystemStimme = liste.value;
         speicher.speichere();
       });
@@ -3121,10 +3124,29 @@ function zeigeTonInhalt() {
 
   const probe = element("button", "knopf schlicht", "🔊 Stimmprobe hören");
   probe.type = "button";
+  let probeStimme = null;
+  let probeLaut = null;
+  function probeAuffrischen() {
+    const laeuft = sprechAudio.aktuell() === "tag01-text" && !sprechAudio.pausiert();
+    const wartet = sprechAudio.aktuell() === "tag01-text" && sprechAudio.pausiert();
+    probe.textContent = laeuft ? "⏸ Pause" : wartet ? "▶ Weiter" : "🔊 Stimmprobe hören";
+    probe.setAttribute("aria-pressed", String(laeuft));
+  }
   probe.addEventListener("click", function () {
     const e = window.SPRECHTRAINING && window.SPRECHTRAINING.EINHEITEN[0];
-    if (e) { sprechAudio.spiele("tag01-text", e.text); }
+    if (!e) { return; }
+    const gleich = probeStimme === (speicher.daten().vorleseStimme || "thorsten") &&
+      probeLaut === sprechAudio.lautstaerke();
+    if (sprechAudio.aktuell() === "tag01-text" && gleich) {
+      if (sprechAudio.pausiert()) { sprechAudio.weiter(); } else { sprechAudio.pausiere(); }
+    } else {
+      probeStimme = speicher.daten().vorleseStimme || "thorsten";
+      probeLaut = sprechAudio.lautstaerke();
+      sprechAudio.spiele("tag01-text", e.text);
+    }
   });
+  sprechAudio.aufAenderung(probeAuffrischen);
+  probeAuffrischen();
   stimmeKarte.appendChild(probe);
   inhalt.appendChild(stimmeKarte);
 
@@ -4091,6 +4113,8 @@ const sprechAudio = (function () {
   let knoten = null;
   let aktuell = null;      // id des vorgelesenen Schnipsels oder "system"
   let pausiert = false;    // mitten im Schnipsel angehalten (Weiter spielt an gleicher Stelle)
+  let unterbrochen = false;   // pause() hat den laufenden play()-Aufruf absichtlich unterbrochen
+  let spielVersuch = 0;       // zählt play()-Aufrufe; späte Absagen alter Aufrufe dürfen nichts zurücksetzen
   let hoerer = [];         // Funktionen, die beim Start/Ende informiert werden
 
   function melde() {
@@ -4146,6 +4170,7 @@ const sprechAudio = (function () {
   function pausiere() {
     if (!aktuell || pausiert) { return; }
     pausiert = true;
+    unterbrochen = true;
     if (aktuell === "system") {
       try { if (window.speechSynthesis && window.speechSynthesis.pause) { window.speechSynthesis.pause(); } } catch (fehler) {}
     } else if (knoten) {
@@ -4157,6 +4182,8 @@ const sprechAudio = (function () {
   function weiter() {
     if (!aktuell || !pausiert) { return; }
     pausiert = false;
+    unterbrochen = false;
+    const versuch = ++spielVersuch;
     musik.fluestern(true);
     if (aktuell === "system") {
       try { if (window.speechSynthesis && window.speechSynthesis.resume) { window.speechSynthesis.resume(); } } catch (fehler) {}
@@ -4164,7 +4191,9 @@ const sprechAudio = (function () {
       const zusicherung = knoten.play();
       if (zusicherung && zusicherung.catch) {
         zusicherung.catch(function () {
-          if (aktuell) { aktuell = null; musik.fluestern(false); melde(); }
+          if (aktuell && !unterbrochen && spielVersuch === versuch) {
+            aktuell = null; musik.fluestern(false); melde();
+          }
         });
       }
     }
@@ -4173,6 +4202,8 @@ const sprechAudio = (function () {
   function spiele(id, text) {
     stoppe();
     if (gewaehlteStimme() === "system") { sprichSystem(text); return; }
+    unterbrochen = false;
+    const versuch = ++spielVersuch;
     musik.fluestern(true);
     try {
       knoten = document.createElement("audio");
@@ -4188,7 +4219,9 @@ const sprechAudio = (function () {
       const zusicherung = knoten.play();
       if (zusicherung && zusicherung.catch) {
         zusicherung.catch(function () {
-          if (aktuell === id) { aktuell = null; musik.fluestern(false); melde(); }
+          if (aktuell === id && !unterbrochen && spielVersuch === versuch) {
+            aktuell = null; musik.fluestern(false); melde();
+          }
         });
       }
       melde();
@@ -4807,7 +4840,10 @@ function sternenRegen(mitBallons = false) {
 
 const SPUR_MOTIVE = {
   gabby: { haupt: "spur-katze", extra: "spur-glitzer", farben: ["#f4a4ca", "#c1a1ed", "#f7bbdd"] },
-  doozie: { haupt: "spur-keks", extra: "spur-cupcake", farben: ["#f5b076", "#eaa0bb", "#91cbd5"] }
+  doozie: { haupt: "spur-keks", extra: "spur-cupcake", farben: ["#f5b076", "#eaa0bb", "#91cbd5"] },
+  hunde: { haupt: "spur-pfote", extra: "spur-knochen", farben: ["#c98a4b", "#a86f3d", "#e0a96d"] },
+  hamster: { haupt: "spur-hamster", extra: "spur-korn", farben: ["#e8b64c", "#d99a3e", "#f2cf85"] },
+  weihnachten: { haupt: "spur-tannenbaum", extra: "spur-schneeflocke", farben: ["#d9534f", "#6aa84f", "#8fcbea"] }
 };
 
 function starteZeigerSpur() {
@@ -4842,7 +4878,8 @@ function starteZeigerSpur() {
     letzterY = ereignis.clientY;
     letzteZeit = jetzt;
 
-    const motiv = SPUR_MOTIVE[modus];
+    // Im Deutsch-Bereich verziehrt die gewählte Deutsch-Welt, sonst die Mathe-Welt.
+    const motiv = SPUR_MOTIVE[bereichAktuell === "deutsch" ? deutschWeltId() : modus];
     const teilchen = element("span", "zeiger-teilchen", motiv ? "" : "🐾");
     if (motiv) {
       spurNummer += 1;
