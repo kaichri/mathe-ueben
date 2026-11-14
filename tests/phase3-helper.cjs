@@ -32,6 +32,9 @@ function game(saved = {}, options = {}) {
       getAttribute(key) { return this.attributes[key] ?? null; },
       contains(child) { while(child) { if(child === this) return true; child=child.parentNode; } return false; },
       removeChild(child) { this.children=this.children.filter(n=>n!==child); child.parentNode=null; },
+      setPointerCapture() {}, releasePointerCapture() {},
+      getBoundingClientRect() { return { left: 0, top: 0, width: 76, height: 76 }; },
+      offsetWidth: 76,
       click() { if(type === 'a' && this.download) { if(options.failDownload) throw new Error('download failed'); downloads.push({href:this.href, name:this.download, blob:blobs.get(this.href)}); } else this.emit('click'); },
       addEventListener(event, handler) { events.set(event, handler); },
       emit(name, extra = {}) { const event = Object.assign({target:this, preventDefault(){this.defaultPrevented=true;}}, extra); if(blocked(this) || this.disabled) return event; events.get(name)?.(event); emitDoc(name,event); return event; },
@@ -78,6 +81,7 @@ function game(saved = {}, options = {}) {
   const document = {
     body: node("body"), createElement: node, createElementNS(ns, type) { return node(type); },
     createDocumentFragment() { return node("#fragment"); },
+    documentElement: { clientWidth: 1024, clientHeight: 768 },
     getElementById(id) {
       if (!nodes.has(id)) {
         const n = node(); n.id = id;

@@ -452,6 +452,22 @@ test("DEUTSCH: Welt-Figuren begleiten die Einheit und der Abschluss lobt die Wel
   assert.match(karte.textContent, /Frohe Weihnachten/);
 });
 
+test("SPRECH: die Welt-Figuren lassen sich wie in Mathe ziehen", () => {
+  const g = game({}, { now: JETZT });
+  g.run("sprech.oeffnen()");
+  const figur = g.nodes.get("sprechMaskottchenReihe").querySelectorAll(".maskottchen")[0];
+  figur.emit("pointerdown", { isPrimary: true, button: 0, pointerId: 1,
+    clientX: 100, clientY: 100, timeStamp: 0 });
+  figur.emit("pointermove", { pointerId: 1, clientX: 150, clientY: 130, timeStamp: 60 });
+  assert(figur.classList.contains("verschoben"), "die Figur wird beim Ziehen frei positioniert");
+  assert(figur.classList.contains("wird-gezogen"), "die Figur hebt beim Ziehen ab");
+  assert.equal(figur.style.left, "50px");
+  assert.equal(figur.style.top, "30px");
+  figur.emit("lostpointercapture", { pointerId: 1, timeStamp: 70 });
+  assert(!figur.classList.contains("wird-gezogen"), "nach dem Loslassen hört das Ziehen auf");
+  assert(figur.classList.contains("verschoben"), "die Figur bleibt dort liegen, wo sie abgelegt wurde");
+});
+
 test("TON: Reiter zeigt Stimmauswahl und Lautstärkeregler", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeFortschritt('ton')");

@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.2";
+const APP_VERSION = "1.1.3";
 const VERSION_STAND = "14. November 2026";
 
 const EINSTELLUNGEN = {
@@ -4374,6 +4374,7 @@ const sprech = (function () {
       const bild = figurBild(figur);
       bild.draggable = false;
       knopf.appendChild(bild);
+      macheMaskottchenZiehbar(knopf, reihe);
       const platz = element("div", "maskottchen-platz");
       platz.appendChild(knopf);
       reihe.appendChild(platz);
@@ -4692,8 +4693,9 @@ function mascottchenAuswahl(startseite = false) {
   return startseite ? figuren.concat("traumpfoetchen", "spielpfoetchen", "bastelpfoetchen", "crouton") : figuren;
 }
 
-function macheMaskottchenZiehbar(knopf) {
-  const startseite = document.getElementById("startBildschirm");
+function macheMaskottchenZiehbar(knopf, stoppKnoten) {
+  /* stoppKnoten: ist er versteckt (z. B. andere Ansicht), endet der Schwung. */
+  const startseite = stoppKnoten || document.getElementById("startBildschirm");
   let griff = null;
   let gezogen = false;
   let frame = null;

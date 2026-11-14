@@ -91,7 +91,8 @@ App.
   und Lebkuchenmann). Die Welt wird in der Übersicht gewählt, begleitet jede
   Übung als kleine Figur und gratuliert am Ende. Die Wahl bleibt auf dem Gerät
   gespeichert und wird im Abgleich wie die Ton-Einstellungen behandelt (der
-  eigene Stand gewinnt).
+  eigene Stand gewinnt). Die Figuren lassen sich wie in Mathe mit der Maus
+  verschieben.
 
 - Jede Übung dauert etwa 10 Minuten und läuft in vier Schritten:
   **Zuhören** (Text wird vorgelesen), **Verstehen** (Fragen mit verbergbaren
@@ -526,6 +527,14 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 `main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
 
 ## Versionshistorie
+
+### 1.1.3 — Ziehbare Deutsch-Figuren
+
+- Die acht Figuren der Deutsch-Welt lassen sich jetzt **wie in Mathe mit der
+  Maus oder dem Finger verschieben**: frei auf der Seite ablegen, mit Schwung
+  werfen (sie prallen am Rand ab) und durch Antippen hüpfen lassen. Öffnet
+  man eine Übung, ruhen die Figuren; zurück in der Übersicht stehen sie dort,
+  wo sie abgelegt wurden.
 
 ### 1.1.2 — Spur der Deutsch-Welten und bessere Stimmprobe
 
