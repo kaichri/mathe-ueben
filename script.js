@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.4";
+const APP_VERSION = "1.1.6";
 const VERSION_STAND = "14. November 2026";
 
 const EINSTELLUNGEN = {
@@ -3818,12 +3818,12 @@ function csvHerunterladen() {
 
 const musik = (function () {
   const dateien = {
-    blau: "musik/blau.mp3",
-    puppenhaus: "musik/puppenhaus.mp3",
-    doozie: "musik/doozie.mp3",
-    hunde: "musik/hunde.mp3",
-    hamster: "musik/hamster.mp3",
-    weihnachten: "musik/weihnachten.mp3"
+    blau: ["musik/blau.mp3"],
+    puppenhaus: ["musik/puppenhaus.mp3"],
+    doozie: ["musik/doozie.mp3"],
+    hunde: ["musik/hunde.mp3"],
+    hamster: ["musik/hamster.mp3"],
+    weihnachten: ["musik/weihnachten-a.mp3", "musik/weihnachten-b.mp3"]
   };
   let an = speicher.daten().sound === null
     ? EINSTELLUNGEN.hintergrundMusikAn
@@ -3844,7 +3844,8 @@ const musik = (function () {
   let rueckfallTimer = null;
   let audioKontext = null;
   let wartetAufKlick = false;
-  let audioDatei = "";
+  let audioListe = null;
+  let audioTeil = 0;
   let abspielVersuch = 0;
   let abspielVersuchLaeuft = false;
   let gestartet = false;
@@ -3954,8 +3955,8 @@ const musik = (function () {
     if (!an) {
       return;
     }
-    const datei = aktuellesAudio();
-    if (audioKnoten && audioDatei === datei) {
+    const liste = aktuellesAudio();
+    if (audioKnoten && audioListe === liste) {
       if (durchKlick && (wartetAufKlick || audioKnoten.paused)) {
         spieleAudio(audioKnoten, durchKlick);
       }
@@ -3964,20 +3965,30 @@ const musik = (function () {
     stoppeNur();
     const knoten = document.createElement("audio");
     audioKnoten = knoten;
-    audioDatei = datei;
-    knoten.src = datei;
+    audioListe = liste;
+    audioTeil = 0;
+    knoten.src = liste[0];
     knoten.volume = aktuelleLautstaerke();
-    knoten.loop = true;
+    knoten.loop = liste.length === 1;
     knoten.addEventListener("error", function () {
       // Verspätete Fehler einer ersetzten Instanz dürfen nichts neu starten.
       if (audioKnoten === knoten) {
-        if (datei === dateien.doozie) {
+        if (audioListe === dateien.doozie) {
           doozieFehlt = true;
           starteHintergrund();
         } else {
           rueckfallMelodie();
         }
       }
+    });
+    // Mehrteilige Melodien (Weihnachten) wechseln am Ende ins nächste Teil.
+    knoten.addEventListener("ended", function () {
+      if (audioKnoten !== knoten || !audioListe || audioListe.length < 2) {
+        return;
+      }
+      audioTeil = (audioTeil + 1) % audioListe.length;
+      knoten.src = audioListe[audioTeil];
+      spieleAudio(knoten);
     });
     spieleAudio(knoten);
   }
@@ -3992,7 +4003,25 @@ const musik = (function () {
       } catch (fehler) {}
       audioKnoten = null;
     }
-    audioDatei = "";
+    audioListe = null;
+    audioTeil = 0;
+    if (rueckfallTimer) {
+      window.clearInterval(rueckfallTimer);
+      rueckfallTimer = null;
+    }
+  }
+
+  /* Der Musik-Knopf pausiert: gleiche Welt → an gleicher Stelle weiter,
+     Weltwechsel verwirft die gemerkte Stelle (dann startet die Musik vorne). */
+  function pausiereNur() {
+    abspielVersuch += 1;
+    abspielVersuchLaeuft = false;
+    wartetAufKlick = false;
+    if (audioKnoten) {
+      try {
+        audioKnoten.pause();
+      } catch (fehler) {}
+    }
     if (rueckfallTimer) {
       window.clearInterval(rueckfallTimer);
       rueckfallTimer = null;
@@ -4017,9 +4046,9 @@ const musik = (function () {
     speicher.speichere();
     zeigeZustand();
     if (an) {
-      starteHintergrund();
+      starteHintergrund(true);
     } else {
-      stoppeNur();
+      pausiereNur();
     }
   }
 
@@ -4065,7 +4094,13 @@ const musik = (function () {
       if (an) { starteHintergrund(); }
     },
     umschalten: umschalten,
-    modusWechsel: function () { if (gestartet && an) { starteHintergrund(); } },
+    modusWechsel: function () {
+      if (gestartet && an) { starteHintergrund(); }
+      else if (gestartet && audioKnoten && audioListe !== aktuellesAudio()) {
+        // Welt gewechselt, während die Musik pausiert: gemerkte Stelle vergessen.
+        stoppeNur();
+      }
+    },
     fanfare: function (sterne) {
       if (!an) {
         return;

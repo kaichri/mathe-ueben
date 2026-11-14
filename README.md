@@ -208,7 +208,8 @@ mathe-ueben/
 │   ├── puppenhaus.mp4
 │   ├── hunde.mp3
 │   ├── hamster.mp3
-│   └── weihnachten.mp3
+│   ├── weihnachten-a.mp3
+│   └── weihnachten-b.mp3
 ├── audio/sprechtraining/       Vorlese-MP3s der Stimmen Thorsten und Ramona
 ├── tools/
 │   ├── sprechtraining-audio.cjs  Erzeugung der Vorlese-MP3s (Piper, offline)
@@ -238,8 +239,13 @@ mathe-ueben/
 Die Hintergrundmusik verwendet lokale MP3-Dateien. Doozies Hundehaus spielt
 `musik/doozie.mp3` und verwendet bei einem Ladefehler `puppenhaus.mp3`. Die drei
 Deutsch-Welten haben eigene Melodien (Hunde: `hunde.mp3`, Hamster:
-`hamster.mp3`, Weihnachtswelt: `weihnachten.mp3`); beim Wechsel zwischen Mathe
-und Deutsch sowie beim Weltwechsel springt die passende Melodie um.
+`hamster.mp3`, Weihnachtswelt: `weihnachten-a.mp3` und `weihnachten-b.mp3`, die
+abwechselnd laufen); beim Wechsel zwischen Mathe und Deutsch sowie beim
+Weltwechsel springt die passende Melodie um.
+
+Der **Musik-Knopf oben** pausiert die Melodie: beim nächsten Einschalten läuft
+sie an derselben Stelle weiter. Nach einem Weltwechsel startet die Musik wieder
+vom Anfang.
 
 ## Lokale Datenspeicherung
 
@@ -527,6 +533,21 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 `main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
 
 ## Versionshistorie
+
+### 1.1.6 — Weihnachtsmix in zwei Teilen und Pause-Weiter-Knopf
+
+- Die **Weihnachtswelt** spielt alle 50 Lieder als zwei ~75-Minuten-Teile in
+  **128 kbit/s** (bessere Qualität als die 32-Minuten-Fassung), die abwechselnd
+  laufen: Teil A → Teil B → Teil A …
+- Der **Musik-Knopf** pausiert jetzt: nach dem Wieder-Einschalten läuft die
+  Melodie **an derselben Stelle weiter**. Nach einem Welt- oder Themenwechsel
+  startet sie wieder vom Anfang.
+
+### 1.1.5 — Weihnachtswelt spielt die ganze Liedersammlung
+
+- Die **Weihnachtswelt** spielt jetzt alle **50 Lieder der Weihnachtsplaylist
+  als einen durchgehenden Mix (~2,5 Stunden)** statt des 32-Minuten-Ausschnitts.
+  Gleiches Volumen wie die anderen Welten, weiches Ausblenden am Ende.
 
 ### 1.1.4 — Längere Weihnachtsmusik
 

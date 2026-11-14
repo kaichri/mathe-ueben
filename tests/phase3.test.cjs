@@ -283,7 +283,7 @@ test("pagehide and hiding the document flush pending input immediately", () => {
 test("the version tab shows build information", () => {
   const g=game();g.run("zeigeFortschritt('version')");
   const text=g.nodes.get("versionInhalt").textContent;
-  assert.match(text,/Version 1\.1\.4/);
+  assert.match(text,/Version 1\.1\.6/);
   assert.match(text,/Speicherformat: Version 3/);
   assert.match(text,/starter\.log/);
   assert.equal(g.run("Object.keys(FORTSCHRITT_TABS).length"),6);
@@ -323,10 +323,42 @@ test("Deutsch worlds play their own melody and Mathe switches back to blau", asy
   assert.equal(g.audios[1].src,'musik/hamster.mp3');
   assert.equal(g.audios[0].paused,true);
   g.run("speicher.daten().deutschWelt='weihnachten';speicher.speichere();musik.modusWechsel();");await Promise.resolve();
-  assert.equal(g.audios[2].src,'musik/weihnachten.mp3');
+  assert.equal(g.audios[2].src,'musik/weihnachten-a.mp3');
   g.run("zeigeBildschirm('startBildschirm')");await Promise.resolve();
   assert.equal(g.audios[3].src,'musik/blau.mp3');
   assert.equal(g.audios.filter(a=>!a.paused).length,1);
+});
+
+test("the Weihnachten melody alternates between its two parts", async () => {
+  const g=game({sound:'an',deutschWelt:'weihnachten'});await Promise.resolve();
+  g.run("zeigeBildschirm('sprechBildschirm')");await Promise.resolve();
+  assert.equal(g.audios[1].src,'musik/weihnachten-a.mp3');
+  assert.equal(g.audios[1].loop,false);
+  g.audios[1].emit('ended');await Promise.resolve();
+  assert.equal(g.audios[1].src,'musik/weihnachten-b.mp3');
+  assert.equal(g.audios[1].plays,2);
+  g.audios[1].emit('ended');await Promise.resolve();
+  assert.equal(g.audios[1].src,'musik/weihnachten-a.mp3');
+  assert.equal(g.audios[1].plays,3);
+  assert.equal(g.audios.length,2);
+});
+
+test("the music button pauses in place and forgets the spot after a world change", async () => {
+  const g=game({sound:'an',deutschWelt:'hamster'});await Promise.resolve();
+  g.run("musik.umschalten()");
+  assert.equal(g.audios[0].paused,true);
+  assert.equal(g.data().sound,'aus');
+  g.run("musik.umschalten()");await Promise.resolve();
+  assert.equal(g.audios.length,1);
+  assert.equal(g.audios[0].plays,2);
+  assert.equal(g.data().sound,'an');
+  g.run("musik.umschalten()");
+  g.run("speicher.daten().deutschWelt='weihnachten';speicher.speichere();zeigeBildschirm('sprechBildschirm')");await Promise.resolve();
+  assert.equal(g.audios[0].paused,true);
+  g.run("musik.umschalten()");await Promise.resolve();
+  assert.equal(g.audios.length,2);
+  assert.equal(g.audios[1].src,'musik/weihnachten-a.mp3');
+  assert.equal(g.audios[1].plays,1);
 });
 
 test("both dialogs have accessible roles/titles and the restart has a description", () => {
