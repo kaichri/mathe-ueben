@@ -282,7 +282,7 @@ test("pagehide and hiding the document flush pending input immediately", () => {
 
 test("CSV quotes semicolons, quotes and newlines, neutralizes formulas and revokes URL", async () => {
   const text='Gift; "special"\nsecond line';
-  const g=game({geschenke:[{id:'g1',text,neuerText:'=1+1'}]});g.run("csvHerunterladen()");
+  const g=game({geschenke:[{id:'g1',datum:'2026-10-28',text},{id:'g2',datum:'2026-10-29',text:'=1+1',wunschGeaendertAm:'2026-11-01T10:00:00.000Z'}]});g.run("csvHerunterladen()");
   const csv=await g.downloads[0].blob.text();
   assert(csv.includes('"Gift; ""special""\nsecond line"'));
   assert(csv.includes("'=1+1"));

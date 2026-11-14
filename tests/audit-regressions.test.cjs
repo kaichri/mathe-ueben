@@ -595,3 +595,39 @@ test("Die Zusammenfassung zählt auch alte Runden ohne Quiztyp", () => {
   assert.equal(g.run("heutigeQuizWelt()"), "bluey",
     "Die Weltwahl erkennt die alte 50er-Runde weiterhin");
 });
+
+/* ------------------------------------------- Low-Befunde der Codeanalyse 2 */
+
+test("Rechengeschichten: eine halbe Stunde (Einzahl) und Einheit Kinder", () => {
+  const g = game({}, { now: JETZT });
+  const vorlage = "window.GESCHICHTEN.VORLAGEN.find(v => v.id === 'uhr-halbe-stunden')";
+  const einz = g.run(vorlage + ".text({p1: 'Emma', p2: 'Mama', z: [1]})");
+  assert.doesNotMatch(einz, /1 halbe Stunden/, "Einzahl darf nicht als Mehrzahl erscheinen");
+  assert.match(einz, /darf genau eine halbe Stunde spielen/);
+  const mehr = g.run(vorlage + ".text({p1: 'Emma', p2: 'Mama', z: [2]})");
+  assert.match(mehr, /darf genau 2 halbe Stunden spielen/);
+  assert.equal(g.run("window.GESCHICHTEN.VORLAGEN.find(v => v.id === 'tretboote-volle-gruppen').einheit"),
+    "Kinder", "Die Lösung lautet '4 Kinder', nicht '4 Kindern'");
+});
+
+test("CSV-Export nennt die Wunschänderung statt leerer Umtausch-Spalten", async () => {
+  const g = game({ geschenke: [{ id: "g1", zeitpunkt: "2026-10-28T10:00:00.000Z",
+    datum: "2026-10-28", text: "Picknick", wunschGeaendertAm: "2026-11-01T10:00:00.000Z" }] }, { now: JETZT });
+  g.run("csvHerunterladen()");
+  assert.equal(g.downloads.length, 1);
+  const inhalt = await g.downloads[0].blob.text();
+  assert.match(inhalt, /GUTSCHEIN;DATUM;WUNSCH GEAENDERT AM;TEXT;EINGELÖST AM/);
+  assert.match(inhalt, /GUTSCHEIN;2026-10-28;2026-11-01T10:00:00\.000Z;Picknick/);
+  assert.doesNotMatch(inhalt, /UMGETAUSCHT ZU/, "Die alten Spalten müssen weg");
+});
+
+test("Eine am Folgetag beendete Runde zählt für den Tag, zu dem sie gehört", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(45);
+  g.time("2026-10-31T23:10:00Z"); // 00:10 Wien am 1.11.
+  abgeben(g);
+  assert.equal(g.data().runden.at(-1).richtig, 45);
+  assert.equal(g.data().runden.at(-1).datum, "2026-10-31",
+    "Die Runde gehört zur Tagesrunde des 31.10., nicht zum Folgetag");
+});

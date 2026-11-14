@@ -263,6 +263,38 @@ test("MERGE: eigene neue vortagSchluessel bleiben auch ohne fremde Neuzugänge e
   assert(!schluessel.includes("alt|0") && !schluessel.includes("alt|1"));
 });
 
+/* ----------------------------------------------------------- Bonus-Sets */
+
+function bonusSet(id, fertig, antwortenAnzahl) {
+  const aufgaben = Array.from({ length: 5 }, (_, i) => ({
+    ident: "b" + (i + 1), bereich: "bonus", layout: "einfach",
+    darstellung: (i + 1) + " + 1 =", schluessel: "b" + (i + 1),
+    felder: [{ korrekt: i + 2, typ: "zahl", beschriftung: "", darstellung: "", anzeige: String(i + 2), einheit: "" }]
+  }));
+  return {
+    id: id, datum: "2026-10-31", welt: "bluey", fertig: fertig,
+    runde: { bereiche: [{ bereich: "bonus", titel: "Bonuswelt", untertitel: "", aufgaben: aufgaben }] },
+    antworten: Object.fromEntries(Array.from({ length: antwortenAnzahl }, (_, i) => ["b" + (i + 1), [String(i + 2)]])),
+    abschnitt: 0, belohnt: []
+  };
+}
+
+test("MERGE: Bonus-Sets am selben Tag – das weitergebrachte gewinnt vor der neueren ID", () => {
+  const fertiges = bonusSet("2026-10-31T08:00:00.000Z-alt", true, 5);
+  const leeres = bonusSet("2026-10-31T09:00:00.000Z-neu", false, 0);
+  const g = game(spielstand({ bonusSet: fertiges }), { now: JETZT });
+  const ergebnis = zusammenfuehren(g, sicherung(spielstand({ bonusSet: leeres })));
+  assert.equal(ergebnis.daten.bonusSet.id, fertiges.id,
+    "Das fertige Set muss das frische, leere Set schlagen");
+
+  // Ohne Fortschrittsunterschied bleibt es bei der neueren ID.
+  const frueh = bonusSet("2026-10-31T08:00:00.000Z-a", false, 0);
+  const spaet = bonusSet("2026-10-31T09:00:00.000Z-b", false, 0);
+  const g2 = game(spielstand({ bonusSet: frueh }), { now: JETZT });
+  const ergebnis2 = zusammenfuehren(g2, sicherung(spielstand({ bonusSet: spaet })));
+  assert.equal(ergebnis2.daten.bonusSet.id, spaet.id);
+});
+
 /* ------------------------------------------------------------------ Fehler */
 
 test("MERGE: ungültige Dateien ändern nichts", () => {

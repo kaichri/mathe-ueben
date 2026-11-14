@@ -302,7 +302,10 @@ const GESCHICHTEN_ORAKEL = {
   "uhr-minuten-zusammen": t => { const [, a, b] = t.match(/spielt (\d+) Minuten .+? und danach (\d+) Minuten/); return +a + +b; },
   "uhr-zeit-planen": t => { const [, a, b] = t.match(/Der Weg dauert (\d+) Minuten und die Pause (\d+) Minuten/); return 60 - +a - +b; },
   "uhr-hin-und-zurueck": t => { const [, a, b] = t.match(/Weg zum See dauert (\d+) Minuten.+? unterwegs (\d+) Minuten Pause/); return 2 * +a + +b; },
-  "uhr-halbe-stunden": t => { const [, a] = t.match(/genau (\d+) halbe Stunden/); return 30 * +a; },
+  "uhr-halbe-stunden": t => {
+    const m = t.match(/genau (\d+) halbe Stunden/) || t.match(/genau eine halbe Stunde/);
+    return 30 * (m[1] ? +m[1] : 1);
+  },
   "uhr-ueben-pro-woche": t => { const [, a, b] = t.match(/\u00fcbt jeden Tag (\d+) Minuten .+? an (\d+) Tagen/); return +a * +b; },
   "uhr-film-dauer": t => {
     const [, h1, m1, h2, m2] = t.match(/von (\d+):(\d+) Uhr bis (\d+):(\d+) Uhr/);

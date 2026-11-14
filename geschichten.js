@@ -903,8 +903,8 @@
       themen: ["alltag", "bluey", "gabby", "doozie"],
       zahlen: [{ min: 1, max: 3 }],
       text: function (c) {
-        return c.p1 + " darf genau " + c.z[0] + " halbe Stunden spielen. " +
-          "Eine halbe Stunde sind 30 Minuten. Wie viele Minuten darf " + c.p1 + " spielen?";
+        return c.p1 + " darf genau " + (c.z[0] === 1 ? "eine halbe Stunde" : c.z[0] + " halbe Stunden") +
+          " spielen. Eine halbe Stunde sind 30 Minuten. Wie viele Minuten darf " + c.p1 + " spielen?";
       },
       frage: "Antwort in Minuten",
       losung: function (c) { return 30 * c.z[0]; },
@@ -1010,7 +1010,7 @@
       regeln: z => z[0] % z[1] !== 0,
       text: c => c.p1 + " teilt " + c.z[0] + " Kinder auf Tretboote auf. In jedes Boot kommen genau " +
         c.z[1] + " Kinder. Nur volle Boote fahren los. Wie viele Kinder bleiben am Steg?",
-      losung: c => c.z[0] % c.z[1], einheit: "Kindern"
+      losung: c => c.z[0] % c.z[1], einheit: "Kinder"
     },
     {
       id: "zahlenweg-huepfen", themen: ALLE_WELTEN, stufe: 1, kategorie: "normal",

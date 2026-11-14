@@ -669,12 +669,20 @@ function verschmelzeSpielstande(lokal, fremd) {
 
   function waehleBonusSet(a, b) {
     if (!a || !b || a.datum !== b.datum) { return waehleTagesSet(a, b); }
-    if (a.id !== b.id) { return a.id > b.id ? a : b; }
-    if (a.belohnt.length !== b.belohnt.length) { return a.belohnt.length > b.belohnt.length ? a : b; }
-    if (a.fertig === b.fertig && a.antwortenZeit !== b.antwortenZeit) {
-      return (a.antwortenZeit || 0) > (b.antwortenZeit || 0) ? a : b;
+    if (a.id === b.id) {
+      if (a.belohnt.length !== b.belohnt.length) { return a.belohnt.length > b.belohnt.length ? a : b; }
+      if (a.fertig === b.fertig && a.antwortenZeit !== b.antwortenZeit) {
+        return (a.antwortenZeit || 0) > (b.antwortenZeit || 0) ? a : b;
+      }
+      return waehleTagesSet(a, b);
     }
-    return waehleTagesSet(a, b);
+    /* Verschiedene Sets am selben Tag (je ein „Neue Aufgaben" pro Gerät): das
+       weitergebrachte Set gewinnt, damit bereits gespielte Arbeit erhalten bleibt. */
+    if (!!a.fertig !== !!b.fertig) { return a.fertig ? a : b; }
+    const antworten = satz => Object.keys((satz && satz.antworten) || {}).length;
+    if (antworten(a) !== antworten(b)) { return antworten(a) > antworten(b) ? a : b; }
+    if (a.belohnt.length !== b.belohnt.length) { return a.belohnt.length > b.belohnt.length ? a : b; }
+    return a.id > b.id ? a : b;
   }
 
   const rundenAlle = vereinigeRunden(A.runden, B.runden);
@@ -2531,7 +2539,10 @@ function speichernRunde(richtig, gesamt, bereichErgebnis, bonusRichtig, istBonus
   const zeitTeile = wienerDatumTeile(jetzt);
   daten.runden.push({
     zeit: jetzt.toISOString(),
-    datum: lokalesDatum(jetzt),
+    /* Die Runde zählt für den Tag, zu dem sie gehört (Tagesrunde/Bonusrunde),
+       nicht für den Tag, an dem sie zufällig beendet wird. */
+    datum: (runde && runde.tagesSet && runde.tagesSet.datum) || (runde && runde.bonusDatum) ||
+      lokalesDatum(jetzt),
     uhrzeit: zeitTeile.hour + ":" + zeitTeile.minute,
     richtig: richtig,
     gesamt: gesamt,
@@ -3528,10 +3539,10 @@ function csvHerunterladen() {
   zeilen.push("BONUSSTERNE;nächste Stufe;" + naechsteBonusStufe(daten.bonusGesamt));
   zeilen.push("BONUSSTERNE;höchstens pro Tag;" + EINSTELLUNGEN.bonusSterneProTag);
   zeilen.push("");
-  zeilen.push("GUTSCHEIN;DATUM;GETAUSCHT AM;UMGETAUSCHT ZU;TEXT;EINGELÖST AM");
+  zeilen.push("GUTSCHEIN;DATUM;WUNSCH GEAENDERT AM;TEXT;EINGELÖST AM");
   daten.geschenke.forEach(function (geschenk) {
     zeilen.push(["GUTSCHEIN", geschenk.datum || "",
-      geschenk.umgetauschtAm || "", geschenk.neuerText || "", geschenk.text, geschenk.eingeloestAm || ""].map(csvZelle).join(";"));
+      geschenk.wunschGeaendertAm || "", geschenk.text, geschenk.eingeloestAm || ""].map(csvZelle).join(";"));
   });
 
   const inhalt = "\uFEFF" + zeilen.join("\r\n");
@@ -3958,7 +3969,7 @@ function sternenRegen(mitBallons = false) {
     feld.hidden = true;
     feld.textContent = "";
     feld.classList.remove("ballon-feier");
-  }, mitBallons ? 6000 : 5600);
+  }, mitBallons ? 6000 : 5900);
 }
 
 /* ------------- Maus-Spur: die Welt malt Symbole hinter dem Zeiger her ------------- */
