@@ -28,6 +28,9 @@ temp/
 # Lokale Piper-Werkzeugkette zur Neuerzeugung der Vorlese-MP3s (große Modelle)
 .tmp-tts/
 
+# Lokale YT-Quellen für die Welt-Musik (die fertigen Tracks liegen in musik/)
+.tmp-musik/
+
 # Rohbilder aus der Bild-Generierung (die fertigen Figuren liegen in bilder/)
 vibe_images/
 

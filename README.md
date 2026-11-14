@@ -528,6 +528,12 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.1.4 — Längere Weihnachtsmusik
+
+- Die **Weihnachtswelt** spielt jetzt einen ~32-minütigen Liedermix aus der
+  selben Compilation statt nur dem ersten Lied (vorher 4 Minuten). Gleiches
+  Volumen wie die anderen Welten, weiches Ausblenden am Ende.
+
 ### 1.1.3 — Ziehbare Deutsch-Figuren
 
 - Die acht Figuren der Deutsch-Welt lassen sich jetzt **wie in Mathe mit der

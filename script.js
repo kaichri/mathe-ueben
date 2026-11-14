@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.3";
+const APP_VERSION = "1.1.4";
 const VERSION_STAND = "14. November 2026";
 
 const EINSTELLUNGEN = {
