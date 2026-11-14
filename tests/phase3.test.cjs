@@ -280,6 +280,18 @@ test("pagehide and hiding the document flush pending input immediately", () => {
   }
 });
 
+test("the version tab shows build information", () => {
+  const g=game();g.run("zeigeFortschritt('version')");
+  const text=g.nodes.get("versionInhalt").textContent;
+  assert.match(text,/Version 1\.0\.6/);
+  assert.match(text,/Speicherformat: Version 3/);
+  assert.match(text,/starter\.log/);
+  assert.equal(g.run("Object.keys(FORTSCHRITT_TABS).length"),5);
+  g.run("zeigeFortschritt('sterne')");
+  assert.equal(g.nodes.get("versionInhalt").hidden,true);
+  assert.equal(g.nodes.get("sterneInhalt").hidden,false);
+});
+
 test("CSV quotes semicolons, quotes and newlines, neutralizes formulas and revokes URL", async () => {
   const text='Gift; "special"\nsecond line';
   const g=game({geschenke:[{id:'g1',datum:'2026-10-28',text},{id:'g2',datum:'2026-10-29',text:'=1+1',wunschGeaendertAm:'2026-11-01T10:00:00.000Z'}]});g.run("csvHerunterladen()");

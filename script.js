@@ -10,6 +10,10 @@
 
 const SPIELERIN = "Emma";
 
+/* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
+const APP_VERSION = "1.0.6";
+const VERSION_STAND = "14. November 2026";
+
 const EINSTELLUNGEN = {
   divisionMitRestAktiv: true, // true = 4 Divisionen mit Rest, false = ohne Rest
   geschichtenAnzahl: 5,
@@ -2877,7 +2881,8 @@ const FORTSCHRITT_TABS = {
   sterne: "Bonussterne",
   geschenke: "Gutscheine",
   statistik: "Statistik",
-  daten: "Spielstand"
+  daten: "Spielstand",
+  version: "Version"
 };
 
 function zeigeFortschritt(tab) {
@@ -2903,7 +2908,8 @@ function zeigeFortschritt(tab) {
     sterne: document.getElementById("sterneInhalt"),
     statistik: document.getElementById("statistikInhalt"),
     geschenke: document.getElementById("geschenkeInhalt"),
-    daten: document.getElementById("spielstandInhalt")
+    daten: document.getElementById("spielstandInhalt"),
+    version: document.getElementById("versionInhalt")
   };
   Object.keys(inhalte).forEach(function (name) {
     const knoten = inhalte[name];
@@ -2923,10 +2929,31 @@ function zeigeFortschritt(tab) {
     zeigeGeschenkeInhalt();
   } else if (aktuellerTab === "daten") {
     zeigeSpielstandInhalt();
+  } else if (aktuellerTab === "version") {
+    zeigeVersionInhalt();
   } else {
     zeigeSterneInhalt();
   }
   zeigeBildschirm("fortschrittBildschirm");
+}
+
+/* Build-Infos zum Gegenprüfen, ob ein Gerät den neuesten Stand hat. */
+function zeigeVersionInhalt() {
+  const inhalt = document.getElementById("versionInhalt");
+  inhalt.textContent = "";
+  const karte = element("div", "sterne-karte");
+  karte.appendChild(element("h3", null, "Version " + APP_VERSION));
+  karte.appendChild(element("p", null,
+    "Stand: " + VERSION_STAND + " · Speicherformat: Version " + speicher.daten().version));
+  karte.appendChild(element("p", "rand",
+    "Wird die App über den Desktop-Starter gestartet, steht die letzte Update-Prüfung " +
+    "in starter.log im App-Ordner."));
+  inhalt.appendChild(karte);
+  const geraet = element("div", "sterne-karte");
+  geraet.appendChild(element("h3", null, "Gerät"));
+  geraet.appendChild(element("p", "rand",
+    (window.navigator && window.navigator.userAgent) || "Browserinformation nicht verfügbar"));
+  inhalt.appendChild(geraet);
 }
 
 function zeigeSterneInhalt() {

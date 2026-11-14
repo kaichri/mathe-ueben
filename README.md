@@ -421,7 +421,49 @@ Die Testergebnisse gelten für den dokumentierten Umfang:
 - Die Langzeitprüfung ist eine beschleunigte Simulation und kein Nachweis
   stundenlanger realer Sitzungen oder einer Wiederherstellung nach Stromausfall.
 
+## Versionierung und Veröffentlichung
+
+Jeder Push auf `main` erhält sinnvollerweise eine neue Version und einen
+Release-Tag:
+
+1. Vor dem Push in `script.js` `APP_VERSION` erhöhen und `VERSION_STAND` auf
+   das Datum setzen, dazu einen Eintrag in der Versionshistorie ergänzen.
+2. Gewöhnliche Pushes erhöhen die letzte Zahl (1.0.6 → 1.0.7); größere neue
+   Funktionen erhöhen die mittlere Zahl (1.0.6 → 1.1.0).
+3. Tag in der Form `v` + Versionsnummer setzen und mit dem Commit pushen:
+
+   ```sh
+   git tag v1.0.7
+   git push origin main v1.0.7
+   ```
+
+**Ausnahme:** Folgt ein weiterer Push kurz nach dem vorigen (innerhalb
+weniger Minuten), wird die Version nicht erneut erhöht. Stattdessen wandert
+der bestehende Tag auf den neuesten Commit:
+
+```sh
+git tag -f v1.0.7
+git push --force origin v1.0.7
+```
+
+Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
+`main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
+
 ## Versionshistorie
+
+### 1.0.6 — Version-Reiter und korrigierte Befunde
+
+- Neuer Reiter **„Version"** in den Einstellungen: zeigt Programmversion und
+  Stand, das Speicherformat und die Browserumgebung – zum Gegenprüfen, ob ein
+  Gerät den neuesten Stand hat. Verweist auch auf `starter.log`.
+- Der Desktop-Starter protokolliert jede Update-Prüfung in `starter.log`
+  neben der Starterdatei (auch der Grund, wenn kein Update geholt wurde).
+- Korrigierte Befunde der Codeanalyse: „Neue Aufgaben" startet nach
+  Mitternacht keine neue Bonusrunde, das Zusammenführen behält die neuesten
+  Aufgaben-Ausschlüsse und das weitergebrachte Bonus-Set, die
+  Statistik-Zusammenfassung zählt alte Runden ohne Quiztyp, Runden zählen für
+  den Tag, zu dem sie gehören, korrigierte Texte in zwei Rechengeschichten und
+  im CSV-Export, der Sternenregen schneidet die langsamsten Tropfen nicht mehr.
 
 ### 1.0.5 — automatische Synchronisierung über GitHub (optional)
 
