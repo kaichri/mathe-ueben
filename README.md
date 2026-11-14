@@ -108,7 +108,9 @@ ist, der Ordner auf `main` steht und die verwalteten Dateien unverändert sind.
 Für ein privates Repository braucht Git einen bereits eingerichteten Zugang.
 Ohne Internet, bei lokalen Änderungen oder wenn Git fehlt, öffnet der Starter
 die vorhandene Version. Eine entpackte ZIP-Kopie lässt sich damit öffnen,
-Updates setzen aber eine Git-Kopie voraus.
+Updates setzen aber eine Git-Kopie voraus. Jede Update-Prüfung schreibt ihren
+Verlauf in `starter.log` neben der Starterdatei; dort steht auch der Grund,
+wenn kein Update geholt wurde.
 
 Alternativ kann das Verzeichnis mit einem lokalen statischen HTTP-Server
 bereitgestellt werden. Dafür ist kein Anwendungsserver erforderlich.
