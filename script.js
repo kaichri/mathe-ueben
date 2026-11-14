@@ -643,6 +643,20 @@ function verschmelzeSpielstande(lokal, fremd) {
     });
     return ergebnis.slice(0, max);
   }
+  /* vortagSchluessel wächst am Ende (älteste zuerst). Darum beim Vereinigen
+     hinten kürzen, damit die neuesten Ausschlüsse beider Geräte erhalten
+     bleiben; die Liste des eigenen Geräts steht als jüngere zuletzt. */
+  function vereinigeAeltesteZuerst(fremd, eigen, max) {
+    const gesehen = new Set();
+    const ergebnis = [];
+    liste(fremd).concat(liste(eigen)).forEach(function (wert) {
+      if (typeof wert === "string" && !gesehen.has(wert)) {
+        gesehen.add(wert);
+        ergebnis.push(wert);
+      }
+    });
+    return ergebnis.slice(-max);
+  }
   function waehleTagesSet(a, b) {
     if (!a) { return b || null; }
     if (!b) { return a; }
@@ -720,7 +734,7 @@ function verschmelzeSpielstande(lokal, fremd) {
     knobelZuletzt: vereinigeTexte(B.knobelZuletzt, A.knobelZuletzt, EINSTELLUNGEN.knobelMerken),
     tagesSet: waehleTagesSet(A.tagesSet, B.tagesSet),
     bonusSet: waehleBonusSet(A.bonusSet, B.bonusSet),
-    vortagSchluessel: vereinigeTexte(B.vortagSchluessel, A.vortagSchluessel, 300),
+    vortagSchluessel: vereinigeAeltesteZuerst(B.vortagSchluessel, A.vortagSchluessel, 300),
     bonusGesamt: bonusGesamt,
     bonusStufenOffen: offeneStufenOhneGutschein(liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen)), geschenke),
     geschenke: geschenke,
@@ -2317,13 +2331,18 @@ function pruefeRunde() {
 
 /* --- die Bonuswelt prüfen: nie rot, nie Meckern, Sterne bis zum Tagesdeckel --- */
 
+/* Eine angezeigte Bonusrunde von gestern zählt nach Mitternacht nicht mehr:
+   zurück zur Startseite, damit zuerst das heutige Quiz gespielt wird. */
+function bonusRundeVonGestern() {
+  if (!runde.bonusDatum || runde.bonusDatum === heutigesDatum()) { return false; }
+  window.alert("Ein neuer Tag! Spiele zuerst das heutige Mathe-Quiz, um die Bonuswelt zu öffnen.");
+  zeigeStartErgebnis();
+  zeigeBildschirm("startBildschirm");
+  return true;
+}
+
 function pruefeBonusRunde() {
-  if (runde.bonusDatum && runde.bonusDatum !== heutigesDatum()) {
-    window.alert("Ein neuer Tag! Spiele zuerst das heutige Mathe-Quiz, um die Bonuswelt zu öffnen.");
-    zeigeStartErgebnis();
-    zeigeBildschirm("startBildschirm");
-    return;
-  }
+  if (bonusRundeVonGestern()) { return; }
   // Gehört zur laufenden Bonusrunde und bleibt bei erneutem Prüfen erhalten.
   const auswertung = runde.bonusAuswertung || (runde.bonusAuswertung = {
     belohnt: new Set(), statistik: null
@@ -3293,6 +3312,17 @@ function datumText(iso) {
 
 /* ------------- Statistik (zweiter Reiter im Fortschritts-Bereich) ------------- */
 
+/* Reguläre Tagesrunden für Zusammenfassung und Weltwahl: Wiederholungen zählen
+   nicht; Runden ohne Wiederholung-Kennzeichen (alte Spielstände) gelten als
+   Quiz, wenn sie 50 Aufgaben haben. */
+function zaehltAlsQuiz(eintrag) {
+  const zeiten = eintrag.uebezeiten || {};
+  if (eintrag.wiederholung === true || zeiten.wiederholung !== undefined) { return false; }
+  return eintrag.wiederholung === false ||
+    Object.keys(BEREICH_NAMEN).some(bereich => zeiten[bereich] !== undefined) ||
+    (eintrag.wiederholung === undefined && eintrag.gesamt === 50);
+}
+
 function zeigeStatistikInhalt() {
   const inhalt = document.getElementById("statistikInhalt");
   inhalt.textContent = "";
@@ -3308,10 +3338,7 @@ function zeigeStatistikInhalt() {
     bonus: { titel: "Bonusquiz", anzahl: 0, aufgaben: 0, richtig: 0 }
   };
   daten.runden.forEach(function (eintrag) {
-    const zeiten = eintrag.uebezeiten || {};
-    const istQuiz = eintrag.wiederholung !== true && zeiten.wiederholung === undefined &&
-      (eintrag.wiederholung === false || Object.keys(BEREICH_NAMEN).some(bereich => zeiten[bereich] !== undefined));
-    if (!eintrag.bonus && !istQuiz) { return; }
+    if (!eintrag.bonus && !zaehltAlsQuiz(eintrag)) { return; }
     const gruppe = eintrag.bonus ? gruppen.bonus : gruppen.quiz;
     gruppe.anzahl += 1;
     gruppe.aufgaben += eintrag.gesamt || 0;
@@ -4018,8 +4045,7 @@ function heutigeQuizWelt() {
   if (tagesSet && tagesSet.datum === heute && tagesSet.fertig) { return tagesSet.welt; }
   // Ein neuer Versuch in derselben Welt öffnet die anderen Welten nicht wieder.
   const quiz = runden.findLast(eintrag => eintrag.datum === heute && !eintrag.bonus &&
-    Object.hasOwn(WELT_NAMEN, eintrag.modus) && (eintrag.wiederholung === false ||
-      (eintrag.wiederholung === undefined && eintrag.gesamt === 50 && !eintrag.uebezeiten?.wiederholung)));
+    Object.hasOwn(WELT_NAMEN, eintrag.modus) && zaehltAlsQuiz(eintrag));
   return quiz?.modus;
 }
 
@@ -4182,6 +4208,7 @@ document.getElementById("neuKnopf").addEventListener("click", function (ereignis
       zeigeRunde(neuesTagesSet());
     });
   } else if (runde && runde.bereichsArt === "bonus") {
+    if (bonusRundeVonGestern()) { return; }
     const neueBonusRunde = baueBonusRunde(runde.welt, true);
     if (neueBonusRunde) {
       zeigeRunde(neueBonusRunde);

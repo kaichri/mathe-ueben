@@ -229,6 +229,40 @@ test("MERGE: Bonussterne werden ohne doppelte Runden vereinigt", () => {
   assert.deepEqual(ergebnis.daten.bonusStufenOffen, []);
 });
 
+/* -------------------------------------------------------- vortagSchluessel */
+
+/* vortagSchluessel wächst am Ende (älteste zuerst). Beim Zusammenführen müssen
+   die neuesten Ausschlüsse beider Geräte erhalten bleiben, auch wenn die
+   Vereinigung länger als 300 Einträge wird. */
+test("MERGE: vortagSchluessel behält die neuesten Ausschlüsse beider Geräte", () => {
+  const alt = Array.from({ length: 300 }, (_, i) => "alt|" + i);
+  const lokalNeu = ["lokal|neu1", "lokal|neu2"];
+  const fremdNeu = ["fremd|neu1", "fremd|neu2"];
+  const lokal = spielstand({ vortagSchluessel: alt.concat(lokalNeu) });
+  const fremd = spielstand({ vortagSchluessel: alt.concat(fremdNeu) });
+  const g = game(lokal, { now: JETZT });
+  const ergebnis = zusammenfuehren(g, sicherung(fremd));
+  assert.equal(ergebnis.ok, true, ergebnis.grund);
+  const schluessel = ergebnis.daten.vortagSchluessel;
+  assert.equal(schluessel.length, 300);
+  for (const s of lokalNeu) assert(schluessel.includes(s), "lokaler Ausschluss fehlt: " + s);
+  for (const s of fremdNeu) assert(schluessel.includes(s), "fremder Ausschluss fehlt: " + s);
+  assert(!schluessel.includes("alt|0"), "Die ältesten Ausschlüsse fallen zuerst heraus");
+});
+
+test("MERGE: eigene neue vortagSchluessel bleiben auch ohne fremde Neuzugänge erhalten", () => {
+  const alt = Array.from({ length: 300 }, (_, i) => "alt|" + i);
+  const lokal = spielstand({ vortagSchluessel: alt.concat(["lokal|neu1", "lokal|neu2"]) });
+  const fremd = spielstand({ vortagSchluessel: alt.slice() });
+  const g = game(lokal, { now: JETZT });
+  const ergebnis = zusammenfuehren(g, sicherung(fremd));
+  const schluessel = ergebnis.daten.vortagSchluessel;
+  assert.equal(schluessel.length, 300);
+  assert(schluessel.includes("lokal|neu1") && schluessel.includes("lokal|neu2"),
+    "Die neuesten Ausschlüsse des eigenen Geräts müssen bleiben");
+  assert(!schluessel.includes("alt|0") && !schluessel.includes("alt|1"));
+});
+
 /* ------------------------------------------------------------------ Fehler */
 
 test("MERGE: ungültige Dateien ändern nichts", () => {

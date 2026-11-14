@@ -554,3 +554,44 @@ test("BEFUND-15: Mehrzahl bleibt korrekt", () => {
   abgeben(g);
   assert.match(g.nodes.get("ergebnisKasten").textContent, /Noch 5 richtige Aufgaben/);
 });
+
+/* ----------------------------------------- Folgebefunde der Codeanalyse 2 */
+
+test("Nach Mitternacht startet 'Neue Aufgaben' keine neue Bonusrunde", () => {
+  const g = game({}, { now: JETZT }); // 31.10., 13:00 Wien
+  g.run("zeigeRunde(neuesTagesSet())");
+  g.fill(45); abgeben(g);
+  assert.equal(g.run("weltHeuteFreigeschaltet('bluey')"), true);
+  g.run("startBonusWelt('bluey')");
+  assert.equal(g.run("runde.bereichsArt"), "bonus");
+
+  // Am selben Tag funktioniert "Neue Aufgaben" weiterhin.
+  g.nodes.get("neuKnopf").emit("click");
+  assert.equal(g.run("runde.bereichsArt"), "bonus");
+  assert.equal(g.nodes.get("uebungsBildschirm").hidden, false);
+  assert.equal(g.data().bonusSet.datum, "2026-10-31");
+
+  // Nach Mitternacht darf keine neue Bonusrunde mehr entstehen.
+  g.time("2026-10-31T23:10:00Z"); // 00:10 Wien am 1.11.
+  g.run("window.alert = function (text) { window.alertText = text; }");
+  g.nodes.get("neuKnopf").emit("click");
+  assert.match(g.run("window.alertText") || "", /neuer Tag/,
+    "Es muss der Mitternachtshinweis erscheinen");
+  assert.equal(g.nodes.get("startBildschirm").hidden, false, "Zurück zur Startseite");
+  assert.equal(g.nodes.get("uebungsBildschirm").hidden, true);
+  assert.equal(g.data().bonusSet.datum, "2026-10-31", "Die gestrige Bonusrunde bleibt erhalten");
+  assert.equal(g.data().runden.filter(r => r.bonus).length, 0, "Es darf keine zweite Bonusrunde geben");
+});
+
+test("Die Zusammenfassung zählt auch alte Runden ohne Quiztyp", () => {
+  const g = game({ runden: [
+    { richtig: 44, gesamt: 50, datum: "2026-10-31", modus: "bluey" }, // vor Version 1.0.1
+    { wiederholung: false, richtig: 40, gesamt: 50 },
+    { richtig: 3, gesamt: 5 } // alte kurze Runde: kein Quiz
+  ] }, { now: JETZT });
+  g.run("zeigeStatistikInhalt()");
+  const statistik = g.nodes.get("statistikInhalt").textContent;
+  assert.match(statistik, /Quiz · 2 abgeschlossen · 84 von 100 Aufgaben richtig \(84 %\)/);
+  assert.equal(g.run("heutigeQuizWelt()"), "bluey",
+    "Die Weltwahl erkennt die alte 50er-Runde weiterhin");
+});
