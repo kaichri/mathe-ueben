@@ -200,13 +200,25 @@ test("SPRECH: Zuhören spielt die eingebettete Thorsten-Stimme", () => {
   const inhalt = g.nodes.get("sprechInhalt");
   assert.match(inhalt.textContent, /1\. Zuhören/);
   assert.match(inhalt.textContent, /Emma geht am Nachmittag in den Garten/);
-  inhalt.querySelectorAll(".vorlesen-knopf")[0].emit("click");
+  const vorlesen = () => inhalt.querySelectorAll(".vorlesen-knopf")[0];
+  vorlesen().emit("click");
   assert.equal(g.audios.length, 1);
   assert.equal(g.audios[0].src, "audio/sprechtraining/thorsten/tag01-text.mp3");
   assert.equal(g.audios[0].volume, 1);
   assert.equal(g.audios[0].plays, 1);
   assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
-  inhalt.querySelectorAll(".vorlesen-knopf")[0].emit("click"); // Stoppen
+  assert.equal(vorlesen().textContent, "⏸ Pause");
+  vorlesen().emit("click"); // Pause
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
+  assert.equal(g.run("sprechAudio.pausiert()"), true);
+  assert.equal(g.audios[0].paused, true);
+  assert.equal(vorlesen().textContent, "▶ Weiter");
+  vorlesen().emit("click"); // Weiter ab derselben Stelle
+  assert.equal(g.run("sprechAudio.pausiert()"), false);
+  assert.equal(g.audios.length, 1, "derselbe Clip läuft weiter, kein neuer");
+  assert.equal(g.audios[0].plays, 2);
+  assert.equal(vorlesen().textContent, "⏸ Pause");
+  g.run("sprechAudio.stoppe()");
   assert.equal(g.run("sprechAudio.aktuell()"), null);
 });
 
@@ -320,6 +332,36 @@ test("SPRECH: Ramona spielt aus ihrem Ordner, Lautstärke wird übernommen", () 
   assert.equal(g.run("sprechAudio.stimme()"), "ramona");
 });
 
+test("SPRECH: „◀ Zurück“ blättert wie in Mathe einen Schritt zurück", () => {
+  const g = game({}, { now: JETZT });
+  g.run("sprech.oeffnen()");
+  offneEinheitMitSatz(g, 1, 1);
+  const inhalt = g.nodes.get("sprechInhalt");
+  const zurueckKnopf = () => inhalt.querySelectorAll("button").find(b => b.textContent === "◀ Zurück");
+  assert(!zurueckKnopf(), "Schritt 1 hat keinen Zurück-Knopf");
+  weiter(g);
+  assert.match(inhalt.textContent, /2\. Verstehen/);
+  zurueckKnopf().emit("click");
+  assert.match(inhalt.textContent, /1\. Zuhören/, "Zurück führt zu Zuhören");
+  assert(!zurueckKnopf(), "am Anfang gibt es keinen Zurück-Knopf");
+  weiter(g);
+  weiter(g);
+  assert.match(inhalt.textContent, /3\. Satz bilden/);
+  zurueckKnopf().emit("click");
+  assert.match(inhalt.textContent, /2\. Verstehen/);
+  weiter(g);
+  weiter(g);
+  assert.match(inhalt.textContent, /4\. Erzählen/);
+  assert(zurueckKnopf(), "auch die Bewertung hat einen Zurück-Knopf");
+  // Ausgewählte Punkte bleiben beim Hin- und Zurblättern erhalten.
+  const chip = inhalt.querySelectorAll(".sprech-chip")[0];
+  chip.emit("click");
+  zurueckKnopf().emit("click");
+  weiter(g);
+  const an = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-chip")[0];
+  assert(an.classList.contains("an"), "die Markierung übersteht das Blättern");
+});
+
 /* ----------------------------------------------------------- Ton-Reiter */
 
 test("DEUTSCH: Welt-Auswahl speichert die Welt und markiert sie aktiv", () => {
@@ -336,7 +378,7 @@ test("DEUTSCH: Welt-Auswahl speichert die Welt und markiert sie aktiv", () => {
   assert.equal(g.saved().deutschWelt, "hamster");
   const aktiv = inhalt.querySelectorAll(".deutsch-welt").filter(k => k.classList.contains("aktiv"));
   assert.equal(aktiv.length, 1);
-  assert.match(aktiv[0].textContent, /Süße Hamster/);
+  assert.match(aktiv[0].textContent, /Flauschige Hamster/);
   const zweite = game(g.saved(), { now: JETZT });
   zweite.run("sprech.oeffnen()");
   assert.equal(zweite.data().deutschWelt, "hamster", "die Weltwahl bleibt gespeichert");

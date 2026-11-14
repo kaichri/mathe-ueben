@@ -85,7 +85,7 @@ App.
 
 - Drei Welten mit je **acht süßen, animierten Figuren** stehen für das
   Deutsch-Üben bereit: **Süße Hunde** (Wuffi, Bello, Flocki, Mopsi, Coco,
-  Schnuffel, Struppi und Bella), **Süße Hamster** (Knuspel, Wommel, Pip,
+  Schnuffel, Struppi und Bella), **Flauschige Hamster** (Knuspel, Wommel, Pip,
   Bommel, Nussi, Flauschi, Krummel und Zucker) und **Weihnachtswelt**
   (Weihnachtsmann, Christkind, Rudolph, Elfe, Wichtel, Schneemann, Griesgram
   und Lebkuchenmann). Die Welt wird in der Übersicht gewählt, begleitet jede
@@ -96,7 +96,8 @@ App.
 - Jede Übung dauert etwa 10 Minuten und läuft in vier Schritten:
   **Zuhören** (Text wird vorgelesen), **Verstehen** (Fragen mit verbergbaren
   Antworten für die Begleitung), **Satz bilden** (Satanfänge erst auf Wunsch)
-  und **Erzählen** mit Bewertung.
+  und **Erzählen** mit Bewertung. Ein „◀ Zurück“-Knopf blättert wie in
+  Mathe einen Schritt zurück.
 - Die Bewertung umfasst angekreuzte wichtige Punkte des Textes sowie vier
   Kriterien mit je drei Stufen: Reihenfolge, ganze Sätze & Grammatik,
   Aussprache und Zusammengehörigkeit. Abschluss erst, wenn alles gesetzt ist.
@@ -111,7 +112,8 @@ App.
   „Neue Übung“ weiter.
 
 **Vorlesen und Ton:** Jeder Text, jede Frage und der Hinweis lassen sich mit
-einem 🔊-Knopf vorlesen. Unter „Einstellungen → Ton & Vorlesen" sind die
+einem 🔊-Knopf vorlesen. Der Knopf schaltet um: erster Klick spielt, zweiter
+pausiert, dritter setzt an derselben Stelle fort. Unter „Einstellungen → Ton & Vorlesen" sind die
 Stimme (Thorsten, Ramona oder Windows-Systemstimme mit Stimmenauswahl) sowie
 getrennte Lautstärken für Vorlesen und Musik einstellbar. Die Lautstärken und
 die Stimmenwahl bleiben auf dem jeweiligen Gerät; beim Vorlesen wird die
@@ -525,6 +527,19 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.1.1 — Vorlese-Knopf mit Pause und Zurück-Blättern
+
+- Der 🔊-Vorlese-Knopf ist jetzt ein **Wiedergabe-Schalter**: erster Klick
+  startet das Vorlesen, zweiter pausiert, dritter setzt **an derselben
+  Stelle** fort (statt alles neu zu starten). Während der Pause läuft die
+  Musik wieder normal weiter, beim Fortsetzen wird sie wieder leiser.
+- **„◀ Zurück“ auch in Deutsch üben:** wie in Mathe blättert ein Zurück-
+  Knopf in der Übung einen Schritt zurück (Verstehen → Zuhören usw.) und
+  bleibt auch neben „Übung abschließen ✓“ verfügbar. Ausgewählte
+  Bewertungspunkte überstehen das Hin- und Zurblättern.
+- Weltname „Süße Hamster“ → **„Flauschige Hamster“**.
+- 26 Tests (`tests/sprechtraining.test.cjs`), Suitensumme 210.
+
 ### 1.1.0 — Deutsch-Sprechtraining, Vorlesen und Ton-Einstellungen
 
 - Neuer Bereich **„Deutsch üben“** mit **Umschalter „Mathe / Deutsch“** im
@@ -541,7 +556,7 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
   Geschichte und darin einen von **vier Fragensätzen je Geschichte** (der
   Satz der vorigen Runde wird vermieden); die Bewertung bleibt ungespeichert.
 - **Drei Welten mit je acht süßen Figuren** (animiert): Süße Hunde (Wuffi,
-  Bello, Flocki, Mopsi, Coco, Schnuffel, Struppi, Bella), Süße Hamster
+  Bello, Flocki, Mopsi, Coco, Schnuffel, Struppi, Bella), Flauschige Hamster
   (Knuspel, Wommel, Pip, Bommel, Nussi, Flauschi, Krummel, Zucker) und
   Weihnachtswelt (Weihnachtsmann, Christkind, Rudolph, Elfe, Wichtel,
   Schneemann, Griesgram, Lebkuchenmann). Welt-Auswahl in der Übersicht,

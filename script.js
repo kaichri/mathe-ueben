@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.1.1";
 const VERSION_STAND = "14. November 2026";
 
 const EINSTELLUNGEN = {
@@ -1403,7 +1403,7 @@ const DEUTSCH_WELTEN = {
     lob: "Alle acht Welpen wedeln ganz stolz mit dem Schwanz!"
   },
   hamster: {
-    titel: "Süße Hamster",
+    titel: "Flauschige Hamster",
     beschreibung: "Mit Knuspel, Wommel und Pip – acht knuffige Hamster",
     figur: "deutschKnuspel",
     figuren: ["deutschKnuspel", "deutschWommel", "deutschPip", "deutschBommel", "deutschNussi", "deutschFlauschi", "deutschKrummel", "deutschZucker"],
@@ -4090,6 +4090,7 @@ const sprechAudio = (function () {
   };
   let knoten = null;
   let aktuell = null;      // id des vorgelesenen Schnipsels oder "system"
+  let pausiert = false;    // mitten im Schnipsel angehalten (Weiter spielt an gleicher Stelle)
   let hoerer = [];         // Funktionen, die beim Start/Ende informiert werden
 
   function melde() {
@@ -4133,12 +4134,40 @@ const sprechAudio = (function () {
   }
   function stoppe() {
     aktuell = null;
+    pausiert = false;
     if (knoten) {
       try { knoten.pause(); } catch (fehler) {}
       knoten = null;
     }
     stoppeSystem();
     musik.fluestern(false);
+    melde();
+  }
+  function pausiere() {
+    if (!aktuell || pausiert) { return; }
+    pausiert = true;
+    if (aktuell === "system") {
+      try { if (window.speechSynthesis && window.speechSynthesis.pause) { window.speechSynthesis.pause(); } } catch (fehler) {}
+    } else if (knoten) {
+      try { knoten.pause(); } catch (fehler) {}
+    }
+    musik.fluestern(false);
+    melde();
+  }
+  function weiter() {
+    if (!aktuell || !pausiert) { return; }
+    pausiert = false;
+    musik.fluestern(true);
+    if (aktuell === "system") {
+      try { if (window.speechSynthesis && window.speechSynthesis.resume) { window.speechSynthesis.resume(); } } catch (fehler) {}
+    } else if (knoten) {
+      const zusicherung = knoten.play();
+      if (zusicherung && zusicherung.catch) {
+        zusicherung.catch(function () {
+          if (aktuell) { aktuell = null; musik.fluestern(false); melde(); }
+        });
+      }
+    }
     melde();
   }
   function spiele(id, text) {
@@ -4170,7 +4199,10 @@ const sprechAudio = (function () {
   return {
     spiele: spiele,
     stoppe: stoppe,
+    pausiere: pausiere,
+    weiter: weiter,
     aktuell: function () { return aktuell; },
+    pausiert: function () { return pausiert; },
     stimme: gewaehlteStimme,
     lautstaerke: aktuelleLautstaerke,
     systemStimmen: function () {
@@ -4257,18 +4289,21 @@ const sprech = (function () {
     }
   }
 
-  /* Ein Knopf, der einen Textabschnitt vorliest (Kinderstimme optional). */
+  /* Ein Knopf, der einen Textabschnitt vorliest (Kinderstimme optional).
+     Erste Klick startet, zweiter pausiert, dritter setzt an derselben Stelle fort. */
   function vorleseKnopf(id, text) {
     const knopf = element("button", "knopf schlicht vorlesen-knopf");
     knopf.type = "button";
     function auffrischen() {
-      const laeuft = sprechAudio.aktuell() === id;
-      knopf.textContent = laeuft ? "■ Stoppen" : "🔊 Vorlesen";
+      const laeuft = sprechAudio.aktuell() === id && !sprechAudio.pausiert();
+      const wartet = sprechAudio.aktuell() === id && sprechAudio.pausiert();
+      knopf.textContent = laeuft ? "⏸ Pause" : wartet ? "▶ Weiter" : "🔊 Vorlesen";
       knopf.setAttribute("aria-pressed", String(laeuft));
     }
     knopf.addEventListener("click", function () {
-      if (sprechAudio.aktuell() === id) { sprechAudio.stoppe(); }
-      else { sprechAudio.spiele(id, text); }
+      if (sprechAudio.aktuell() === id) {
+        if (sprechAudio.pausiert()) { sprechAudio.weiter(); } else { sprechAudio.pausiere(); }
+      } else { sprechAudio.spiele(id, text); }
     });
     sprechAudio.aufAenderung(auffrischen);
     auffrischen();
@@ -4387,6 +4422,21 @@ const sprech = (function () {
     });
     return knopf;
   }
+  /* Blätterleiste wie in Mathe: Zurück (ab Schritt 2) neben Weiter. */
+  function schrittNavi(text) {
+    const zeile = element("div", "sprech-zeile sprech-navi");
+    if (schritt > 0) {
+      const zurueck = element("button", "knopf schlicht", "◀ Zurück");
+      zurueck.type = "button";
+      zurueck.addEventListener("click", function () {
+        schritt -= 1;
+        rendere();
+      });
+      zeile.appendChild(zurueck);
+    }
+    zeile.appendChild(weiterKnopf(text));
+    return zeile;
+  }
 
   function rendereEinheit() {
     const inhalt = document.getElementById("sprechInhalt");
@@ -4415,7 +4465,7 @@ const sprech = (function () {
       karte.appendChild(zeile);
       inhalt.appendChild(karte);
       inhalt.appendChild(elternKasten("Für die Begleitung"));
-      inhalt.appendChild(weiterKnopf("Verstanden! Weiter ▶"));
+      inhalt.appendChild(schrittNavi("Verstanden! Weiter ▶"));
     } else if (schritt === 1) {
       const karte = element("div", "sterne-karte");
       karte.appendChild(element("h4", null, "2. Verstehen"));
@@ -4438,7 +4488,7 @@ const sprech = (function () {
       karte.appendChild(antwortKnopf);
       inhalt.appendChild(karte);
       inhalt.appendChild(elternKasten("Für die Begleitung"));
-      inhalt.appendChild(weiterKnopf("Weiter ▶"));
+      inhalt.appendChild(schrittNavi("Weiter ▶"));
     } else if (schritt === 2) {
       const karte = element("div", "sterne-karte");
       karte.appendChild(element("h4", null, "3. Satz bilden"));
@@ -4458,7 +4508,7 @@ const sprech = (function () {
       karte.appendChild(hilfe);
       inhalt.appendChild(karte);
       inhalt.appendChild(elternKasten("Für die Begleitung"));
-      inhalt.appendChild(weiterKnopf("Weiter ▶"));
+      inhalt.appendChild(schrittNavi("Weiter ▶"));
     } else if (schritt === 3) {
       inhalt.appendChild(rendereBewertung());
     } else {
@@ -4513,6 +4563,14 @@ const sprech = (function () {
 
     const fertig = bewertung.reihenfolge !== undefined && bewertung.grammatik !== undefined &&
       bewertung.aussprache !== undefined && bewertung.zusammen !== undefined;
+    const zeile = element("div", "sprech-zeile sprech-navi");
+    const zurueck = element("button", "knopf schlicht", "◀ Zurück");
+    zurueck.type = "button";
+    zurueck.addEventListener("click", function () {
+      schritt -= 1;
+      rendere();
+    });
+    zeile.appendChild(zurueck);
     const abschliessen = element("button", "knopf primaer sprech-fertig-knopf", "Übung abschließen ✓");
     abschliessen.type = "button";
     abschliessen.disabled = !fertig;
@@ -4525,7 +4583,8 @@ const sprech = (function () {
     if (!fertig) {
       abschliessen.setAttribute("aria-disabled", "true");
     }
-    kasten.appendChild(abschliessen);
+    zeile.appendChild(abschliessen);
+    kasten.appendChild(zeile);
     fragment.appendChild(kasten);
     return fragment;
   }
