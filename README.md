@@ -4,7 +4,9 @@ Ein deutschsprachiges Mathe-Lernspiel für Kinder der **3. Klasse Volksschule**.
 Das Spiel übt die vier Grundrechenarten, Zahlenrätsel sowie Rechengeschichten
 mit Geld und Uhrzeiten. Die Rechenaufgaben bewegen sich grundsätzlich im
 Zahlenraum 100; Geldbeträge werden intern in Cent und Uhrzeiten in Minuten
-verarbeitet.
+verarbeitet. Zusätzlich enthält es ein endlos wiederholbares
+**Deutsch-Sprechtraining** (Eltern-Kind-Modus) mit eingebetteter
+Vorlesefunktion.
 
 Die Anwendung besteht aus HTML, CSS und JavaScript. Zum Spielen sind weder
 ein Benutzerkonto noch eine Installation oder ein Build-Schritt erforderlich.
@@ -69,6 +71,58 @@ Alle **25 Bonussterne** ist eine neue Stufe erreicht. Für jede neue Stufe
 kann Emma einen Gutschein auswählen. Ihre Bonussterne sammelt sie weiter.
 Beim Umtausch eines offenen Gutscheins bleiben Datum und Platz erhalten.
 
+### Deutsch üben – Sprechtraining (Eltern-Kind-Modus)
+
+Der **Umschalter „Mathe / Deutsch“** im oberen Seitenbereich wechselt zwischen
+den beiden Bereichen; der **Startseite**-Knopf öffnet dabei stets die
+Startseite des gerade aktiven Bereichs. Die Deutsch-Startseite ist wie die
+Mathe-Startseite aufgebaut (Maskottchen, Welt-Auswahl und „Los geht's!“) und
+bietet zusätzlich einen Kasten zum direkten Aussuchen einer Geschichte. Es
+gibt **14 Geschichten mit je vier Fragensätzen** zum mündlichen Erzählen
+(Inhalt aus dem PDF „Emma_Deutsch_Sprechtraining_14_Tage"). Eine erwachsene
+Person begleitet: Stellt Fragen mündlich, hört zu und bewertet am Ende in der
+App.
+
+- Drei Welten mit je **acht süßen, animierten Figuren** stehen für das
+  Deutsch-Üben bereit: **Süße Hunde** (Wuffi, Bello, Flocki, Mopsi, Coco,
+  Schnuffel, Struppi und Bella), **Süße Hamster** (Knuspel, Wommel, Pip,
+  Bommel, Nussi, Flauschi, Krummel und Zucker) und **Weihnachtswelt**
+  (Weihnachtsmann, Christkind, Rudolph, Elfe, Wichtel, Schneemann, Griesgram
+  und Lebkuchenmann). Die Welt wird in der Übersicht gewählt, begleitet jede
+  Übung als kleine Figur und gratuliert am Ende. Die Wahl bleibt auf dem Gerät
+  gespeichert und wird im Abgleich wie die Ton-Einstellungen behandelt (der
+  eigene Stand gewinnt).
+
+- Jede Übung dauert etwa 10 Minuten und läuft in vier Schritten:
+  **Zuhören** (Text wird vorgelesen), **Verstehen** (Fragen mit verbergbaren
+  Antworten für die Begleitung), **Satz bilden** (Satanfänge erst auf Wunsch)
+  und **Erzählen** mit Bewertung.
+- Die Bewertung umfasst angekreuzte wichtige Punkte des Textes sowie vier
+  Kriterien mit je drei Stufen: Reihenfolge, ganze Sätze & Grammatik,
+  Aussprache und Zusammengehörigkeit. Abschluss erst, wenn alles gesetzt ist.
+- Am Ende gibt es eine kurze Einschätzung: Was war schon stark, worauf beim
+  nächsten Mal achten. Ein gelber Kasten enthält die Anleitung für die
+  Begleitung.
+- **Endlos üben statt Tagesplan:** Es gibt keine feste Reihenfolge und keine
+  Tagesfolge; jede Geschichte ist jederzeit offen. „Los geht's!“ startet eine
+  zufällige Geschichte und darin einen der vier Fragensätze – derselbe Satz
+  wie in der vorigen Runde wird vermieden. Die Bewertung gilt nur für die
+  laufende Übung und wird nicht gespeichert; danach geht es direkt mit
+  „Neue Übung“ weiter.
+
+**Vorlesen und Ton:** Jeder Text, jede Frage und der Hinweis lassen sich mit
+einem 🔊-Knopf vorlesen. Unter „Einstellungen → Ton & Vorlesen" sind die
+Stimme (Thorsten, Ramona oder Windows-Systemstimme mit Stimmenauswahl) sowie
+getrennte Lautstärken für Vorlesen und Musik einstellbar. Die Lautstärken und
+die Stimmenwahl bleiben auf dem jeweiligen Gerät; beim Vorlesen wird die
+Hintergrundmusik automatisch leiser.
+
+Die eingebetteten Stimmen wurden offline mit dem Open-Source-Werkzeug
+[Piper](https://github.com/rhasspy/piper) (MIT-Lizenz) erzeugt: **Thorsten**
+(de_DE-thorsten-high, Stimme von Thorsten, CC-BY) und **Ramona**
+(de_DE-ramona-low). Die fertigen MP3-Dateien liegen unter
+`audio/sprechtraining/`; zur Neuerzeugung dient `tools/sprechtraining-audio.cjs`.
+
 ### Weitere Funktionen
 
 - Bonussterne, Meilensteine, Bereichsauswertung und Übekalender.
@@ -78,7 +132,10 @@ Beim Umtausch eines offenen Gutscheins bleiben Datum und Platz erhalten.
   (Zusammenführen statt Überschreiben).
 - Statistikexport als CSV sowie Spielstand-Sicherung und -Wiederherstellung als
   JSON-Datei (Umzug auf einen anderen PC, „Einstellungen → Spielstand“).
-- Hintergrundmusik und synthetische Ersatzmelodie bei fehlenden Dateien.
+- Hintergrundmusik mit eigenen Melodien für die drei Deutsch-Welten und
+  synthetische Ersatzmelodie bei fehlenden Dateien.
+- Ton-Einstellungen: Vorlesestimme (Thorsten/Ramona/Windows-Systemstimme) und
+  getrennte Lautstärken für Vorlesen und Musik.
 - Tastaturbedienung mit Tab, Enter und Pfeiltasten sowie Dialognavigation mit
   Tab/Umschalt+Tab und Escape.
 - Zugängliche Dialogtitel, Fokusführung und eine Live-Region für Ergebnisse.
@@ -139,12 +196,20 @@ mathe-ueben/
 ├── script.js                   Spielzustände, Bewertung, Speicher, Audio und Export
 ├── aufgaben-bereiche.js         Rechenaufgaben und Bonusaufgaben
 ├── geschichten.js              Geschichtenvorlagen und ihre Auswahl
+├── sprechtraining.js           Deutsch-Sprechtraining (14 Geschichten, je 4 Fragensätze)
 ├── musik/
 │   ├── blau.mp3
 │   ├── puppenhaus.mp3
 │   ├── blau.mp4
 │   ├── doozie.mp3
-│   └── puppenhaus.mp4
+│   ├── puppenhaus.mp4
+│   ├── hunde.mp3
+│   ├── hamster.mp3
+│   └── weihnachten.mp3
+├── audio/sprechtraining/       Vorlese-MP3s der Stimmen Thorsten und Ramona
+├── tools/
+│   ├── sprechtraining-audio.cjs  Erzeugung der Vorlese-MP3s (Piper, offline)
+│   └── welt-figuren-bilder.cjs   Freistellung der Welt-Figuren (Pillow, offline)
 ├── tests/
 │   ├── phase1.test.cjs
 │   ├── phase2.test.cjs
@@ -152,6 +217,7 @@ mathe-ueben/
 │   ├── phase3-helper.cjs
 │   ├── phase4.test.cjs
 │   ├── phase4.browser.cjs
+│   ├── sprechtraining.test.cjs     Deutsch-Üben, Navigation, Vorlesen und Ton-Einstellungen
 │   ├── audit-math.test.cjs         Mathematik mit unabhängigen Orakeln
 │   ├── audit-invariants.test.cjs   Zustand, Speicher, Tageswechsel
 │   ├── audit-regressions.test.cjs  Regressionstests der Audit-Korrekturen
@@ -167,7 +233,10 @@ mathe-ueben/
 ```
 
 Die Hintergrundmusik verwendet lokale MP3-Dateien. Doozies Hundehaus spielt
-`musik/doozie.mp3` und verwendet bei einem Ladefehler `puppenhaus.mp3`.
+`musik/doozie.mp3` und verwendet bei einem Ladefehler `puppenhaus.mp3`. Die drei
+Deutsch-Welten haben eigene Melodien (Hunde: `hunde.mp3`, Hamster:
+`hamster.mp3`, Weihnachtswelt: `weihnachten.mp3`); beim Wechsel zwischen Mathe
+und Deutsch sowie beim Weltwechsel springt die passende Melodie um.
 
 ## Lokale Datenspeicherung
 
@@ -342,26 +411,31 @@ Spielstand.
 
 ### Regression und Syntax
 
-Die 69 Regressionstests der Phasen 1–4 verwenden den integrierten
-Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 100
+Die 70 Regressionstests der Phasen 1–4 verwenden den integrierten
+Node.js-Testläufer und benötigen keine zusätzlichen npm-Pakete. Dazu kommen 109
 Audit-Tests: Mathematik mit unabhängigen, aus dem Aufgabentext abgeleiteten
 Orakeln, Invarianten für Zustand und Speicher, Regressionstests für die
 Audit-Befunde und die beiden angepassten Spielregeln (Wiederholungssterne,
 Bestätigung beim Abschließen) sowie Tests für Sichern, Laden, Zusammenführen und
-den GitHub-Abgleich des Spielstands. Node.js 24 wurde für die dokumentierten
-Prüfungen verwendet; zum Spielen ist Node.js nicht erforderlich.
+den GitHub-Abgleich des Spielstands. Weitere 25 Tests decken das Deutsch-Üben
+(Sprechtraining), die Navigation zwischen Mathe und Deutsch, die Vorlesefunktion
+und die Ton-Einstellungen ab. Node.js 24
+wurde für die dokumentierten Prüfungen verwendet; zum Spielen ist Node.js
+nicht erforderlich.
 
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (169 Tests)
+# Alle Node-Tests (204 Tests)
 node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
   tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs `
-  tests/audit-spielstand.test.cjs tests/audit-merge.test.cjs tests/audit-sync.test.cjs
+  tests/audit-spielstand.test.cjs tests/audit-merge.test.cjs tests/audit-sync.test.cjs `
+  tests/sprechtraining.test.cjs
 
 node --check script.js
 node --check aufgaben-bereiche.js
 node --check geschichten.js
+node --check sprechtraining.js
 ```
 
 Die Tests simulieren unter anderem DOM, Browser-Speicher, Audiofehler und
@@ -450,6 +524,47 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 `main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
 
 ## Versionshistorie
+
+### 1.1.0 — Deutsch-Sprechtraining, Vorlesen und Ton-Einstellungen
+
+- Neuer Bereich **„Deutsch üben“** mit **Umschalter „Mathe / Deutsch“** im
+  oberen Seitenbereich; der Startseite-Knopf öffnet stets die Startseite des
+  aktiven Bereichs, der Umschalter wechselt in beide Richtungen.
+  Die Deutsch-Startseite ist wie die Mathe-Startseite aufgebaut (Maskottchen,
+  Welt-Auswahl und großer Los-Knopf) und bietet zusätzlich einen Kasten zum
+  direkten Aussuchen einer Geschichte.
+- **Endlos üben statt Tagesplan:** 14 Geschichten zum mündlichen Erzählen
+  (Zuhören, Verstehen, Satz bilden, Erzählen) mit Bewertung durch die
+  Begleitung — wichtige Punkte ankreuzen und vier Kriterien (Reihenfolge,
+  Grammatik, Aussprache, Zusammengehörigkeit) in je drei Stufen. Keine
+  Freischaltung und keine Tagesfolge: „Los geht's!“ wählt eine zufällige
+  Geschichte und darin einen von **vier Fragensätzen je Geschichte** (der
+  Satz der vorigen Runde wird vermieden); die Bewertung bleibt ungespeichert.
+- **Drei Welten mit je acht süßen Figuren** (animiert): Süße Hunde (Wuffi,
+  Bello, Flocki, Mopsi, Coco, Schnuffel, Struppi, Bella), Süße Hamster
+  (Knuspel, Wommel, Pip, Bommel, Nussi, Flauschi, Krummel, Zucker) und
+  Weihnachtswelt (Weihnachtsmann, Christkind, Rudolph, Elfe, Wichtel,
+  Schneemann, Griesgram, Lebkuchenmann). Welt-Auswahl in der Übersicht,
+  Begleitfigur in jeder Übung und Lob der Welt auf der Abschlusskarte. Die
+  Wahl bleibt gerätebezogen gespeichert (Feld `deutschWelt`, im Merge gewinnt
+  der eigene Stand; die entfernte Welt „Legami-Freunde“ fällt auf die
+  Hundewelt zurück).
+- Bewertung mit kurzer Einschätzung (Stärken, „Nächstes Mal drauf achten“).
+  Inhalte in `sprechtraining.js`.
+- **Vorlesefunktion** für alle Texte und Fragen mit eingebetteten Offline-
+  Stimmen **Thorsten** und **Ramona** (erzeugt mit Piper, siehe
+  „Deutsch-Sprechtraining“) sowie wahlweise der Windows-Systemstimme mit
+  Stimmenauswahl. Beim Vorlesen wird die Musik automatisch leiser; Wechsel
+  des Bildschirms stoppt die Sprachausgabe.
+- Neuer Einstellungen-Reiter **„Ton & Vorlesen“**: Stimmenwahl und getrennte
+  Lautstärkeregler für Vorlesen und Musik (gerätebezogen, im Merge bleibt der
+  eigene Stand). Standard-Musiklautstärke 30 % passend zur Regler-Stufe.
+- Spielstand um die Felder `deutschWelt`, `vorleseStimme`,
+  `vorleseSystemStimme`, `stimmeLautstaerke` und `musikLautstaerke` erweitert
+  (Speicherformat bleibt Version 3); `deutschWelt` wird im Merge wie die
+  Ton-Einstellungen behandelt (der eigene Stand gewinnt). Der Fortschritt des
+  Deutsch-Übens wird bewusst nicht gespeichert.
+- 25 aktualisierte Tests (`tests/sprechtraining.test.cjs`), Suitensumme 204.
 
 ### 1.0.6 — Version-Reiter und korrigierte Befunde
 

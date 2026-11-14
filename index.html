@@ -255,10 +255,16 @@
     <h1>Mathe üben <span class="fuer">für <span id="kopfName">Emma</span></span></h1>
     <p class="kopf-zeile" id="kopfZeile">3. Klasse &middot; Raum 100</p>
   </div>
-  <button class="knopf home-knopf" id="abbruchKnopf" type="button" aria-label="Startseite" title="Startseite">
-    <svg class="symbol" aria-hidden="true"><use id="homeHaus" href="#haus-bluey"/></svg>
-    <span>Startseite</span>
-  </button>
+  <div class="kopf-mitte">
+    <div class="bereich-schalter" role="group" aria-label="Bereich wählen">
+      <button class="bereich-knopf aktiv" id="matheUmschalter" type="button" aria-pressed="true">Mathe</button>
+      <button class="bereich-knopf" id="deutschUmschalter" type="button" aria-pressed="false">Deutsch</button>
+    </div>
+    <button class="knopf home-knopf" id="abbruchKnopf" type="button" aria-label="Startseite" title="Startseite">
+      <svg class="symbol" aria-hidden="true"><use id="homeHaus" href="#haus-bluey"/></svg>
+      <span>Startseite</span>
+    </button>
+  </div>
   <div class="kopf-knoepfe">
     <button class="kopf-knopf" id="musikKnopf" type="button" aria-label="Musik" aria-pressed="true" title="Musik an oder aus">
       <svg class="symbol" viewBox="0 0 24 24" aria-hidden="true">
@@ -352,6 +358,13 @@
     </div>
   </section>
 
+  <!-- --------------- Deutsch üben --------------- -->
+  <section class="bildschirm" id="sprechBildschirm" hidden>
+    <div class="maskottchen-reihe" id="sprechMaskottchenReihe"></div>
+    <h2 class="begruessung" id="sprechUeberschrift">Deutsch üben</h2>
+    <div id="sprechInhalt"></div>
+  </section>
+
   <!-- --------------- Fortschrittsbereich (Sterne / Statistik / Gutscheine / Spielstand) --------------- -->
   <section class="bildschirm" id="fortschrittBildschirm" hidden>
     <h2 class="begruessung">Einstellungen</h2>
@@ -359,6 +372,7 @@
     <div id="sterneInhalt" hidden></div>
     <div id="geschenkeInhalt" hidden></div>
     <div id="statistikInhalt" hidden></div>
+    <div id="tonInhalt" hidden></div>
     <div id="spielstandInhalt" hidden></div>
     <div id="versionInhalt" hidden></div>
     <input type="file" id="spielstandDatei" accept=".json,application/json" hidden>
@@ -414,6 +428,7 @@
 
 <script src="aufgaben-bereiche.js"></script>
 <script src="geschichten.js"></script>
+<script src="sprechtraining.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

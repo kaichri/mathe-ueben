@@ -283,10 +283,10 @@ test("pagehide and hiding the document flush pending input immediately", () => {
 test("the version tab shows build information", () => {
   const g=game();g.run("zeigeFortschritt('version')");
   const text=g.nodes.get("versionInhalt").textContent;
-  assert.match(text,/Version 1\.0\.6/);
+  assert.match(text,/Version 1\.1\.0/);
   assert.match(text,/Speicherformat: Version 3/);
   assert.match(text,/starter\.log/);
-  assert.equal(g.run("Object.keys(FORTSCHRITT_TABS).length"),5);
+  assert.equal(g.run("Object.keys(FORTSCHRITT_TABS).length"),6);
   g.run("zeigeFortschritt('sterne')");
   assert.equal(g.nodes.get("versionInhalt").hidden,true);
   assert.equal(g.nodes.get("sterneInhalt").hidden,false);
@@ -313,6 +313,19 @@ test("Doozie file is attempted and missing file falls back to Puppenhaus without
   g.audios[0].emit('error');await Promise.resolve();
   assert.equal(g.audios[1].src,'musik/puppenhaus.mp3');
   assert.equal(g.audios[0].paused,true);
+  assert.equal(g.audios.filter(a=>!a.paused).length,1);
+});
+
+test("Deutsch worlds play their own melody and Mathe switches back to blau", async () => {
+  const g=game({sound:'an',deutschWelt:'hamster'});await Promise.resolve();
+  assert.equal(g.audios[0].src,'musik/blau.mp3');
+  g.run("zeigeBildschirm('sprechBildschirm')");await Promise.resolve();
+  assert.equal(g.audios[1].src,'musik/hamster.mp3');
+  assert.equal(g.audios[0].paused,true);
+  g.run("speicher.daten().deutschWelt='weihnachten';speicher.speichere();musik.modusWechsel();");await Promise.resolve();
+  assert.equal(g.audios[2].src,'musik/weihnachten.mp3');
+  g.run("zeigeBildschirm('startBildschirm')");await Promise.resolve();
+  assert.equal(g.audios[3].src,'musik/blau.mp3');
   assert.equal(g.audios.filter(a=>!a.paused).length,1);
 });
 

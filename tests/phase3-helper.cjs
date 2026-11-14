@@ -17,8 +17,12 @@ function game(saved = {}, options = {}) {
   function node(type = "div") {
     const events = new Map();
     let content = "";
+    // `.type` bleibt der Tag-Name: Skripte setzen input.type (z.B. "range"),
+    // das darf die Tag-Erkennung in matches() nicht kaputt machen.
     const n = {
-      type, className: "", dataset: {}, style: {}, children: [], hidden: false, inert: false,
+      get type() { return type; },
+      set type(value) {},
+      className: "", dataset: {}, style: {}, children: [], hidden: false, inert: false,
       value: "", disabled: false, attributes: {}, tabIndex: type === 'button' || type === 'input' || type === 'a' ? 0 : -1,
       get textContent() { return content + this.children.map(c => c.textContent).join(""); },
       set textContent(value) { content = String(value); this.children = []; },
@@ -73,6 +77,7 @@ function game(saved = {}, options = {}) {
   let writes = 0;
   const document = {
     body: node("body"), createElement: node, createElementNS(ns, type) { return node(type); },
+    createDocumentFragment() { return node("#fragment"); },
     getElementById(id) {
       if (!nodes.has(id)) {
         const n = node(); n.id = id;
@@ -127,6 +132,7 @@ function game(saved = {}, options = {}) {
       removeItem(key) { speicher.delete(key); }
     },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
+    SPRECHTRAINING: require("../sprechtraining.js"),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
     location: { reload() { reloads += 1; } },
     Blob, URL: { createObjectURL(blob) { const id='blob:'+blobs.size; blobs.set(id,blob); return id; }, revokeObjectURL(id) { revoked.push(id); blobs.delete(id); } },

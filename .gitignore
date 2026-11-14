@@ -25,6 +25,12 @@ Desktop.ini
 tmp/
 temp/
 
+# Lokale Piper-Werkzeugkette zur Neuerzeugung der Vorlese-MP3s (große Modelle)
+.tmp-tts/
+
+# Rohbilder aus der Bild-Generierung (die fertigen Figuren liegen in bilder/)
+vibe_images/
+
 # Local configuration and credentials
 .env
 .env.*

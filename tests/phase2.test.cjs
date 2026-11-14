@@ -270,7 +270,7 @@ test("a click can start paused music before the initial autoplay request settles
   let reject;
   const g = game({ sound: "an" }, { audio: [() => new Promise((resolve, no) => { reject = no; }), "resolve"] });
   const audio = g.audios[0];
-  assert.equal(audio.volume, 0.32);
+  assert.equal(audio.volume, 0.3);
   audio.paused = true;
   g.click();
   await Promise.resolve();
