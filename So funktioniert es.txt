@@ -21,7 +21,7 @@ für Abschnitt (erst Addition, dann Subtraktion usw.):
    5 Aufgaben  Zahlenrätsel   (z. B. □ + 27 = 85)
    5 Aufgaben  Rechengeschichten (davon 2 mit Euro/Cent oder Uhr/Minuten)
 
-Niveau: 3. Klasse Volksschule, alles im Raum 100, keine negativen Zahlen.
+Niveau: 3. Klasse Volksschule, alles im Raum 1000, keine negativen Zahlen.
 
 Es gibt weit mehr Aufgaben- und Geschichtenvorlagen, als an einem Tag
 gebraucht werden, und das Programm merkt sich die letzten Geschichten:

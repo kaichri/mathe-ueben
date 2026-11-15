@@ -3,7 +3,7 @@
 Ein deutschsprachiges Mathe-Lernspiel für Kinder der **3. Klasse Volksschule**.
 Das Spiel übt die vier Grundrechenarten, Zahlenrätsel sowie Rechengeschichten
 mit Geld und Uhrzeiten. Die Rechenaufgaben bewegen sich grundsätzlich im
-Zahlenraum 100; Geldbeträge werden intern in Cent und Uhrzeiten in Minuten
+Zahlenraum 1000; Geldbeträge werden intern in Cent und Uhrzeiten in Minuten
 verarbeitet. Zusätzlich enthält es ein endlos wiederholbares
 **Deutsch-Sprechtraining** (Eltern-Kind-Modus) mit eingebetteter
 Vorlesefunktion.
@@ -533,6 +533,16 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 `main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
 
 ## Versionshistorie
+
+### 1.1.7 — Rechnen im Zahlenraum 1000
+
+- **Plus, minus, mal und Division rechnen jetzt im Zahlenraum 1000** (statt
+  100): dreistellige Summen mit Übertrag, Subtraktionen mit Borgen,
+  halbschriftliche Multiplikation (zweistellig × einstellig, z. B. 94 × 4),
+  Hunderterdivision (z. B. 800 ÷ 4) und Divisionen mit Rest bis ca. 900. Das
+  kleine Einmaleins bleibt als Grundlage erhalten. Die Zahlenrätsel folgen dem
+  neuen Zahlenraum.
+- Titelzeile: „3. Klasse · Raum 1000".
 
 ### 1.1.6 — Weihnachtsmix in zwei Teilen und Pause-Weiter-Knopf
 

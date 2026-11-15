@@ -87,7 +87,7 @@ test("seven consecutive sets: new tens tasks first, then only oldest necessary r
   let excluded = [];
   const seen = new Set();
   let oldest;
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 23; i++) {
     const round = api.erzeugeRunde({ ausschliessen: excluded });
     assert.equal(round.anzahl, 45);
     assert.equal(new Set(round.aufgaben.map(k => k.schluessel)).size, 45);
@@ -95,10 +95,11 @@ test("seven consecutive sets: new tens tasks first, then only oldest necessary r
     assert.equal(tens.length, 3);
     if (i === 0) oldest = tens.map(k => k.schluessel);
     const repeats = tens.filter(k => seen.has(k.schluessel));
-    assert.equal(repeats.length, i < 6 ? 0 : 3);
-    if (i === 6) assert.deepEqual(new Set(repeats.map(k => k.schluessel)), new Set(oldest));
+    // 22 Runden decken den ganzen Zehner-Pool (66 Schlüssel) ab.
+    assert.equal(repeats.length, i < 22 ? 0 : 3);
+    if (i === 22) assert.deepEqual(new Set(repeats.map(k => k.schluessel)), new Set(oldest));
     tens.forEach(k => seen.add(k.schluessel));
-    excluded = excluded.concat(round.aufgaben.map(k => k.schluessel)).slice(-300);
+    excluded = excluded.concat(round.aufgaben.map(k => k.schluessel)).slice(-3000);
   }
 });
 
@@ -114,9 +115,9 @@ test("daily-set integration generates twelve complete sets with growing history"
 test("fully excluded tens pool is relaxed without mutating caller history", () => {
   const { api } = generator();
   const history = [];
-  for (const tens of [10, 20, 30, 40, 50]) {
+  for (const tens of [20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400]) {
     for (const factor of [2, 3, 4]) {
-      if (tens * factor <= 100) {
+      if (tens * factor <= 1000) {
         history.push(`mul|${tens} × ${factor} =`, `mul|${factor} × ${tens} =`);
       }
     }

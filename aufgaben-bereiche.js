@@ -3,7 +3,7 @@
    Erzeugt die Rechenaufgaben für die 3. Klasse Volksschule.
 
    Regeln für alle Aufgaben:
-   - alle Zahlen und Ergebnisse im Raum 100
+   - alle Zahlen und Ergebnisse im Raum 1000
    - keine negativen Ergebnisse
    - Divisionen ohne Rest gehen wirklich ohne Rest auf
    - bei Divisionen mit Rest ist der Rest immer kleiner als der Teiler
@@ -99,9 +99,9 @@
   /* ---------------- Addition ---------------- */
 
   function additionUebertrag() {
-    var a = zufall(13, 88);
-    var b = zufall(13, 88);
-    if (a + b > 100) {
+    var a = zufall(113, 887);
+    var b = zufall(23, 287);
+    if (a + b > 1000) {
       return null;
     }
     if (a % 10 + b % 10 < 11) {
@@ -111,10 +111,10 @@
   }
 
   function additionDreiZahlen() {
-    var a = zufall(11, 44);
-    var b = zufall(11, 38);
-    var c = zufall(4, 17);
-    if (a + b + c > 100) {
+    var a = zufall(111, 446);
+    var b = zufall(111, 348);
+    var c = zufall(14, 97);
+    if (a + b + c > 1000) {
       return null;
     }
     if (a % 10 + b % 10 < 11 && b % 10 + c % 10 < 11) {
@@ -126,8 +126,8 @@
   /* ---------------- Subtraktion ---------------- */
 
   function subtraktionBorgen() {
-    var a = zufall(31, 98);
-    var b = zufall(13, 79);
+    var a = zufall(231, 987);
+    var b = zufall(23, 287);
     if (a - b < 3) {
       return null;
     }
@@ -139,18 +139,18 @@
 
   function subtraktionKette() {
     if (Math.random() < 0.5) {
-      var a = zufall(45, 99);
-      var b = zufall(13, 40);
-      var c = zufall(6, 25);
+      var a = zufall(445, 989);
+      var b = zufall(113, 250);
+      var c = zufall(16, 85);
       if (a - b - c < 3 || a % 10 >= b % 10) {
         return null;
       }
       return karte("sub", "subtraktion-kette", a + " \u2212 " + b + " \u2212 " + c + " =", [feld(a - b - c)]);
     }
-    var x = zufall(34, 88);
-    var y = zufall(15, 45);
-    var z = zufall(6, 20);
-    if (x - y < 2 || x - y + z > 100 || x % 10 >= y % 10) {
+    var x = zufall(334, 888);
+    var y = zufall(115, 245);
+    var z = zufall(16, 90);
+    if (x - y < 2 || x - y + z > 1000 || x % 10 >= y % 10) {
       return null;
     }
     return karte("sub", "subtraktion-kette", x + " \u2212 " + y + " + " + z + " =", [feld(x - y + z)]);
@@ -167,9 +167,9 @@
   }
 
   function multiplikationZehner() {
-    var zehner = waehle([10, 20, 30, 40, 50]);
+    var zehner = waehle([20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400]);
     var einstieg = zufall(2, 4);
-    if (zehner * einstieg > 100) {
+    if (zehner * einstieg > 1000) {
       return null;
     }
     var paar = Math.random() < 0.5 ? [zehner, einstieg] : [einstieg, zehner];
@@ -179,9 +179,9 @@
   }
 
   function multiplikationHalbschriftlich() {
-    var zweistellig = zufall(12, 29);
-    var einstieg = zufall(3, 4);
-    if (zweistellig * einstieg > 100 || zweistellig % 10 === 0) {
+    var zweistellig = zufall(13, 97);
+    var einstieg = zufall(3, 9);
+    if (zweistellig % 10 === 0) {
       return null;
     }
     var k = karte("mul", "halbschriftlich", zweistellig + " \u00D7 " + einstieg + " =", [feld(zweistellig * einstieg)]);
@@ -216,9 +216,9 @@
   }
 
   function divisionGlatteZahlen() {
-    var dividend = waehle([20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    var dividend = waehle([20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500, 600, 700, 800, 900]);
     var moeglich = teiler(dividend, 2, 10).filter(function (d) {
-      return dividend / d >= 3 && dividend / d <= 50;
+      return dividend / d >= 3 && dividend / d <= 200;
     });
     if (moeglich.length === 0) {
       return null;
@@ -229,8 +229,8 @@
 
   function divisionZweistelligOhneRest() {
     var d = zufall(3, 9);
-    var q = zufall(12, 29);
-    if (d * q > 100 || q % 10 === 0) {
+    var q = zufall(12, 99);
+    if (d * q > 1000 || q % 10 === 0) {
       return null;
     }
     return karte("div", "division-zweistellig", d * q + " \u00F7 " + d + " =", [feld(q)]);
@@ -238,10 +238,10 @@
 
   function divisionMitRestBauen() {
     var d = zufall(3, 9);
-    var q = zufall(4, 11);
+    var q = zufall(12, 99);
     var r = zufall(1, d - 1);
     var dividend = d * q + r;
-    if (dividend > 100) {
+    if (dividend > 1000) {
       return null;
     }
     return karte("div", "division-rest", dividend + " \u00F7 " + d + " =", [
@@ -253,9 +253,9 @@
   /* ---------------- Zahlenrätsel mit □ ---------------- */
 
   function raetselAddition() {
-    var loesung = zufall(13, 74);
-    var b = zufall(11, 26);
-    if (loesung + b > 100) {
+    var loesung = zufall(113, 774);
+    var b = zufall(113, 226);
+    if (loesung + b > 1000) {
       return null;
     }
     var text = Math.random() < 0.5
@@ -265,10 +265,10 @@
   }
 
   function raetselSubtraktion() {
-    var a = zufall(12, 60);
-    var b = zufall(11, 38);
+    var a = zufall(112, 760);
+    var b = zufall(113, 240);
     var gesamt = a + b;
-    if (gesamt > 100) {
+    if (gesamt > 1000) {
       return null;
     }
     if (Math.random() < 0.5) {
@@ -282,12 +282,12 @@
   }
 
   function raetselMultiplikation() {
-    var a = zufall(3, 9);
-    var b = zufall(3, 10);
-    var produkt = a * b;
-    if (produkt > 100) {
+    var a = zufall(13, 97);
+    var b = zufall(3, 9);
+    if (a % 10 === 0) {
       return null;
     }
+    var produkt = a * b;
     if (Math.random() < 0.5) {
       // □ × a = produkt   ->   □ = b
       return karte("raetsel", "luecke-multiplikation", LUECKE + " \u00D7 " + a + " = " + produkt,
@@ -299,12 +299,12 @@
   }
 
   function raetselDivision() {
-    var a = zufall(3, 9);
-    var b = zufall(3, 10);
-    var produkt = a * b;
-    if (produkt > 100) {
+    var a = zufall(13, 97);
+    var b = zufall(3, 9);
+    if (a % 10 === 0) {
       return null;
     }
+    var produkt = a * b;
     if (Math.random() < 0.5) {
       // produkt ÷ □ = b   ->   □ = a
       return karte("raetsel", "luecke-division", produkt + " \u00F7 " + LUECKE + " = " + b,

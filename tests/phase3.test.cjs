@@ -283,7 +283,7 @@ test("pagehide and hiding the document flush pending input immediately", () => {
 test("the version tab shows build information", () => {
   const g=game();g.run("zeigeFortschritt('version')");
   const text=g.nodes.get("versionInhalt").textContent;
-  assert.match(text,/Version 1\.1\.6/);
+  assert.match(text,/Version 1\.1\.7/);
   assert.match(text,/Speicherformat: Version 3/);
   assert.match(text,/starter\.log/);
   assert.equal(g.run("Object.keys(FORTSCHRITT_TABS).length"),6);

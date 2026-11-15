@@ -59,7 +59,7 @@ function pruefeRechenkarte(karte, rundeNr) {
     assert.equal(Number.isInteger(f.korrekt), true, "Nicht ganzzahlige Lösung: " + wo);
     assert(f.korrekt >= 0, "Negative Lösung: " + wo);
     if (f.typ === "zahl") {
-      assert(f.korrekt <= 100, "Lösung über 100: " + wo + " -> " + f.korrekt);
+      assert(f.korrekt <= 1000, "Lösung über 1000: " + wo + " -> " + f.korrekt);
       assert.equal(f.anzeige, String(f.korrekt), "Anzeige weicht ab: " + wo);
     }
   }
@@ -139,13 +139,13 @@ test("AUDIT Rechenaufgaben: Sollverteilung, Eindeutigkeit und keine Wiederholung
   }
 });
 
-test("AUDIT Rechenaufgaben: keine negativen Zwischen- oder Endwerte, Zahlenraum 100", () => {
+test("AUDIT Rechenaufgaben: keine negativen Zwischen- oder Endwerte, Zahlenraum 1000", () => {
   for (let i = 0; i < 200; i++) {
     for (const karte of aufgaben.erzeugeRunde().aufgaben) {
       const alle = zahlen(karte.darstellung);
-      for (const n of alle) assert(n <= 100, "Zahl über 100: " + karte.darstellung);
+      for (const n of alle) assert(n <= 1000, "Zahl über 1000: " + karte.darstellung);
       for (const f of karte.felder) {
-        if (f.darstellung) for (const n of zahlen(f.darstellung)) assert(n <= 100);
+        if (f.darstellung) for (const n of zahlen(f.darstellung)) assert(n <= 1000);
       }
       // Kettenaufgaben dürfen unterwegs nicht negativ werden.
       const s = karte.darstellung.replace(/\u2212/g, "-");
