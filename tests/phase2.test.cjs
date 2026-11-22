@@ -346,7 +346,7 @@ test("invalid money cannot be scored as a correct answer", () => {
 test("Vienna midnight is shared by daily quiz, bonus, statistics and calendar", () => {
   const g = game({}, {now: "2026-10-31T22:59:00Z"});
   assert.equal(g.run("heutigesDatum()"), "2026-10-31");
-  g.run("zeigeRunde(neuesTagesSet()); holBonusTag().verteilt = 2");
+  g.run("zeigeRunde(neuesTagesSet()); speicher.daten().tagesSet.fertig = true; holBonusTag().verteilt = 2");
   g.time("2026-10-31T23:01:00Z");
   assert.equal(g.run("heutigesDatum()"), "2026-11-01");
   assert.equal(g.run("holBonusTag().verteilt"), 0);

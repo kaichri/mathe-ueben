@@ -201,6 +201,34 @@ test("MERGE: unterschiedliche Tage – der neuere Tag gewinnt", () => {
   assert.equal(ergebnis.daten.tagesSet.datum, "2026-10-31");
 });
 
+test("MERGE: mehrtägiges Quiz am zweiten PC weitergespielt – Fortschritt und Abschluss gewinnen", () => {
+  const basis = Object.assign(tagesSet("2026-10-30", false, { "aufgabe-1": ["7"] }),
+    { id: "quiz-1", gestartetAm: 1000, antwortenZeit: 2000 });
+  const pc2Geaendert = Object.assign(tagesSet("2026-10-30", false, { "aufgabe-1": ["8"] }),
+    { id: "quiz-1", gestartetAm: 1000, antwortenZeit: 5000 });
+  const g1 = game(spielstand({ tagesSet: basis }), { now: JETZT });
+  const res1 = zusammenfuehren(g1, sicherung(spielstand({ tagesSet: pc2Geaendert })));
+  assert.deepEqual(res1.daten.tagesSet.antworten["aufgabe-1"], ["8"],
+    "Bei gleicher Antwortzahl gewinnt die neuere Eingabe (antwortenZeit)");
+
+  const pc2Fertig = Object.assign(tagesSet("2026-10-30", true, { "aufgabe-1": ["7"] }),
+    { id: "quiz-1", gestartetAm: 1000, antwortenZeit: 6000 });
+  const g2 = game(spielstand({ tagesSet: basis }), { now: JETZT });
+  const res2 = zusammenfuehren(g2, sicherung(spielstand({ tagesSet: pc2Fertig })));
+  assert.equal(res2.daten.tagesSet.fertig, true);
+});
+
+test("MERGE: neues Quiz am selben Tag nach Abschluss gewinnt vor älterem fertigen Quiz", () => {
+  const altFertig = Object.assign(tagesSet("2026-10-31", true, { "aufgabe-1": ["7"] }),
+    { id: "quiz-alt", gestartetAm: 1000 });
+  const neuOffen = Object.assign(tagesSet("2026-10-31", false, {}),
+    { id: "quiz-neu", gestartetAm: 5000 });
+  const g = game(spielstand({ tagesSet: altFertig }), { now: JETZT });
+  const ergebnis = zusammenfuehren(g, sicherung(spielstand({ tagesSet: neuOffen })));
+  assert.equal(ergebnis.daten.tagesSet.id, "quiz-neu");
+  assert.equal(ergebnis.daten.tagesSet.fertig, false);
+});
+
 /* -------------------------------------------------------- Bereiche und Bonus */
 
 test("MERGE: Bereichssummen zählen gemeinsame Runden nur einmal", () => {

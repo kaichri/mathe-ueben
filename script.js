@@ -11,8 +11,8 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.7";
-const VERSION_STAND = "14. November 2026";
+const APP_VERSION = "1.1.8";
+const VERSION_STAND = "22. November 2026";
 
 const EINSTELLUNGEN = {
   divisionMitRestAktiv: true, // true = 4 Divisionen mit Rest, false = ohne Rest
@@ -328,6 +328,16 @@ const speicher = (function () {
           }
           set.belohnt = Array.isArray(set.belohnt)
             ? [...new Set(set.belohnt.filter(id => kennungen.has(id)))] : [];
+        } else {
+          if (set.id !== undefined && (typeof set.id !== "string" || set.id.length === 0)) {
+            delete set.id;
+          }
+          if (typeof set.gestartetAm !== "number" || !Number.isFinite(set.gestartetAm)) {
+            delete set.gestartetAm;
+          }
+          if (typeof set.antwortenZeit !== "number" || !Number.isFinite(set.antwortenZeit)) {
+            delete set.antwortenZeit;
+          }
         }
         if (!gueltigeUebezeiten(set.uebezeiten)) { delete set.uebezeiten; }
         if (!objekt(set.antworten)) { if (set.antworten !== undefined) { problem(); } set.antworten = {}; }
@@ -694,11 +704,28 @@ function verschmelzeSpielstande(lokal, fremd) {
   function waehleTagesSet(a, b) {
     if (!a) { return b || null; }
     if (!b) { return a; }
-    if (a.datum !== b.datum) { return String(a.datum) > String(b.datum) ? a : b; }
-    // Gleicher Tag: die abgeschlossene Runde gewinnt, damit nichts doppelt bewertet wird.
-    if (!!a.fertig !== !!b.fertig) { return a.fertig ? a : b; }
     const antworten = set => Object.keys((set && set.antworten) || {}).length;
-    return antworten(b) > antworten(a) ? b : a;
+    const gleicheRunde = (a.id && b.id) ? (a.id === b.id) : (a.datum === b.datum);
+    if (gleicheRunde) {
+      // Selbes Quiz: eine abgeschlossene Runde gewinnt, damit nichts doppelt bewertet wird.
+      if (!!a.fertig !== !!b.fertig) { return a.fertig ? a : b; }
+      const anzA = antworten(a);
+      const anzB = antworten(b);
+      if (anzA !== anzB) { return anzB > anzA ? b : a; }
+      if ((a.antwortenZeit || 0) !== (b.antwortenZeit || 0)) {
+        return (b.antwortenZeit || 0) > (a.antwortenZeit || 0) ? b : a;
+      }
+      return a;
+    }
+    // Verschiedene Quizze: das später gestartete Quiz gewinnt (damit ein
+    // abgeschlossenes älteres Quiz kein danach gestartetes neues Quiz verdrängt).
+    const startA = typeof a.gestartetAm === "number" ? a.gestartetAm : (Date.parse(a.datum + "T00:00:00Z") || 0);
+    const startB = typeof b.gestartetAm === "number" ? b.gestartetAm : (Date.parse(b.datum + "T00:00:00Z") || 0);
+    if (startA !== startB) { return startB > startA ? b : a; }
+    if (a.datum !== b.datum) { return String(a.datum) > String(b.datum) ? a : b; }
+    if (!!a.fertig !== !!b.fertig) { return a.fertig ? a : b; }
+    if (antworten(a) !== antworten(b)) { return antworten(b) > antworten(a) ? b : a; }
+    return String(b.id || "") > String(a.id || "") ? b : a;
   }
 
   function waehleBonusSet(a, b) {
@@ -766,6 +793,12 @@ function verschmelzeSpielstande(lokal, fremd) {
     bonusTag = A.bonusTag || B.bonusTag || null;
   }
 
+  const stufenNeu = [];
+  const vorherMax = Math.max(A.bonusGesamt || 0, B.bonusGesamt || 0);
+  for (let stufe = naechsteBonusStufe(vorherMax); stufe <= bonusGesamt; stufe += BONUS_STUFEN_SCHRITT) {
+    stufenNeu.push(stufe);
+  }
+
   return {
     version: 3,
     modus: A.modus || B.modus || "bluey",
@@ -780,7 +813,8 @@ function verschmelzeSpielstande(lokal, fremd) {
     bonusSet: waehleBonusSet(A.bonusSet, B.bonusSet),
     vortagSchluessel: vereinigeAeltesteZuerst(B.vortagSchluessel, A.vortagSchluessel, 300),
     bonusGesamt: bonusGesamt,
-    bonusStufenOffen: offeneStufenOhneGutschein(liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen)), geschenke),
+    bonusStufenOffen: offeneStufenOhneGutschein(
+      liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen), stufenNeu), geschenke),
     geschenke: geschenke,
     bereichPunkte: bereichPunkte,
     sound: A.sound !== undefined ? A.sound : (B.sound !== undefined ? B.sound : null),
@@ -907,6 +941,7 @@ const sync = (function () {
   let status = { text: "Nicht eingerichtet.", art: "info" };
   let laeuft = false;
   let timer = null;
+  let timerSofort = false;
   let zuletztGepusht = null;
   let geladen = false;
 
@@ -937,23 +972,24 @@ const sync = (function () {
 
   function speichere(neu) {
     lade();
-    einstellungen = Object.assign({}, einstellungen, neu || {});
+    const pruefen = Object.assign({}, einstellungen, neu || {});
     /* Repository muss "besitzer/name" sein, Dateiname ein relativer Pfad. */
-    if (!/^[\w.-]+\/[\w.-]+$/.test(String(einstellungen.repo || ""))) {
+    if (!/^[\w.-]+\/[\w.-]+$/.test(String(pruefen.repo || ""))) {
       setzeStatus("Bitte das Repository als „besitzer/name“ eintragen.", "fehler");
       return false;
     }
-    const datei = String(einstellungen.datei || "");
+    const datei = String(pruefen.datei || "");
     if (!datei || datei.indexOf("..") >= 0 || datei.indexOf("//") >= 0 || datei[0] === "/") {
       setzeStatus("Bitte einen gültigen Dateinamen angeben (z. B. spielstand.json).", "fehler");
       return false;
     }
     try {
-      window.localStorage.setItem(SYNC_SCHLUESSEL, JSON.stringify(einstellungen));
+      window.localStorage.setItem(SYNC_SCHLUESSEL, JSON.stringify(pruefen));
     } catch (fehler) {
       setzeStatus("Die Zugangsdaten konnten nicht gespeichert werden.", "fehler");
       return false;
     }
+    einstellungen = pruefen;
     zuletztGepusht = null;
     return true;
   }
@@ -1069,14 +1105,14 @@ const sync = (function () {
     if (laeuft) { return { ok: false, laeuft: true }; }
     laeuft = true;
     try {
-      const lokal = JSON.stringify(speicher.daten());
       if (!opts.erzwingen && zuletztGepusht === stabilStringify(speicher.daten())) {
         return { ok: true, unveraendert: true };
       }
       let letzterGrund = "";
       for (let versuch = 0; versuch < 3; versuch++) {
         const stand = await holeStand();
-        let zuSchreiben = lokal;
+        const lokalStand = stabilStringify(speicher.daten());
+        let zuSchreiben = JSON.stringify(speicher.daten());
         if (stand.vorhanden && stand.text) {
           const ergebnis = speicher.zusammenfuehren(stand.text);
           if (!ergebnis.ok) {
@@ -1088,7 +1124,7 @@ const sync = (function () {
         }
         const antwort = await schreibeStand(zuSchreiben, stand.sha);
         if (antwort.konflikt) { letzterGrund = "gleichzeitige Änderung"; continue; }
-        zuletztGepusht = stabilStringify(speicher.daten());
+        zuletztGepusht = lokalStand;
         setzeStatus("Gespeichert (" + new Date().toLocaleTimeString("de-DE",
           { timeZone: "Europe/Vienna" }) + " Uhr).", "ok");
         return { ok: true };
@@ -1123,10 +1159,19 @@ const sync = (function () {
 
   function planeSchieben(sofort) {
     if (!istKonfiguriert()) { return; }
-    if (timer) { return; }
+    if (timer) {
+      if (sofort && !timerSofort) {
+        window.clearTimeout(timer);
+        timer = null;
+      } else {
+        return;
+      }
+    }
+    timerSofort = Boolean(sofort);
     const wartezeit = sofort ? 0 : EINSTELLUNGEN.syncVerzoegerungMs;
     timer = window.setTimeout(function () {
       timer = null;
+      timerSofort = false;
       schieben().catch(function (fehler) {
         setzeStatus(fehler.message || String(fehler), "fehler");
       });
@@ -1159,7 +1204,7 @@ const sync = (function () {
     einstellungen = Object.assign({}, SYNC_VORGABEN);
     geladen = true;
     zuletztGepusht = null;
-    if (timer) { window.clearTimeout(timer); timer = null; }
+    if (timer) { window.clearTimeout(timer); timer = null; timerSofort = false; }
     setzeStatus("Synchronisierung entfernt.", "info");
   }
 
@@ -1256,6 +1301,14 @@ function aktualisiereBereichsSchalter() {
     knopf.classList.toggle("aktiv", aktiv);
     knopf.setAttribute("aria-pressed", String(aktiv));
   });
+  const titel = document.getElementById("kopfTitel");
+  if (titel) { titel.textContent = bereichAktuell === "deutsch" ? "Deutsch üben" : "Mathe üben"; }
+  const zeile = document.getElementById("kopfZeile");
+  if (zeile) {
+    zeile.textContent = bereichAktuell === "deutsch"
+      ? "3. Klasse \u00B7 Sprechtraining"
+      : "3. Klasse \u00B7 Raum 1000";
+  }
 }
 
 function zeigeBildschirm(id) {
@@ -1304,10 +1357,10 @@ function geldWertAus(eingabeKnoten) {
 
 function parseZeit(roh) {
   const text = String(roh || "").trim().toLowerCase().replace(/\s+/g, " ");
-  let treffer = text.match(/^(\d{1,2})\s*(?:uhr|u|:|\.|,)\s*(\d{1,2})$/);
+  let treffer = text.match(/^(\d{1,2})\s*(?:(:|\.|,)\s*(\d{1,2})(?:\s*(?:uhr|u))?|(?:uhr|u)\s*(\d{1,2}))$/);
   if (treffer) {
     const stunde = Number(treffer[1]);
-    const minute = Number(treffer[2]);
+    const minute = Number(treffer[3] !== undefined ? treffer[3] : treffer[4]);
     if (stunde <= 23 && minute <= 59) {
       return { stunde: stunde, minute: minute };
     }
@@ -1431,17 +1484,23 @@ const DOOZIE_GESCHICHTENFIGUREN = new Map([
   ["pixiepfötchen", "pixiepfoetchen"], ["pixiepup", "pixiepfoetchen"],
   ["spielpfötchen", "spielpfoetchen"], ["gamepup", "spielpfoetchen"],
   ["swenny", "swenny"], ["swaggy", "swenny"],
-  ["sahnepfötchen", "sahnepfoetchen"], ["creampup", "sahnepfoetchen"]
+  ["sahnepfötchen", "sahnepfoetchen"], ["creampup", "sahnepfoetchen"],
+  ["bastelpfötchen", "bastelpfoetchen"]
 ]);
 
 function geschichtenFigur(karte) {
-  const woerter = karte.text.toLowerCase().split(/[^\p{L}]+/u);
+  const text = typeof karte.text === "string" ? karte.text.toLowerCase() : "";
+  const woerter = text.split(/[^\p{L}]+/u);
   if (modus === "doozie") {
     for (const wort of woerter) {
       if (DOOZIE_GESCHICHTENFIGUREN.has(wort)) { return DOOZIE_GESCHICHTENFIGUREN.get(wort); }
     }
   }
-  return mascottchenAuswahl().find(figur => woerter.includes(FIGURENBILDER[figur])) || themenSymbol();
+  return mascottchenAuswahl(true).find(function (figur) {
+    const name = MASKOTTCHEN_NAMEN[figur];
+    if (name && text.includes(name.toLowerCase())) { return true; }
+    return woerter.includes(FIGURENBILDER[figur]);
+  }) || themenSymbol();
 }
 
 function figurBild(figur, klassen) {
@@ -1713,6 +1772,8 @@ function neuesTagesSet() {
   // Erst nach vollständiger Erzeugung den bisherigen Spielstand ersetzen.
   daten.vortagSchluessel = ausschluss;
   daten.tagesSet = {
+    id: new Date().toISOString() + "-" + Math.random().toString(36).slice(2),
+    gestartetAm: Date.now(),
     datum: heutigesDatum(),
     welt: modus,
     fertig: false,
@@ -1725,21 +1786,13 @@ function neuesTagesSet() {
   return rundeAusSet(daten.tagesSet);
 }
 
-/* Heute schon ein offenes Set? Dann wird es geladen – mit allen Antworten.
-   Sonst (neuer Tag oder beendeter Versuch) gibt es ein frisches Set. */
+/* Ein noch offenes Quiz wird – auch an Folgetagen – mit allen Antworten
+   fortgesetzt. Erst nach Abschluss (oder wenn keines offen ist) entsteht ein
+   frisches Set. */
 function starteTagesRunde() {
   const daten = speicher.daten();
-  const heute = heutigesDatum();
-  if (daten.tagesSet && daten.tagesSet.datum !== heute) {
-    // Das Set von gestern braucht niemand mehr – nur seine Schlüssel nicht nochmal.
-    daten.vortagSchluessel = (daten.vortagSchluessel || [])
-      .concat(schluesselDerSetRunde(daten.tagesSet.runde)).slice(-300);
-    daten.tagesSet = null;
-    speicher.speichere();
-  }
   const set = daten.tagesSet;
-  if (set && set.datum === heute && !set.fertig &&
-      set.runde && Array.isArray(set.runde.bereiche)) {
+  if (set && !set.fertig && set.runde && Array.isArray(set.runde.bereiche)) {
     return rundeAusSet(set);
   }
   return neuesTagesSet();
@@ -1779,7 +1832,7 @@ function sichereTagesAntworten(aufgeschoben) {
       antworten[karte.ident] = werte;
     }
   });
-  if (runde.bonusSet && geaendert) { set.antwortenZeit = Date.now(); }
+  if (geaendert) { set.antwortenZeit = Date.now(); }
   set.abschnitt = abschnittZeiger;
   speicher.speichere(aufgeschoben === true);
   // Beim Tippen nur geplant (höchstens einmal pro Minute), nicht sofort.
@@ -1877,13 +1930,25 @@ function zeigeRunde(neueRunde) {
     runde.karten.forEach(function (karte) {
       const werte = set.antworten[karte.ident];
       const teile = kartenEingaben.get(karte.ident);
+      const belohnt = Boolean(runde.bonusAuswertung?.belohnt.has(karte.ident));
       if (Array.isArray(werte) && Array.isArray(teile)) {
         werte.forEach(function (wert, stelle) {
           if (teile[stelle]) {
             teile[stelle].value = wert;
-            if (runde.bonusAuswertung?.belohnt.has(karte.ident)) { teile[stelle].disabled = true; }
+            if (belohnt) { teile[stelle].disabled = true; }
           }
         });
+      }
+      if (belohnt) {
+        const kasten = document.querySelector('[data-karten-id="' + karte.ident + '"]');
+        if (kasten) {
+          kasten.classList.add("richtig", "bonus-punkt");
+          const kontrolle = kasten.querySelector(".kontrolle");
+          if (kontrolle) {
+            kontrolle.textContent = "";
+            kontrolle.appendChild(element("span", "markierung", "🌟 Toll geknobelt!"));
+          }
+        }
       }
     });
     const gemerkt = Number(set.abschnitt) || 0;
@@ -1942,6 +2007,7 @@ function aktualisiereAbschnittsNav() {
       BEREICH_KURZ[bereich.bereich] || bereich.titel);
     punkt.type = "button";
     punkt.title = bereich.titel;
+    if (nr === abschnittZeiger) { punkt.setAttribute("aria-current", "step"); }
     punkt.addEventListener("click", function () {
       zeigeAbschnitt(nr);
     });
@@ -1974,7 +2040,11 @@ function aktualisiereKnopfLeiste() {
     neu.hidden = true;
   } else {
     zurueck.hidden = true;
-    pruefen.hidden = false;
+    const bonusFertig = Boolean(runde && runde.bereichsArt === "bonus" &&
+      ((runde.bonusSet && runde.bonusSet.fertig) ||
+        (runde.bonusAuswertung && runde.bonusAuswertung.belohnt.size >= runde.karten.length) ||
+        bonusPlaetzeHeute() <= 0));
+    pruefen.hidden = bonusFertig;
     pruefen.textContent = "Prüfen";
     // Ohne offene Bonussternen bringt eine weitere Bonusrunde keinen Stern.
     neu.hidden = bonusPlaetzeHeute() <= 0;
@@ -1991,7 +2061,8 @@ function baueBereich(bereich) {
       : themenSymbol()
   ));
   kopf.appendChild(element("h2", null, bereich.titel));
-  kopf.appendChild(element("span", "zaehler", bereich.aufgaben.length + " Aufgaben"));
+  kopf.appendChild(element("span", "zaehler",
+    bereich.aufgaben.length + (bereich.aufgaben.length === 1 ? " Aufgabe" : " Aufgaben")));
   abschnitt.appendChild(kopf);
   abschnitt.appendChild(element("p", "bereich-untertitel", bereich.untertitel));
 
@@ -2199,7 +2270,9 @@ function baueAufgabe(karte) {
 
 /* Der Text der Rechnung; lange Ausdrücke bekommen eine kleinere Schrift. */
 function ausdruck(text) {
-  return element("span", "ausdruck" + (text.length > 11 ? " lang" : ""), text);
+  const klasse = text.length > 13 ? "ausdruck sehr-lang"
+    : text.length > 9 ? "ausdruck lang" : "ausdruck";
+  return element("span", klasse, text);
 }
 
 function rechnungsReihe(kinder) {
@@ -2425,8 +2498,8 @@ function pruefeRunde() {
   aktualisiereKnopfLeiste();
   aktualisiereFortschritt();
 
-  /* Nur eine reguläre Tagesrunde öffnet die Bonuswelt ab 90 %.
-     Eine bereits offene Welt bleibt für den Tag offen. */
+  /* Nur eine reguläre Quizrunde öffnet die Bonuswelt ab 90 % – auch wenn sie
+     an einem früheren Tag begonnen wurde (Abschlusstag zählt). */
   const welt = runde.welt || modus;
   const offenVorher = weltHeuteFreigeschaltet(welt);
   const ebenFreigeschaltet = (istTagesRunde() && richtig / gesamt >= EINSTELLUNGEN.bonusAbAnteil)
@@ -2541,9 +2614,9 @@ function pruefeBonusRunde() {
     auswertung.statistik.bonusRichtig += vergeben;
     auswertung.statistik.uebezeiten = { ...runde.uebezeiten };
     speicher.speichere();
-    sync.nachAenderung(false);
+    sync.nachAenderung(vergeben > 0);
   }
-  if (bonusRichtig === runde.karten.length) {
+  if (bonusRichtig === runde.karten.length || bonusPlaetzeHeute() === 0) {
     runde.zeitBeendet = true;
     pausiereUebezeit();
   }
@@ -2563,6 +2636,9 @@ function pruefeBonusRunde() {
       sternenRegen(vergeben === offenVorher);
     }
     musik.fanfare(5);
+  } else if (bonusRichtig === runde.karten.length) {
+    kasten.appendChild(element("p", "ergebnis-zeile",
+      "🌟 Alle Knobelaufgaben dieser Runde sind schon gelöst!"));
   } else {
     kasten.appendChild(element("p", "ergebnis-zeile",
       "Knobel weiter! Beim nächsten Versuch klappt es bestimmt."));
@@ -2618,7 +2694,15 @@ function fehlerZeilen(karte) {
     return [karte.darstellung.replace("=", "").trim() + " = " +
       karte.felder[0].anzeige + " Rest " + karte.felder[1].anzeige];
   }
-  return karte.felder.map(function (feld) {
+  if (karte.layout === "luecke" && karte.felder.length === 1) {
+    const gleichung = (karte.darstellung || "").trim();
+    const loesung = loesungsText(karte, karte.felder[0]);
+    return [gleichung ? gleichung + "  (" + loesung + ")" : loesung];
+  }
+  return karte.felder.map(function (feld, stelle) {
+    if (stelle === 0 && !feld.darstellung && karte.darstellung) {
+      return karte.darstellung.replace("=", "").trim() + " = " + feld.anzeige;
+    }
     return loesungsText(karte, feld);
   });
 }
@@ -2646,10 +2730,9 @@ function speichernRunde(richtig, gesamt, bereichErgebnis, bonusRichtig, istBonus
   const zeitTeile = wienerDatumTeile(jetzt);
   daten.runden.push({
     zeit: jetzt.toISOString(),
-    /* Die Runde zählt für den Tag, zu dem sie gehört (Tagesrunde/Bonusrunde),
-       nicht für den Tag, an dem sie zufällig beendet wird. */
-    datum: (runde && runde.tagesSet && runde.tagesSet.datum) || (runde && runde.bonusDatum) ||
-      lokalesDatum(jetzt),
+    /* Quizrunden zählen für den Abschlusstag (auch bei mehrtägigen Runden);
+       Bonusrunden bleiben an ihren Bonustag gebunden. */
+    datum: (istBonus && runde && runde.bonusDatum) || lokalesDatum(jetzt),
     uhrzeit: zeitTeile.hour + ":" + zeitTeile.minute,
     richtig: richtig,
     gesamt: gesamt,
@@ -3000,6 +3083,7 @@ function zeigeFortschritt(tab) {
         FORTSCHRITT_TABS[name]);
       knopf.type = "button";
       knopf.dataset.reiter = name;
+      knopf.setAttribute("aria-pressed", String(name === aktuellerTab));
       knopf.addEventListener("click", function () {
         zeigeFortschritt(name);
       });
@@ -3082,6 +3166,7 @@ function zeigeTonInhalt() {
     const knopf = element("button", "stufen-knopf ton-stimme" + (aktuell === wahl[0] ? " aktiv" : ""),
       wahl[1] + "\u00A0· " + wahl[2]);
     knopf.type = "button";
+    knopf.setAttribute("aria-pressed", String(aktuell === wahl[0]));
     knopf.addEventListener("click", function () {
       sprechAudio.stoppe();
       speicher.daten().vorleseStimme = wahl[0];
@@ -3103,6 +3188,16 @@ function zeigeTonInhalt() {
       const leer = document.createElement("option");
       leer.textContent = "Keine deutschen Systemstimmen gefunden";
       liste.appendChild(leer);
+      if (window.speechSynthesis && typeof window.speechSynthesis.addEventListener === "function") {
+        window.speechSynthesis.addEventListener("voiceschanged", function aktualisiereStimmen() {
+          if (typeof window.speechSynthesis.removeEventListener === "function") {
+            window.speechSynthesis.removeEventListener("voiceschanged", aktualisiereStimmen);
+          }
+          if (!inhalt.hidden && speicher.daten().vorleseStimme === "system") {
+            zeigeTonInhalt();
+          }
+        });
+      }
     } else {
       const gewuenscht = speicher.daten().vorleseSystemStimme;
       stimmen.forEach(function (s) {
@@ -3125,7 +3220,6 @@ function zeigeTonInhalt() {
   const probe = element("button", "knopf schlicht", "🔊 Stimmprobe hören");
   probe.type = "button";
   let probeStimme = null;
-  let probeLaut = null;
   function probeAuffrischen() {
     const laeuft = sprechAudio.aktuell() === "tag01-text" && !sprechAudio.pausiert();
     const wartet = sprechAudio.aktuell() === "tag01-text" && sprechAudio.pausiert();
@@ -3135,13 +3229,11 @@ function zeigeTonInhalt() {
   probe.addEventListener("click", function () {
     const e = window.SPRECHTRAINING && window.SPRECHTRAINING.EINHEITEN[0];
     if (!e) { return; }
-    const gleich = probeStimme === (speicher.daten().vorleseStimme || "thorsten") &&
-      probeLaut === sprechAudio.lautstaerke();
+    const gleich = probeStimme === (speicher.daten().vorleseStimme || "thorsten");
     if (sprechAudio.aktuell() === "tag01-text" && gleich) {
       if (sprechAudio.pausiert()) { sprechAudio.weiter(); } else { sprechAudio.pausiere(); }
     } else {
       probeStimme = speicher.daten().vorleseStimme || "thorsten";
-      probeLaut = sprechAudio.lautstaerke();
       sprechAudio.spiele("tag01-text", e.text);
     }
   });
@@ -3160,9 +3252,12 @@ function zeigeTonInhalt() {
     const wert = speicher.daten()[r.name];
     const anteil = typeof wert === "number" && Number.isFinite(wert) ? wert : r.falle;
     const zeile = element("div", "ton-zeile");
+    const reglerId = "tonRegler-" + r.name;
     const titel = element("label", null, r.titel);
+    titel.setAttribute("for", reglerId);
     zeile.appendChild(titel);
     const slider = document.createElement("input");
+    slider.id = reglerId;
     slider.type = "range";
     slider.min = "0";
     slider.max = "100";
@@ -3177,6 +3272,7 @@ function zeigeTonInhalt() {
       speicher.speichere();
       zahlAnzeige.textContent = slider.value + " %";
       if (r.name === "musikLautstaerke") { musik.setzeLautstaerke(neu); }
+      else if (r.name === "stimmeLautstaerke") { sprechAudio.setzeLautstaerke(neu); }
     });
     zeile.appendChild(slider);
     zeile.appendChild(zahlAnzeige);
@@ -3325,6 +3421,8 @@ function zeigeImportMeldung(text) {
   }
 }
 
+let wirdNeuGeladen = false;
+
 function ladeSpielstandNeu() {
   if (window.location && typeof window.location.reload === "function") {
     window.location.reload();
@@ -3347,6 +3445,7 @@ function uebernehmeSpielstand(daten, erfolgsmeldung, sicherungsPraefix) {
       "Bitte prüfen, ob der Browser Daten speichern darf, und es dann noch einmal versuchen.");
     return false;
   }
+  wirdNeuGeladen = true;
   zeigeImportMeldung(erfolgsmeldung);
   ladeSpielstandNeu();
   return true;
@@ -3384,16 +3483,20 @@ function fuehreSpielstaendeZusammen(text) {
     return;
   }
   const vorschau = ergebnis.vorschau || { runden: 0, sterne: 0, geschenke: 0 };
-  if (vorschau.runden === 0 && vorschau.sterne === 0 && vorschau.geschenke === 0) {
+  if (!ergebnis.veraendert) {
     zeigeImportMeldung("Beide Spielstände enthalten bereits alles – es gibt nichts zu ergänzen.");
     return;
   }
+  const hatZaehler = vorschau.runden !== 0 || vorschau.sterne !== 0 || vorschau.geschenke !== 0;
   const teile = [vorschau.runden + (vorschau.runden === 1 ? " Runde" : " Runden"),
     vorschau.sterne + (vorschau.sterne === 1 ? " Bonusstern" : " Bonussterne"),
     vorschau.geschenke + (vorschau.geschenke === 1 ? " Gutschein" : " Gutscheine")];
+  const zusammenfassung = hatZaehler
+    ? "Aus der Datei kommen " + teile.join(", ") + " dazu"
+    : "Weitere Fortschritte (z. B. offene Aufgaben, Übezeiten oder Gutschein-Änderungen) werden übernommen";
   zeigeFrage({
     titel: "Spielstände zusammenführen?",
-    text: "Aus der Datei kommen " + teile.join(", ") + " dazu" +
+    text: zusammenfassung +
       (ergebnis.stand ? " (Stand " + datumText(ergebnis.stand) + ")" : "") +
       ". Beide Stände werden vereinigt, nichts wird gelöscht. Doppelte Runden und Gutscheine " +
       "zählen nur einmal. Der bisherige Stand wird vorher automatisch als Datei gesichert.",
@@ -4078,7 +4181,6 @@ const musik = (function () {
     lautstaerke: aktuelleLautstaerke,
     setzeLautstaerke: function (wert) {
       lautstaerke = wert;
-      leise = false;
       wendeLautstaerkeAn();
     },
     fluestern: function (ein) {
@@ -4146,7 +4248,8 @@ const sprechAudio = (function () {
     ramona: "audio/sprechtraining/ramona"
   };
   let knoten = null;
-  let aktuell = null;      // id des vorgelesenen Schnipsels oder "system"
+  let aktuell = null;      // id des vorgelesenen Schnipsels
+  let istSystem = false;   // true, wenn gerade die Systemstimme spricht
   let pausiert = false;    // mitten im Schnipsel angehalten (Weiter spielt an gleicher Stelle)
   let unterbrochen = false;   // pause() hat den laufenden play()-Aufruf absichtlich unterbrochen
   let spielVersuch = 0;       // zählt play()-Aufrufe; späte Absagen alter Aufrufe dürfen nichts zurücksetzen
@@ -4169,10 +4272,15 @@ const sprechAudio = (function () {
       try { window.speechSynthesis.cancel(); } catch (fehler) {}
     }
   }
-  function sprichSystem(text) {
+  function sprichSystem(id, text) {
     if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== "function") {
-      aktuell = null; melde(); return;
+      aktuell = null; istSystem = false; musik.fluestern(false); melde(); return;
     }
+    const versuch = ++spielVersuch;
+    unterbrochen = false;
+    pausiert = false;
+    istSystem = true;
+    musik.fluestern(true);
     try {
       const sage = new window.SpeechSynthesisUtterance(text);
       sage.lang = "de-DE";
@@ -4182,18 +4290,25 @@ const sprechAudio = (function () {
       });
       if (gefunden) { sage.voice = gefunden; }
       sage.volume = aktuelleLautstaerke();
-      sage.onend = function () { if (aktuell === "system") { aktuell = null; melde(); } };
+      sage.onend = function () {
+        if (spielVersuch === versuch && aktuell === id && istSystem) {
+          aktuell = null; istSystem = false; pausiert = false; musik.fluestern(false); melde();
+        }
+      };
       sage.onerror = sage.onend;
-      aktuell = "system";
+      aktuell = id;
       window.speechSynthesis.speak(sage);
       melde();
     } catch (fehler) {
-      aktuell = null; melde();
+      aktuell = null; istSystem = false; pausiert = false; musik.fluestern(false); melde();
     }
   }
   function stoppe() {
+    spielVersuch += 1;
     aktuell = null;
+    istSystem = false;
     pausiert = false;
+    unterbrochen = false;
     if (knoten) {
       try { knoten.pause(); } catch (fehler) {}
       knoten = null;
@@ -4206,7 +4321,7 @@ const sprechAudio = (function () {
     if (!aktuell || pausiert) { return; }
     pausiert = true;
     unterbrochen = true;
-    if (aktuell === "system") {
+    if (istSystem) {
       try { if (window.speechSynthesis && window.speechSynthesis.pause) { window.speechSynthesis.pause(); } } catch (fehler) {}
     } else if (knoten) {
       try { knoten.pause(); } catch (fehler) {}
@@ -4219,15 +4334,16 @@ const sprechAudio = (function () {
     pausiert = false;
     unterbrochen = false;
     const versuch = ++spielVersuch;
+    const eigener = knoten;
     musik.fluestern(true);
-    if (aktuell === "system") {
+    if (istSystem) {
       try { if (window.speechSynthesis && window.speechSynthesis.resume) { window.speechSynthesis.resume(); } } catch (fehler) {}
-    } else if (knoten) {
-      const zusicherung = knoten.play();
+    } else if (eigener) {
+      const zusicherung = eigener.play();
       if (zusicherung && zusicherung.catch) {
         zusicherung.catch(function () {
-          if (aktuell && !unterbrochen && spielVersuch === versuch) {
-            aktuell = null; musik.fluestern(false); melde();
+          if (knoten === eigener && aktuell && !unterbrochen && spielVersuch === versuch) {
+            aktuell = null; pausiert = false; musik.fluestern(false); melde();
           }
         });
       }
@@ -4236,32 +4352,37 @@ const sprechAudio = (function () {
   }
   function spiele(id, text) {
     stoppe();
-    if (gewaehlteStimme() === "system") { sprichSystem(text); return; }
+    if (gewaehlteStimme() === "system") { sprichSystem(id, text); return; }
     unterbrochen = false;
     const versuch = ++spielVersuch;
     musik.fluestern(true);
     try {
-      knoten = document.createElement("audio");
-      knoten.src = ORDNER[gewaehlteStimme()] + "/" + id + ".mp3";
-      knoten.volume = aktuelleLautstaerke();
+      const eigener = document.createElement("audio");
+      knoten = eigener;
+      eigener.src = ORDNER[gewaehlteStimme()] + "/" + id + ".mp3";
+      eigener.volume = aktuelleLautstaerke();
       aktuell = id;
-      knoten.addEventListener("ended", function () {
-        if (aktuell === id) { aktuell = null; musik.fluestern(false); melde(); }
+      eigener.addEventListener("ended", function () {
+        if (knoten === eigener && aktuell === id) {
+          aktuell = null; pausiert = false; musik.fluestern(false); melde();
+        }
       });
-      knoten.addEventListener("error", function () {
-        if (aktuell === id) { aktuell = null; musik.fluestern(false); melde(); }
+      eigener.addEventListener("error", function () {
+        if (knoten === eigener && aktuell === id) {
+          aktuell = null; pausiert = false; musik.fluestern(false); melde();
+        }
       });
-      const zusicherung = knoten.play();
+      const zusicherung = eigener.play();
       if (zusicherung && zusicherung.catch) {
         zusicherung.catch(function () {
-          if (aktuell === id && !unterbrochen && spielVersuch === versuch) {
-            aktuell = null; musik.fluestern(false); melde();
+          if (knoten === eigener && aktuell === id && !unterbrochen && spielVersuch === versuch) {
+            aktuell = null; pausiert = false; musik.fluestern(false); melde();
           }
         });
       }
       melde();
     } catch (fehler) {
-      aktuell = null; musik.fluestern(false); melde();
+      aktuell = null; pausiert = false; musik.fluestern(false); melde();
     }
   }
   return {
@@ -4273,6 +4394,11 @@ const sprechAudio = (function () {
     pausiert: function () { return pausiert; },
     stimme: gewaehlteStimme,
     lautstaerke: aktuelleLautstaerke,
+    setzeLautstaerke: function () {
+      if (knoten && !istSystem) {
+        try { knoten.volume = aktuelleLautstaerke(); } catch (fehler) {}
+      }
+    },
     systemStimmen: function () {
       if (!window.speechSynthesis || !window.speechSynthesis.getVoices) { return []; }
       try {
@@ -4300,11 +4426,13 @@ const sprech = (function () {
   let letzteGeschichte = null;
 
   function oeffnen() {
+    sprechAudio.stoppe();
     zeigeBildschirm("sprechBildschirm");
     rendere();
   }
   /* Deutsch-Startseite: laufende Übung verwerfen und zur Übersicht. */
   function oeffneStart() {
+    sprechAudio.stoppe();
     einheit = null;
     oeffnen();
   }
@@ -4325,6 +4453,7 @@ const sprech = (function () {
     oeffneEinheit(geschichte);
   }
   function oeffneEinheit(e, setNummer) {
+    sprechAudio.stoppe();
     const anzahl = (Array.isArray(e.fragenSets) && e.fragenSets.length) || 1;
     einheit = e;
     frageSetNummer = (typeof setNummer === "number" && setNummer >= 1 && setNummer <= anzahl)
@@ -4486,8 +4615,10 @@ const sprech = (function () {
     const knopf = element("button", "knopf primaer sprech-weiter", text || "Weiter ▶");
     knopf.type = "button";
     knopf.addEventListener("click", function () {
+      sprechAudio.stoppe();
       schritt += 1;
       rendere();
+      if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
     });
     return knopf;
   }
@@ -4498,8 +4629,10 @@ const sprech = (function () {
       const zurueck = element("button", "knopf schlicht", "◀ Zurück");
       zurueck.type = "button";
       zurueck.addEventListener("click", function () {
+        sprechAudio.stoppe();
         schritt -= 1;
         rendere();
+        if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
       });
       zeile.appendChild(zurueck);
     }
@@ -4518,8 +4651,8 @@ const sprech = (function () {
     zurueck.type = "button";
     zurueck.addEventListener("click", zurueckZurUebersicht);
     kopf.appendChild(zurueck);
-    kopf.appendChild(figurBild(DEUTSCH_WELTEN[deutschWeltId()].figur, "sprech-figur"));
     kopf.appendChild(element("h3", null, einheit.titel));
+    kopf.appendChild(figurBild(DEUTSCH_WELTEN[deutschWeltId()].figur, "sprech-figur"));
     kopf.appendChild(element("p", "sprech-ziel", "Mini-Ziel: " + einheit.ziel));
     inhalt.appendChild(kopf);
     inhalt.appendChild(schrittLeiste());
@@ -4530,7 +4663,7 @@ const sprech = (function () {
       karte.appendChild(element("p", "sprech-text", einheit.text));
       const zeile = element("div", "sprech-zeile");
       zeile.appendChild(vorleseKnopf("tag" + nr + "-text", einheit.text));
-      zeile.appendChild(element("span", "rand", "Erst hören, dann spricht ihr darüber."));
+      zeile.appendChild(element("span", "rand", "Erst hören, dann sprecht ihr darüber."));
       karte.appendChild(zeile);
       inhalt.appendChild(karte);
       inhalt.appendChild(elternKasten("Für die Begleitung"));
@@ -4562,7 +4695,7 @@ const sprech = (function () {
       const karte = element("div", "sterne-karte");
       karte.appendChild(element("h4", null, "3. Satz bilden"));
       karte.appendChild(element("p", "rand",
-        "Emma übt die Sätze zum Text. Diese Satzanfänge helfen – erst zeigen, wenn sie gebraucht werden."));
+        SPIELERIN + " übt die Sätze zum Text. Diese Satzanfänge helfen – erst zeigen, wenn sie gebraucht werden."));
       const liste = element("ul", "sprech-satzanfaenge" + (hilfeSichtbar ? "" : " verborgen"));
       einheit.satzAnfaenge.forEach(function (anfang) {
         liste.appendChild(element("li", null, anfang));
@@ -4596,13 +4729,19 @@ const sprech = (function () {
 
     const kasten = element("div", "eltern-kasten");
     kasten.appendChild(element("h4", null, "Bewertung für Mama oder Papa"));
-    kasten.appendChild(element("p", "rand", "Hinweis heute: " + einheit.hinweis));
+    const nr = ("0" + einheit.tag).slice(-2);
+    const hinweisZeile = element("div", "sprech-zeile");
+    hinweisZeile.appendChild(vorleseKnopf("tag" + nr + "-hinweis", einheit.hinweis));
+    hinweisZeile.appendChild(element("p", "rand", "Hinweis heute: " + einheit.hinweis));
+    kasten.appendChild(hinweisZeile);
 
-    kasten.appendChild(element("p", "sprech-abschnitt", "Was hat Emma erwähnt?"));
+    kasten.appendChild(element("p", "sprech-abschnitt", "Was hat " + SPIELERIN + " erwähnt?"));
     const chips = element("div", "sprech-chips");
     einheit.wichtigePunkte.forEach(function (punkt) {
-      const chip = element("button", "sprech-chip" + (bewertung.punkte.has(punkt) ? " an" : ""), punkt);
+      const aktiv = bewertung.punkte.has(punkt);
+      const chip = element("button", "sprech-chip" + (aktiv ? " an" : ""), punkt);
       chip.type = "button";
+      chip.setAttribute("aria-pressed", String(aktiv));
       chip.addEventListener("click", function () {
         if (bewertung.punkte.has(punkt)) { bewertung.punkte.delete(punkt); }
         else { bewertung.punkte.add(punkt); }
@@ -4618,8 +4757,10 @@ const sprech = (function () {
       block.appendChild(element("p", "rand", "Worauf achten: " + k.achten));
       const stufen = element("div", "stufen-gruppe");
       k.stufen.forEach(function (text, i) {
-        const knopf = element("button", "stufen-knopf" + (bewertung[k.name] === i ? " aktiv" : ""), text);
+        const aktiv = bewertung[k.name] === i;
+        const knopf = element("button", "stufen-knopf" + (aktiv ? " aktiv" : ""), text);
         knopf.type = "button";
+        knopf.setAttribute("aria-pressed", String(aktiv));
         knopf.addEventListener("click", function () {
           bewertung[k.name] = i;
           rendere();
@@ -4636,8 +4777,10 @@ const sprech = (function () {
     const zurueck = element("button", "knopf schlicht", "◀ Zurück");
     zurueck.type = "button";
     zurueck.addEventListener("click", function () {
+      sprechAudio.stoppe();
       schritt -= 1;
       rendere();
+      if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
     });
     zeile.appendChild(zurueck);
     const abschliessen = element("button", "knopf primaer sprech-fertig-knopf", "Übung abschließen ✓");
@@ -4645,9 +4788,11 @@ const sprech = (function () {
     abschliessen.disabled = !fertig;
     abschliessen.addEventListener("click", function () {
       if (!fertig) { return; }
+      sprechAudio.stoppe();
       musik.ton("freude");
       schritt = 4;
       rendere();
+      if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
     });
     if (!fertig) {
       abschliessen.setAttribute("aria-disabled", "true");
@@ -4688,7 +4833,7 @@ const sprech = (function () {
       karte.appendChild(element("p", null, "Nächstes Mal drauf achten: " + schwaechste + "."));
       if (k) { karte.appendChild(element("p", "rand", k.achten)); }
     }
-    karte.appendChild(element("p", "rand", "Emma hat " + bewertung.punkte.size + " von " +
+    karte.appendChild(element("p", "rand", SPIELERIN + " hat " + bewertung.punkte.size + " von " +
       einheit.wichtigePunkte.length + " wichtigen Dingen erwähnt."));
     inhalt.appendChild(karte);
 
@@ -4797,7 +4942,7 @@ function macheMaskottchenZiehbar(knopf, stoppKnoten) {
     let vorher = null;
     function schwebe(zeit) {
       frame = null;
-      if (!knopf.isConnected || startseite.hidden) { return; }
+      if (!knopf.isConnected || startseite.hidden || !istInZeigbaremBereich(knopf)) { return; }
       const sekunden = vorher === null ? 0 : Math.min((zeit - vorher) / 1000, 0.05);
       vorher = zeit;
       positioniere(links + vx * sekunden, oben + vy * sekunden);
@@ -4968,32 +5113,33 @@ function heutigeQuizWelt() {
 function aktualisiereWeltwahl() {
   const offen = bonusPlaetzeHeute();
   const welten = speicher.daten().bonusWelten;
-  const quizWelt = heutigeQuizWelt();
   const bonusText = offen > 0
     ? "Noch " + offen + (offen === 1 ? " Bonusstern" : " Bonussterne") + " für heute!"
     : "Morgen warten " + EINSTELLUNGEN.bonusSterneProTag + " neue Bonussterne.";
   document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
     const welt = knopf.dataset.modus;
     const bonus = welten.includes(welt);
-    const gesperrt = Boolean(quizWelt && welt !== quizWelt && !bonus);
-    knopf.disabled = gesperrt;
+    knopf.disabled = false;
     knopf.classList.toggle("themen-bonus", bonus);
     knopf.querySelector(".thema-titel").textContent =
       bonus ? "Bonuswelt " + WELT_NAMEN[welt] + " 🌟" : WELT_NAMEN[welt];
-    knopf.querySelector(".thema-text").hidden = bonus || gesperrt;
+    knopf.querySelector(".thema-text").hidden = bonus;
     const status = knopf.querySelector(".thema-bonusstatus");
-    status.hidden = !bonus && !gesperrt;
-    status.textContent = bonus ? bonusText : gesperrt ? "Heute schon ein Quiz gespielt." : "";
+    status.hidden = !bonus;
+    status.textContent = bonus ? bonusText : "";
   });
 
   const los = document.getElementById("losKnopf");
   const set = speicher.daten().tagesSet;
-  const heute = set && set.datum === heutigesDatum();
+  const offenQuiz = Boolean(set && !set.fertig && set.runde && Array.isArray(set.runde.bereiche));
   const bonus = welten.includes(modus);
-  los.disabled = bonus ? offen === 0 : Boolean(quizWelt && modus !== quizWelt);
-  los.textContent = bonus ? (offen > 0 ? "Bonuswelt spielen!" : "Bonus für heute geschafft!")
-    : los.disabled ? "Für heute gesperrt" : heute ? (set.fertig ? "Neues Quiz für heute!" : "Weiterspielen!") : "Los geht's!";
-  document.getElementById("matheWeiterKnopf").hidden = !(bonus && heute && !set.fertig);
+  los.disabled = bonus ? offen === 0 : false;
+  los.textContent = bonus
+    ? (offen > 0 ? "Bonuswelt spielen!" : "Bonus für heute geschafft!")
+    : offenQuiz ? "Weiterspielen!" : "Los geht's!";
+  const matheWeiter = document.getElementById("matheWeiterKnopf");
+  matheWeiter.hidden = !bonus;
+  matheWeiter.textContent = offenQuiz ? "Mathe-Runde fortsetzen" : "Neues Mathe-Quiz starten";
 }
 
 function startBonusWelt(welt) {
@@ -5057,37 +5203,6 @@ document.querySelectorAll(".themen-knopf").forEach(function (knopf) {
 });
 
 function starteMatheVonStart() {
-  const quizWelt = heutigeQuizWelt();
-  if (quizWelt && modus !== quizWelt) { return; }
-  const set = speicher.daten().tagesSet;
-  const heute = heutigesDatum();
-  if (set && set.datum === heute && set.fertig) {
-    zeigeNeuerVersuchFrage(function () {
-      zeigeRunde(neuesTagesSet());
-    });
-    return;
-  }
-  /* Eine angefangene Runde von gestern kann nicht fortgesetzt werden. Vor dem
-     Verwerfen der Antworten einmal nachfragen, damit nichts unbemerkt verloren geht. */
-  if (set && set.datum !== heute && !set.fertig) {
-    const beantwortet = Object.keys(set.antworten || {}).length;
-    if (beantwortet > 0) {
-      zeigeFrage({
-        titel: "Aufgaben von gestern",
-        text: "Deine Runde von gestern ist noch offen (" + beantwortet + " von " +
-          (set.runde && set.runde.bereiche
-            ? set.runde.bereiche.reduce(function (n, b) { return n + b.aufgaben.length; }, 0)
-            : 50) + " Aufgaben beantwortet). Sie kann nicht fortgesetzt werden. " +
-          "Möchtest du mit neuen Aufgaben für heute starten?",
-        ja: "Neue Aufgaben starten",
-        nein: "Abbrechen",
-        dann: function () {
-          zeigeRunde(starteTagesRunde());
-        }
-      });
-      return;
-    }
-  }
   zeigeRunde(starteTagesRunde());
 }
 
@@ -5255,6 +5370,7 @@ document.getElementById("sicherungKnopf").addEventListener("click", function () 
 });
 if (typeof window.addEventListener === "function") {
   window.addEventListener("pagehide", function () {
+    if (wirdNeuGeladen) { return; }
     pausiereUebezeit();
     sichereTagesAntworten();
     speicher.speichere();
@@ -5264,6 +5380,7 @@ if (typeof window.addEventListener === "function") {
   window.addEventListener("pageshow", starteUebezeit);
 }
 document.addEventListener("visibilitychange", function () {
+  if (wirdNeuGeladen) { return; }
   if (document.visibilityState === "hidden") {
     pausiereUebezeit();
     sichereTagesAntworten();

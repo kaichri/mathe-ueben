@@ -96,7 +96,7 @@ App.
 
 - Jede Übung dauert etwa 10 Minuten und läuft in vier Schritten:
   **Zuhören** (Text wird vorgelesen), **Verstehen** (Fragen mit verbergbaren
-  Antworten für die Begleitung), **Satz bilden** (Satanfänge erst auf Wunsch)
+  Antworten für die Begleitung), **Satz bilden** (Satzanfänge erst auf Wunsch)
   und **Erzählen** mit Bewertung. Ein „◀ Zurück“-Knopf blättert wie in
   Mathe einen Schritt zurück.
 - Die Bewertung umfasst angekreuzte wichtige Punkte des Textes sowie vier
@@ -435,11 +435,8 @@ nicht erforderlich.
 Im Projektverzeichnis ausführen:
 
 ```powershell
-# Alle Node-Tests (204 Tests)
-node --test tests/phase1.test.cjs tests/phase2.test.cjs tests/phase3.test.cjs tests/phase4.test.cjs `
-  tests/audit-math.test.cjs tests/audit-invariants.test.cjs tests/audit-regressions.test.cjs `
-  tests/audit-spielstand.test.cjs tests/audit-merge.test.cjs tests/audit-sync.test.cjs `
-  tests/sprechtraining.test.cjs
+# Alle Node-Tests
+node --test tests/*.test.cjs
 
 node --check script.js
 node --check aufgaben-bereiche.js
@@ -533,6 +530,21 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 `main`. Ältere Fassungen vor dieser Regel bleiben ohne nachgetragenen Tag.
 
 ## Versionshistorie
+
+### 1.1.8 — Mehrtägige Quizze, freie Weltenwahl & Fehlerkorrekturen
+
+- **Quizze über mehrere Tage fortsetzen:** Ein angefangenes 50-Aufgaben-Quiz
+  bleibt auch am Folgetag (und per GitHub-Sync oder Datei-Merge über mehrere
+  PCs) erhalten. Beim Abschluss zählt der Abschlusstag für Statistik und
+  Bonuswelt.
+- **Direkt neues Quiz starten & freie Weltenwahl:** Nach Abschluss eines Quiz
+  lassen sich sofort neue Aufgaben in jeder der drei Welten starten (das
+  Tageslimit von max. 5 Bonussternen bleibt bestehen).
+- **Fehlerkorrekturen:** Fehlerliste zeigt wieder vollständige Rechnungen,
+  Bonus-Knobelaufgaben zeigen ihre Fragetexte, Systemstimme unterstützt
+  Pause/Weiter und Musik-Ducking, Vorlesen stoppt bei Schritt-/Ansichtswechsel,
+  Hinweis-Vorleseknopf in Schritt 4, korrigierte Texte & neu erzeugte MP3-Clips,
+  Merge/Sync-Verbesserungen sowie Layout-Anpassungen für den Zahlenraum 1000.
 
 ### 1.1.7 — Rechnen im Zahlenraum 1000
 

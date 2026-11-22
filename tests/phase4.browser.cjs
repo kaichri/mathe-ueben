@@ -13,13 +13,13 @@ const engines=[['Chrome',process.env.CHROME_PATH || 'C:/Program Files/Google/Chr
   ['Edge',process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe']];
 const result={date:new Date().toISOString(),output,engines:[],unavailable:[],checks:[]};
 let currentPage;
-const allowed=new Set(['index.html','style.css','script.js','geschichten.js','aufgaben-bereiche.js','videos.js']);
+const allowed=new Set(['index.html','style.css','script.js','geschichten.js','aufgaben-bereiche.js','sprechtraining.js','videos.js']);
 const server=http.createServer((req,res)=>{
   const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\//,'') || 'index.html';
-  if(!(allowed.has(name) || /^musik\/[\w-]+\.mp[34]$/.test(name))) {res.writeHead(404);return res.end();}
+  if(!(allowed.has(name) || /^musik\/[\w-]+\.mp[34]$/.test(name) || /^bilder\/[\w-]+\.(?:webp|ico)$/.test(name) || /^audio\/sprechtraining\/(?:thorsten|ramona)\/[\w-]+\.mp3$/.test(name))) {res.writeHead(404);return res.end();}
   const filename=path.join(root,name);
   if(!fs.existsSync(filename)){res.writeHead(404);return res.end();}
-  const type={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'application/javascript','.mp3':'audio/mpeg','.mp4':'video/mp4'}[path.extname(name)];
+  const type={'.html':'text/html; charset=utf-8','.css':'text/css','.js':'application/javascript','.mp3':'audio/mpeg','.mp4':'video/mp4','.webp':'image/webp','.ico':'image/x-icon'}[path.extname(name)];
   res.writeHead(200,{'Content-Type':type,'Content-Length':fs.statSync(filename).size,'Cache-Control':'no-store'});
   fs.createReadStream(filename).pipe(res);
 });

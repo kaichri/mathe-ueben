@@ -378,7 +378,7 @@ test("BEFUND-8: Meldungen nennen das eingestellte Tageskontingent", () => {
   assert.doesNotMatch(knopf.querySelector(".thema-bonusstatus").textContent, /Bonus-kontingent/);
 });
 
-test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt", () => {
+test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt, andere Welten bleiben frei", () => {
   const g = game({}, { now: JETZT });
   const karte = g.run("document.querySelectorAll('.themen-knopf')[1]");
   karte.emit("click");
@@ -391,9 +391,11 @@ test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt
   assert.match(karte.querySelector(".thema-titel").textContent, /Bonuswelt Gabbys Puppenhaus/);
   assert.equal(g.run("document.querySelectorAll('.themen-knopf').length"), 3);
   assert.equal(g.run("document.querySelectorAll('.themen-bonus').length"), 1);
-  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[0].disabled"), true);
-  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[2].disabled"), true);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[0].disabled"), false);
+  assert.equal(g.run("document.querySelectorAll('.themen-knopf')[2].disabled"), false);
   assert.equal(karte.disabled, false);
+  assert.equal(g.nodes.get("matheWeiterKnopf").hidden, false);
+  assert.equal(g.nodes.get("matheWeiterKnopf").textContent, "Neues Mathe-Quiz starten");
   g.nodes.get("losKnopf").emit("click");
   assert.equal(g.run("runde.bereichsArt"), "bonus");
   assert.equal(g.run("runde.welt"), "gabby");
@@ -405,19 +407,23 @@ test("Die geschaffte Welt wird bis zum Tageswechsel durch ihre Bonuswelt ersetzt
   assert.equal(g.run("document.querySelectorAll('.themen-knopf')[0].disabled"), false);
 });
 
-test("Nach einem abgeschlossenen Quiz bleiben andere Welten beim erneuten Versuch gesperrt", () => {
+test("Nach einem abgeschlossenen Quiz kann direkt ein neues Quiz in jeder Welt gestartet werden", () => {
   const g = game({}, { now: JETZT });
   const andereWelt = g.run("document.querySelectorAll('.themen-knopf')[1]");
   g.run("zeigeRunde(neuesTagesSet())");
+  const ersteId = g.data().tagesSet.id;
   g.fill(40);
   abgeben(g);
   g.nodes.get("abbruchKnopf").emit("click");
-  assert.equal(andereWelt.disabled, true);
+  assert.equal(andereWelt.disabled, false);
   andereWelt.emit("click");
-  assert.equal(g.run("modus"), "bluey");
-  g.run("neuesTagesSet(); aktualisiereWeltwahl()");
-  assert.equal(andereWelt.disabled, true);
+  assert.equal(g.run("modus"), "gabby");
   assert.equal(g.nodes.get("losKnopf").disabled, false);
+  assert.equal(g.nodes.get("losKnopf").textContent, "Los geht's!");
+  g.nodes.get("losKnopf").emit("click");
+  assert.notEqual(g.data().tagesSet.id, ersteId);
+  assert.equal(g.data().tagesSet.welt, "gabby");
+  assert.equal(g.data().tagesSet.fertig, false);
 });
 
 test("Ballons feiern erst den letzten Bonusstern des Tages", () => {
@@ -465,27 +471,20 @@ test("BEFUND-10: die Startseite meldet eine Bonusrunde als Bonusrunde", () => {
 });
 
 /* --------------------------------------------------------------- BEFUND-11 */
-test("BEFUND-11: Tageswechsel fragt vor dem Verwerfen offener Antworten", () => {
+test("BEFUND-11: ein offenes Quiz wird am Folgetag mit allen Antworten fortgesetzt", () => {
   const g = game({}, { now: "2026-10-31T22:55:00Z" }); // 23:55 Wien
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(4);
   g.run("sichereTagesAntworten()");
-  const alteDatum = g.data().tagesSet.datum;
-  g.time("2026-10-31T23:10:00Z"); // 00:10 Wien am Folgetag
-  g.nodes.get("startBildschirm").hidden = false;
+  const alteId = g.data().tagesSet.id;
+  g.time("2026-11-02T10:00:00Z"); // zwei Tage später
+  g.nodes.get("abbruchKnopf").emit("click");
+  assert.equal(g.nodes.get("losKnopf").textContent, "Weiterspielen!");
   g.nodes.get("losKnopf").emit("click");
 
-  assert.equal(frageDialogOffen(g), true, "Es muss eine Rückfrage erscheinen");
-  assert.match(g.nodes.get("frageText").textContent, /4 von 50/);
-  // Abbrechen: die alte Runde bleibt erhalten
-  g.nodes.get("frageNeinKnopf").emit("click");
-  assert.equal(g.data().tagesSet.datum, alteDatum);
+  assert.equal(frageDialogOffen(g), false, "Keine Verwerfen-Abfrage mehr – offenes Quiz läuft weiter");
+  assert.equal(g.data().tagesSet.id, alteId);
   assert.equal(Object.keys(g.data().tagesSet.antworten).length, 4);
-  // Bestätigen: neue Aufgaben, Antworten verworfen, Sterne/Gutscheine bleiben
-  g.nodes.get("losKnopf").emit("click");
-  g.nodes.get("frageJaKnopf").emit("click");
-  assert.equal(g.data().tagesSet.datum, "2026-11-01");
-  assert.equal(Object.keys(g.data().tagesSet.antworten).length, 0);
 });
 
 /* --------------------------------------------------------------- BEFUND-12 */
@@ -621,13 +620,106 @@ test("CSV-Export nennt die Wunschänderung statt leerer Umtausch-Spalten", async
   assert.doesNotMatch(inhalt, /UMGETAUSCHT ZU/, "Die alten Spalten müssen weg");
 });
 
-test("Eine am Folgetag beendete Runde zählt für den Tag, zu dem sie gehört", () => {
+test("Eine am Folgetag beendete Runde zählt für den Abschlusstag und öffnet heute die Bonuswelt", () => {
   const g = game({}, { now: JETZT });
   g.run("zeigeRunde(neuesTagesSet())");
   g.fill(45);
   g.time("2026-10-31T23:10:00Z"); // 00:10 Wien am 1.11.
   abgeben(g);
   assert.equal(g.data().runden.at(-1).richtig, 45);
-  assert.equal(g.data().runden.at(-1).datum, "2026-10-31",
-    "Die Runde gehört zur Tagesrunde des 31.10., nicht zum Folgetag");
+  assert.equal(g.data().runden.at(-1).datum, "2026-11-01",
+    "Die Runde zählt für den Abschlusstag (1.11.)");
+  assert.deepEqual(Array.from(g.data().bonusWelten), ["bluey"],
+    "Bei >= 45/50 öffnet sich am Abschlusstag die Bonuswelt");
+});
+
+/* ------------------------------------------- Code-Audit-Fixes (2026-11-22) */
+
+test("Fehlerliste zeigt Rechnung bei Grundaufgaben, Lücken und Umkehraufgaben", () => {
+  const g = game({}, { now: JETZT });
+  g.run(`const karten = [
+      { ident: 'a1', bereich: 'add', layout: 'einfach', darstellung: '345 + 128 =', schluessel: 'x1',
+        felder: [{korrekt: 473, anzeige: '473', typ: 'zahl', beschriftung: ''}] },
+      { ident: 'm1', bereich: 'mul', layout: 'einfach', darstellung: '7 \\u00D7 8 =', schluessel: 'x2',
+        felder: [{korrekt: 56, anzeige: '56', typ: 'zahl', beschriftung: ''},
+                 {korrekt: 8, anzeige: '8', typ: 'zahl', darstellung: '56 \\u00F7 7 =', beschriftung: 'Umkehraufgabe'}] },
+      { ident: 'l1', bereich: 'raetsel', layout: 'luecke', darstellung: '\\u25A1 + 150 = 420', schluessel: 'x3',
+        felder: [{korrekt: 270, anzeige: '270', typ: 'zahl', beschriftung: '\\u25A1 = '}] }
+    ];
+    const rr = baueRunde([{ bereich: 'wiederholung', titel: 'Noch einmal üben', untertitel: '', aufgaben: karten }]);
+    rr.bereichsArt = 'uebungen';
+    zeigeRunde(rr);`);
+  abgeben(g, 1);
+  const text = g.nodes.get("ergebnisKasten").textContent.replace(/\s+/g, " ");
+  assert.match(text, /345 \+ 128 = 473/);
+  assert.match(text, /7 \u00D7 8 = 56 56 \u00F7 7 = 8/);
+  assert.match(text, /\u25A1 \+ 150 = 420 \(\u25A1 = 270\)/);
+});
+
+test("Bonus-Knobelaufgaben behalten ihren Fragetext bis in die Anzeige", () => {
+  const g = game({}, { now: JETZT });
+  const karten = g.run("window.AUFGABEN.erzeugeBonus(5, 'bluey', [])");
+  assert.equal(karten.length, 5);
+  for (const k of karten) {
+    assert(typeof k.frage === "string" && k.frage.length > 0, "frage fehlt bei " + k.art);
+  }
+  g.run("zeigeRunde(baueBonusRunde('bluey'))");
+  const bereicheText = g.nodes.get("bereiche").textContent;
+  assert(bereicheText.includes(g.run("runde.karten[0].frage")),
+    "Der Fragetext der Bonusaufgabe muss im DOM erscheinen");
+});
+
+test("parseZeit versteht auch das eigene Anzeigeformat mit 'Uhr'", () => {
+  const g = game({}, { now: JETZT });
+  const plain = v => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(g.run("parseZeit('9:35 Uhr')")), { stunde: 9, minute: 35 });
+  assert.deepEqual(plain(g.run("parseZeit('9.05 uhr')")), { stunde: 9, minute: 5 });
+  assert.deepEqual(plain(g.run("parseZeit('14:00 Uhr')")), { stunde: 14, minute: 0 });
+  assert.equal(g.run("parseZeit('9 Uhr 35 Uhr')"), null);
+});
+
+test("Merge trägt neu überschrittene 25er-Bonusstufe in bonusStufenOffen ein", () => {
+  const rA = { zeit: "2026-10-30T10:00:00.000Z", datum: "2026-10-30", modus: "bluey", richtig: 1, gesamt: 1, bonusRichtig: 1, bonus: true };
+  const rB = { zeit: "2026-10-30T11:00:00.000Z", datum: "2026-10-30", modus: "bluey", richtig: 1, gesamt: 1, bonusRichtig: 1, bonus: true };
+  const lokal = { version: 3, bonusGesamt: 24, bonusStufenOffen: [], runden: [rA], geschenke: [] };
+  const fremd = { version: 3, bonusGesamt: 24, bonusStufenOffen: [], runden: [rB], geschenke: [] };
+  const g = game(lokal, { now: JETZT });
+  const res = g.run("speicher.zusammenfuehren(" + JSON.stringify(JSON.stringify({ format: "mathe-sicherung", daten: fremd })) + ")");
+  assert.equal(res.ok, true, res.grund);
+  assert.equal(res.daten.bonusGesamt, 25);
+  assert.deepEqual(Array.from(res.daten.bonusStufenOffen), [25]);
+});
+
+test("Manueller Datei-Merge übernimmt auch reine Gutschein-Einlösungen", () => {
+  const gutschein = { id: "g1", datum: "2026-10-20", zeitpunkt: "2026-10-20T10:00:00.000Z", text: "Filmabend" };
+  const eingeloest = Object.assign({}, gutschein, { eingeloestAm: "2026-10-31" });
+  const g = game({ version: 3, runden: [], geschenke: [gutschein] }, { now: JETZT });
+  const datei = JSON.stringify({ format: "mathe-sicherung", daten: { version: 3, runden: [], geschenke: [eingeloest] } });
+  g.run("fuehreSpielstaendeZusammen(" + JSON.stringify(datei) + ")");
+  assert.equal(g.nodes.get("frageUeberlagerung").hidden, false,
+    "Rückfrage zum Zusammenführen muss auch bei reinen Statusänderungen erscheinen");
+});
+
+test("Sync-Validierung lässt den gespeicherten Stand bei ungültigem Pfad unangetastet", () => {
+  const g = game({}, { now: JETZT });
+  assert.equal(g.run("sync.speichere({ repo: 'a/b', datei: 'ok.json', token: 'tok' })"), true);
+  assert.equal(g.run("sync.speichere({ repo: 'a/b', datei: '../kaputt.json', token: 'tok' })"), false);
+  assert.equal(g.run("sync.einstellungen().datei"), "ok.json");
+});
+
+test("Gelöste Bonusrunde blendet Prüfen aus und überschreibt Meldung nicht mit 'Knobel weiter'", () => {
+  const g = game({}, { now: JETZT });
+  g.run("zeigeRunde(neuesTagesSet())"); g.fill(50); g.run("pruefeRunde()");
+  g.run("zeigeRunde(baueBonusRunde('bluey'))"); g.fill(5); g.run("pruefeRunde()");
+  assert.equal(g.nodes.get("pruefenKnopf").hidden, true);
+  g.run("pruefeBonusRunde()");
+  assert.doesNotMatch(g.nodes.get("ergebnisKasten").textContent, /Knobel weiter/);
+});
+
+test("geschichtenFigur findet auch Nebenfiguren und verträgt fehlenden Text", () => {
+  const g = game({}, { now: JETZT });
+  assert.equal(g.run("geschichtenFigur({ text: 'Muffin sammelt 12 Muscheln.' })"), "muffin");
+  assert.equal(g.run("geschichtenFigur({})"), "hund");
+  g.run("setzeModus('doozie')");
+  assert.equal(g.run("geschichtenFigur({ text: 'Bastelpfötchen bastelt 4 Karten.' })"), "bastelpfoetchen");
 });

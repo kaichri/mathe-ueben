@@ -98,6 +98,8 @@ body {
 .kopf {
   --kopf-knopf-hoehe: 44px;
   --kopf-symbol-groesse: 24px;
+  position: relative;
+  z-index: 5;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
@@ -385,6 +387,30 @@ main {
   font-size: 18px;
 }
 
+.knopf.klein {
+  font-size: 16px;
+  padding: 8px 14px;
+  border-width: 2px;
+  border-radius: 10px;
+}
+
+.knopf:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: var(--linien);
+  border-color: var(--linien);
+  color: var(--text-mild);
+}
+
+.knopf:disabled:hover {
+  background: var(--linien);
+}
+
+.rand {
+  color: var(--text-mild);
+  font-size: 16px;
+}
+
 /* ---------------- Aufgabenbereiche ---------------- */
 
 .bereich {
@@ -436,7 +462,7 @@ main {
 
 .aufgaben-raster {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
   gap: 12px;
 }
 
@@ -468,7 +494,9 @@ main {
 
 .rechnung .ausdruck { white-space: nowrap; }
 
-.rechnung .ausdruck.lang { font-size: 25px; }
+.rechnung .ausdruck.lang { font-size: 24px; }
+
+.rechnung .ausdruck.sehr-lang { font-size: 20px; }
 
 .rechnung.rest-zeile { align-items: center; }
 
@@ -490,6 +518,9 @@ main {
   border-color: var(--akzent);
   box-shadow: 0 0 0 3px var(--akzent-hell);
 }
+
+.eingabe.richtig { border-color: var(--gut); background: var(--gut-hell); }
+.eingabe.falsch { border-color: var(--schlecht); background: var(--schlecht-hell); }
 
 .eingabe.breit { width: 148px; font-size: 24px; }
 .eingabe.mittel { width: 112px; }
@@ -627,6 +658,7 @@ main {
 .werkzeug-leiste {
   position: sticky;
   bottom: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -688,7 +720,7 @@ main {
   margin-bottom: 4px;
 }
 
-.uebe-liste .richtig-dabci { color: var(--gut); font-weight: 700; }
+.uebe-liste .richtig-dabei { color: var(--gut); font-weight: 700; }
 
 /* ---------------- Sternenseite ---------------- */
 
@@ -709,7 +741,8 @@ main {
 .sterne-zeile {
   display: flex;
   justify-content: space-between;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
   border-top: 1px solid var(--linien);
   padding: 6px 0;
   font-variant-numeric: tabular-nums;
@@ -749,7 +782,7 @@ main {
 @media print {
   body { background: #ffffff; font-size: 14px; }
   .kopf { display: block; }
-  .werkzeug-leiste, .sterne-anzeige, .start-info,
+  .werkzeug-leiste, .sterne-anzeige, .start-info, .bereich-schalter, .abschnitts-nav,
   .kopf-knoepfe, .kopf .home-knopf, .regen, .winter-schnee, .ueberlagerung, .maskottchen-reihe, .zeiger-spur-feld { display: none; }
   .bereich { break-inside: avoid; border-color: #999999; }
   .eingabe { border-color: #666666; }
@@ -1173,12 +1206,21 @@ main {
 .gutschein-status { font-size: 15px; color: #7a5c11; font-weight: 700; }
 
 .gutschein-text { font-size: 20px; font-weight: 700; margin: 4px 0 10px; }
+.gutschein-karte .knopf.klein { margin: 4px 8px 4px 0; }
 
 /* ---------------- Kleine Bildschirme ---------------- */
 
 @media (max-width: 640px) {
   body { font-size: 18px; }
-  .kopf { --kopf-knopf-hoehe: 36px; --kopf-symbol-groesse: 18px; padding: 10px 12px; gap: 6px; }
+  .kopf {
+    --kopf-knopf-hoehe: 36px;
+    --kopf-symbol-groesse: 18px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 12px;
+    gap: 8px 6px;
+  }
+  .kopf-mitte { grid-column: 1 / -1; justify-content: flex-start; order: 2; }
+  .kopf-knoepfe { order: 1; }
   .kopf h1 { font-size: 20px; }
   .kopf-zeile { font-size: 13px; }
   .kopf .home-knopf { padding: 0 8px; }
@@ -1201,6 +1243,7 @@ main {
   .rechnung { font-size: 26px; }
   .eingabe { width: 82px; font-size: 24px; }
   .eingabe.geld-teil { width: 62px; font-size: 22px; }
+  .eingabe.geld-teil[data-geld-rolle="euro"] { width: 72px; }
   .geld-zeichen { font-size: 17px; }
   .aufgaben-raster { grid-template-columns: minmax(0, 1fr); }
   .bereich-kopf { flex-wrap: wrap; }
@@ -1353,15 +1396,16 @@ main {
 .ton-zeile {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   margin-bottom: 10px;
 }
 
 .ton-zeile label { font-weight: 700; min-width: 90px; }
-.ton-regler { flex: 1 1 200px; max-width: 340px; }
+.ton-regler { flex: 1 1 160px; min-width: 0; max-width: 340px; }
 .ton-lautstaerke { font-variant-numeric: tabular-nums; min-width: 52px; }
 .ton-systemzeile { margin: 10px 0; }
-.ton-stimmenliste { font: inherit; max-width: 460px; }
+.ton-stimmenliste { font: inherit; width: 100%; max-width: 460px; }
 
 /* Deutsch üben: Welt-Auswahl (gleicher Aufbau wie die Themenwahl der Mathe-Seite) */
 .deutsch-welt {
@@ -1390,16 +1434,17 @@ main {
 .deutsch-welt-titel { font-size: 21px; font-weight: 700; }
 .deutsch-welt-text { font-size: 15px; color: var(--text-mild); }
 
-.sprech-kopf { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.sprech-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sprech-kopf .sprech-figur { height: 64px; width: auto; margin-left: auto; }
+.sprech-kopf .sprech-ziel { flex-basis: 100%; }
 
 .sprech-feier { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0; }
-.sprech-figuren { display: flex; gap: 12px; }
+.sprech-figuren { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .sprech-figuren img { height: 76px; width: auto; }
 .sprech-lob { font-weight: 700; color: var(--akzent-dunkel); margin: 0; text-align: center; }
 
 @media (max-width: 640px) {
-  .sprech-tage { grid-template-columns: 1fr 1fr; }
+  .sprech-tage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .sprech-text { font-size: 19px; }
   .bereich-knopf { font-size: 15px; padding: 0 10px; min-height: 30px; }
 }

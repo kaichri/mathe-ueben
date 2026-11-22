@@ -15,10 +15,10 @@ Pro Tag gibt es ein festes Set aus 50 Aufgaben. Gerechnet wird Abschnitt
 für Abschnitt (erst Addition, dann Subtraktion usw.):
 
   10 Aufgaben  Addition       (mit Übertrag, auch 3 Zahlen hintereinander)
-  10 Aufgaben  Subtraktion    (mit Borgen, auch Ketten wie 63 - 27 + 15)
-  10 Aufgaben  Multiplikation (Einmaleins, Zehnermaleins, halbschriftlich wie 24 x 3)
-  10 Aufgaben  Division       (davon 4 mit Rest, z. B. 54 ÷ 7 = 7 Rest 5)
-   5 Aufgaben  Zahlenrätsel   (z. B. □ + 27 = 85)
+  10 Aufgaben  Subtraktion    (mit Borgen, auch Ketten wie 634 - 217 + 45)
+  10 Aufgaben  Multiplikation (Einmaleins, Zehnermaleins, halbschriftlich wie 94 x 4)
+  10 Aufgaben  Division       (davon 4 mit Rest, z. B. 454 ÷ 7 = 64 Rest 6)
+   5 Aufgaben  Zahlenrätsel   (z. B. □ + 127 = 485)
    5 Aufgaben  Rechengeschichten (davon 2 mit Euro/Cent oder Uhr/Minuten)
 
 Niveau: 3. Klasse Volksschule, alles im Raum 1000, keine negativen Zahlen.
@@ -33,31 +33,41 @@ Bei den Rechengeschichten kann Emma oben eine von drei Welten wählen:
   "Gabbys Puppenhaus" - Gabby, Pandy, Kuchi, Meerkatze, Kitty Fee, Carlita,
                         Ratkatz, Marty, DJ Katzenminze u. a.
   "Doozies Hundehaus" - Doozie (Gabbys Schwester), Puggie, Sahnepfötchen,
-                        Bastelpfötchen, Pogi, Crouton, Seaquin, DreamPup u. a.
+                        Bastelpfötchen, Pogi, Crouton, Paillette, Traumpfötchen,
+                        Pixiepfötchen, Spielpfötchen, Swenny u. a.
                         (Besuch aus dem Puppenhaus ist dort auch dabei.)
-Die Welten entscheiden nur über die Figuren im Text - die Aufgaben selbst
-sind pro Tag für alle Welten gleich.
+Alle drei Welten bleiben frei wählbar. Ist ein Quiz noch offen, wird es –
+auch an Folgetagen – mit allen bisherigen Antworten fortgesetzt. Nach dem
+Abschluss lässt sich direkt ein neues Quiz in jeder gewünschten Welt starten.
 
 
-Das Tages-Quiz (ein Aufgaben-Set pro Tag)
------------------------------------------
-* Das erste "Los geht's!" an einem Tag erzeugt DAS eine Set. Der Knopf heißt
-  dann "Weiterspielen!", bis Emma die Runde mit "Fertig" abschließt.
+Deutsch üben (Sprechtraining)
+-----------------------------
+Über den Umschalter "Mathe | Deutsch" in der Kopfzeile öffnet sich das
+Sprechtraining (Eltern-Kind-Modus) mit 14 kurzen Geschichten, drei eigenen
+Welten ("Süße Hunde", "Flauschige Hamster", "Weihnachtswelt") und eingebetteter
+Vorlesefunktion. Jede Übung läuft in vier Schritten: Zuhören, Verstehen,
+Satz bilden und Erzählen. Alle Geschichten sind jederzeit in beliebiger
+Reihenfolge spielbar.
+
+
+Das Mathe-Quiz (auch über mehrere Tage spielbar)
+------------------------------------------------
+* "Los geht's!" startet ein Set aus 50 Aufgaben. Solange es noch nicht
+  abgeschlossen ist, heißt der Knopf "Weiterspielen!" – auch am nächsten Tag
+  oder (über GitHub-Sync bzw. Datei-Merge) an einem anderen PC.
 * Nur ein Abschnitt ist sichtbar. "Weiter" und "Zurück" blättern - unterwegs
   wird NICHTS bewertet, es wird auch nichts grün oder rot. Oben zeigt eine
   kleine Leiste den aktuellen Abschnitt; ein Klick springt direkt hin.
-* Jeder Tipp wird sofort gespeichert (bei jedem Tastendruck und beim
-  Weiterklicken). Seite zu, Computer aus - beim nächsten Öffnen stehen die
-  Antworten und der gleiche Abschnitt wieder da.
+* Antworten werden automatisch gespeichert. Seite zu, Computer aus - beim
+  nächsten Öffnen stehen die Antworten und der gleiche Abschnitt wieder da.
 * Erst "Fertig" (im letzten Abschnitt) zeigt alles: alle Bereiche, grün und
-  rot, die richtigen Lösungen bei den Fehlern.
-  Danach kann nichts mehr ausgebessert werden - auch nicht nach einem
-  Neustart an diesem Tag.
-* Der Knopf "Neuer Versuch" (erscheint nach dem Fertig) erzeugt nach einer
-  Rückfrage ein brandneues Set für denselben Tag - die alten Antworten gehen
-  dabei verloren, aber verdiente Bonussterne und offene Bonuswelten bleiben.
-* Am nächsten Tag gibt es automatisch ein neues Set. Die Aufgaben des alten
-  Tags werden beim Bauen ausgeschlossen, kommen also nicht sofort wieder.
+  rot, die richtigen Lösungen bei den Fehlern. Das Quiz zählt für den
+  Abschlusstag (inkl. Bonuswelt bei mindestens 45/50 Richtigen).
+* Nach dem Abschluss lässt sich jederzeit sofort ein neues Quiz starten
+  (auf der Startseite in jeder der drei Welten oder über "Neuer Versuch").
+  Die bisherigen Aufgaben werden beim Bauen des neuen Sets ausgeschlossen,
+  kommen also nicht sofort wieder.
 
 
 Die Bonuswelten (Knobeln mit Bonussternen)
@@ -119,21 +129,24 @@ fragt das Programm beim Start, ob es mit neuen Aufgaben weitergehen soll.
 Einstellungen
 ----------------
 Ein Klick auf die Sterne-Anzeige oder das Zahnrad oben öffnet
-"Einstellungen" mit vier Reitern:
+"Einstellungen" mit sechs Reitern:
 
   Bonussterne - gesammelte Bonussterne und Stufen
   Gutscheine - alle Gutscheine mit ihrem aktuellen Wunsch
   Statistik  - Runden-, Kalender- und Bereichs-Auswertung. Nichts wird
                überschrieben: jede Runde wird angehängt gespeichert.
                Mit "Statistik herunterladen" (Knopf erscheint nur in diesem Reiter)
-                entsteht immer eine neue CSV-
+               entsteht immer eine neue CSV-
                Datei mit Zeitstempel (z. B. mathe-statistik-2026-10-28-1530.csv),
                die sich in Excel öffnen lässt. Darin stehen auch die Bonus-
                runden (BONUSRUNDE) und alle Gutscheine mit dem aktuellen Wunsch.
+  Ton & Vorlesen - Vorlesestimme (Thorsten, Ramona oder Systemstimme) sowie
+               getrennte Lautstärkeregler für Vorlesen und Hintergrundmusik.
   Spielstand - "Spielstand sichern (Datei)", "Spielstand laden (Datei)"
                und "Spielstand zusammenführen (Datei)" für den Umzug auf
                einen anderen PC bzw. zum Vereinigen zweier Stände; dazu die
                optionale automatische GitHub-Synchronisierung (siehe unten).
+  Version    - Programmversion, Stand und Geräteinformationen.
 
 
 Auf einem anderen PC weiterspielen
@@ -218,19 +231,22 @@ Browser die Verbindung zu GitHub blockieren. Dann entweder das Spiel
 bleiben.
 
 
-Musik
------
-Oben ist der Musik-Knopf (Notensymbol). Er stellt das Theme-Lieder leise
-im Hintergrund an oder aus; die Einstellung bleibt gemerkt.
+Musik und Wintermodus
+---------------------
+Oben ist der Musik-Knopf (Notensymbol). Er pausiert die Hintergrundmusik
+oder setzt sie an derselben Stelle fort; die Einstellung bleibt gemerkt.
 Die Hintergrund-Lieder liegen im Ordner "musik"
-(blau.mp3, puppenhaus.mp3 und doozie.mp3). Falls Musikdateien fehlen, singt das Programm selbst
-eine kleine Melodie - kaputt geht also nichts.
+(blau.mp3, puppenhaus.mp3, doozie.mp3, hunde.mp3, hamster.mp3 sowie
+weihnachten-a.mp3 und weihnachten-b.mp3). Falls Musikdateien fehlen, spielt das
+Programm selbst eine kleine Melodie - kaputt geht also nichts.
+Daneben schaltet das Schneeflocken-Symbol den Wintermodus (fallender Schnee)
+ein oder aus.
 
 
 Division mit Rest eingeben
 --------------------------
 Bei diesen Aufgaben gibt es zwei Felder: erst das Ergebnis, dann der Rest.
-Beispiel: 54 ÷ 7 = [7] Rest [5]
+Beispiel: 454 ÷ 7 = [64] Rest [6]
 
 
 Geld und Uhrzeit eingeben
@@ -238,7 +254,7 @@ Geld und Uhrzeit eingeben
 Geld: Hier gibt es zwei Felder – links die Euro, rechts die Cent.
 Beispiel für 16 € 50: links 16 rein, rechts 50. Ein leeres Feld zählt
 als 0, ein "5" im Cent-Feld sind 5 Cent (nicht 50).
-Uhrzeit: "9:25", "9.25", "9 Uhr 25" oder kurz "925" wird alles verstanden.
+Uhrzeit: "9:25", "9:25 Uhr", "9.25", "9 Uhr 25" oder kurz "925" wird alles verstanden.
 
 
 Etwas ändern
@@ -254,9 +270,8 @@ stellen.
 Bonuswelt-Regeln ändern: siehe oben bei "Die Bonuswelten"
 (bonusSterneProTag, bonusAbAnteil, BONUS_STUFEN_SCHRITT).
 
-Musik leiser/lauter: in script.js bei
-   musikLautstaerke: 0.16
-(z. B. 0.30 für lauter, 0.05 für sehr leise).
+Musik leiser/lauter: direkt unter "Einstellungen" -> "Ton & Vorlesen"
+einstellen (Standardwert in script.js ist musikLautstaerke: 0.3).
 
 Späßige Animationen aus: in script.js bei
    spaessig: false
@@ -289,4 +304,4 @@ Ohne diese Datei hat jeder PC seinen eigenen Spielstand.
 Ausdrucken
 ----------
 Mit Strg + P lässt sich eine Runde auch auf Papier rechnen; Knöpfe, Musik
-und Video werden beim Drucken automatisch weggelassen.
+und Animationen werden beim Drucken automatisch weggelassen.

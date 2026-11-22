@@ -1,6 +1,8 @@
 @echo off
-setlocal
-pushd "%~dp0" || exit /b 1
+setlocal EnableDelayedExpansion
+set "APP_DIR=%~dp0"
+set "STARTER_LOG=%APP_DIR%starter.log"
+pushd "%APP_DIR%" || exit /b 1
 
 set "CHROME_EXE="
 for %%I in ("%ProgramFiles%\Google\Chrome\Application\chrome.exe" "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" "%LocalAppData%\Google\Chrome\Application\chrome.exe") do (
@@ -12,57 +14,65 @@ rem Read this block before Git can replace the starter during an update.
   set "GIT_TERMINAL_PROMPT=0"
   set "GCM_INTERACTIVE=never"
   set "GIT_OPTIONAL_LOCKS=0"
-  set "STARTER_LOG=%~dp0starter.log"
 
   where git >nul 2>&1
   if errorlevel 1 (
-    call :log "Git ist nicht installiert oder nicht im Pfad - kein Update."
+    echo Git ist nicht installiert oder nicht im Pfad - kein Update.
+    >>"!STARTER_LOG!" echo !date! !time! - Git ist nicht installiert oder nicht im Pfad - kein Update.
   ) else (
     call :update
   )
 
   if not exist "index.html" (
     echo index.html fehlt. Bitte den Starter im App-Ordner ablegen.
-    pause
+    popd
     exit /b 1
   )
+  set "TARGET_URL=!APP_DIR!index.html"
   if defined CHROME_EXE (
-    start "" "%CHROME_EXE%" --autoplay-policy=no-user-gesture-required "%CD%\index.html" || exit /b 1
+    start "" "!CHROME_EXE!" --autoplay-policy=no-user-gesture-required "!TARGET_URL!"
   ) else (
-    start "" "%CD%\index.html" || exit /b 1
+    start "" "!TARGET_URL!"
   )
+  set "START_ERR=!errorlevel!"
   popd
-  exit /b 0
+  exit /b !START_ERR!
 )
 
 :update
 if not exist ".git" (
-  call :log "Kein .git-Ordner - Updates brauchen eine Git-Kopie des Projekts."
+  echo Kein .git-Ordner - Updates brauchen eine Git-Kopie des Projekts.
+  >>"!STARTER_LOG!" echo !date! !time! - Kein .git-Ordner - Updates brauchen eine Git-Kopie des Projekts.
   exit /b
 )
 set "APP_BRANCH="
 for /f "delims=" %%I in ('git symbolic-ref --quiet HEAD') do set "APP_BRANCH=%%I"
-if not "%APP_BRANCH%"=="refs/heads/main" (
-  call :log "Der Ordner steht nicht auf main (%APP_BRANCH%) - kein Update."
+if /i not "!APP_BRANCH!"=="refs/heads/main" (
+  echo Der Ordner steht nicht auf main (!APP_BRANCH!^) - kein Update.
+  >>"!STARTER_LOG!" echo !date! !time! - Der Ordner steht nicht auf main (!APP_BRANCH!^) - kein Update.
   exit /b
 )
-for /f "delims=" %%I in ('git status --porcelain --untracked-files^=no') do (
-  call :log "Lokale Aenderungen an verwalteten Dateien - kein Update."
-  >>"%STARTER_LOG%" echo   %%I
-  exit /b
+set "HAS_DIRTY="
+for /f "delims=" %%I in ('git status --porcelain --untracked-files^=no 2^>nul') do (
+  if not defined HAS_DIRTY (
+    set "HAS_DIRTY=1"
+    echo Lokale Aenderungen an verwalteten Dateien - kein Update.
+    >>"!STARTER_LOG!" echo !date! !time! - Lokale Aenderungen an verwalteten Dateien - kein Update.
+  )
+  set "DIRTY_LINE=%%I"
+  >>"!STARTER_LOG!" echo   !DIRTY_LINE!
 )
+if defined HAS_DIRTY exit /b
 (
-  call :log "Suche nach Updates ..."
-  git -c http.lowSpeedLimit=1 -c http.lowSpeedTime=5 pull --ff-only --no-rebase --no-autostash origin main >>"%STARTER_LOG%" 2>&1
+  echo Suche nach Updates ...
+  >>"!STARTER_LOG!" echo !date! !time! - Suche nach Updates ...
+  git -c http.lowSpeedLimit=1 -c http.lowSpeedTime=5 pull --ff-only --no-rebase --no-autostash origin main >>"!STARTER_LOG!" 2>&1
   if errorlevel 1 (
-    call :log "Update fehlgeschlagen - Starte die vorhandene Version."
+    echo Update fehlgeschlagen - Starte die vorhandene Version.
+    >>"!STARTER_LOG!" echo !date! !time! - Update fehlgeschlagen - Starte die vorhandene Version.
   ) else (
-    call :log "Update geprueft."
+    echo Update geprueft.
+    >>"!STARTER_LOG!" echo !date! !time! - Update geprueft.
   )
   exit /b
 )
-
-:log
-echo %~1
->>"%STARTER_LOG%" echo %date% %time% - %~1
-exit /b

@@ -218,7 +218,7 @@
           { frage: "Was macht Bruno?", antwort: "Er schüttelt sich und spritzt Wasser auf Lenas Hose." }
         ],
         [
-          { frage: "Wen nimmt Lena spazieren?", antwort: "Ihren Hund Bruno." },
+          { frage: "Wen nimmt Lena mit zum Spazierengehen?", antwort: "Ihren Hund Bruno." },
           { frage: "Was passiert plötzlich?", antwort: "Es beginnt stark zu regnen." },
           { frage: "Welchen Schirm spannt Lena auf?", antwort: "Ihren gelben." },
           { frage: "Warum wird Lenas Hose nass?", antwort: "Bruno schüttelt sich und spritzt Wasser." }
@@ -267,7 +267,7 @@
         ]
       ],
       satzAnfaenge: ["Die Kinder spielen …", "Der Ball rollt …", "Am Ende …"],
-      hinweis: "Wiederholt die Schritte von Tag 1 bis 6. Helfe nur so viel wie nötig.",
+      hinweis: "Wiederholt alle Schritte in Ruhe. Hilf nur so viel wie nötig.",
       wichtigePunkte: ["Fußball im Park", "schießt weit", "hinter Busch", "unter der Bank"],
       musterloesung: "Die Kinder spielen Fußball. Toms Ball rollt hinter einen Busch. Am Ende finden sie ihn unter einer Bank."
     },
@@ -287,7 +287,7 @@
           { frage: "Welche Klasse besucht den Zoo?", antwort: "Die Klasse 3A." },
           { frage: "Welche Tiere sehen die Kinder zuerst?", antwort: "Die Elefanten." },
           { frage: "Was macht der Elefant mit dem Rüssel?", antwort: "Er spritzt Wasser." },
-          { frage: "Worum lachen die Kinder?", antwort: "Weil die Pinguine lustig watscheln." }
+          { frage: "Warum lachen die Kinder?", antwort: "Weil die Pinguine lustig watscheln." }
         ],
         [
           { frage: "Wohin geht die Klasse 3A?", antwort: "In den Zoo." },
@@ -377,7 +377,7 @@
       tag: 11,
       titel: "Eine Geschichte nacherzählen",
       ziel: "Der kleine Igel.",
-      text: "Auf dem Schulweg entdeckt Amir einen kleinen Igel im Gras. Er bleibt stehen und schaut ihn vorsichtig an. Zu Hause erzählt er seiner Mutter davon. Sie erklären ihm, dass man wilde Tiere nicht einfach mitnehmen soll. Am nächsten Tag sehen sie nach, ob der Igel noch dort ist. Er ist verschwunden.",
+      text: "Auf dem Schulweg entdeckt Amir einen kleinen Igel im Gras. Er bleibt stehen und schaut ihn vorsichtig an. Zu Hause erzählt er seiner Mutter davon. Sie erklärt ihm, dass man wilde Tiere nicht einfach mitnehmen soll. Am nächsten Tag sehen sie nach, ob der Igel noch dort ist. Er ist verschwunden.",
       fragenSets: [
         [
           { frage: "Wen entdeckt Amir?", antwort: "Einen kleinen Igel im Gras." },
@@ -394,7 +394,7 @@
         ],
         [
           { frage: "Was macht Amir zuerst?", antwort: "Er bleibt stehen und schaut den Igel vorsichtig an." },
-          { frage: "Was lernen sie?", antwort: "Man soll wilde Tiere nicht einfach mitnehmen." },
+          { frage: "Was lernt Amir?", antwort: "Man soll wilde Tiere nicht einfach mitnehmen." },
           { frage: "Wo entdeckt Amir den Igel?", antwort: "Auf dem Schulweg." },
           { frage: "Wie schaut Amir den Igel an?", antwort: "Vorsichtig." }
         ],
@@ -407,7 +407,7 @@
       satzAnfaenge: ["Auf dem Schulweg …", "Zuerst …", "Zu Hause …", "Am nächsten Tag …"],
       hinweis: "Lies den Abschnitt zweimal. Emma erzählt anschließend mit eigenen Worten.",
       wichtigePunkte: ["Igel im Gras", "schaut an", "Mutter erzählt", "nicht mitnehmen", "verschwunden"],
-      musterloesung: "Amir entdeckt einen Igel im Gras. Er schaut ihn vorsichtig an und erzählt seiner Mutter davon. Sie erklären, dass wilde Tiere in der Natur bleiben sollen. Am nächsten Tag ist der Igel verschwunden."
+      musterloesung: "Amir entdeckt einen Igel im Gras. Er schaut ihn vorsichtig an und erzählt seiner Mutter davon. Sie erklärt, dass wilde Tiere in der Natur bleiben sollen. Am nächsten Tag ist der Igel verschwunden."
     },
     {
       tag: 12,

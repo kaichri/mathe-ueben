@@ -566,3 +566,95 @@ test("MERGE: ungültige Ton-Daten in der Datei werden abgelehnt", () => {
     assert(g.run("speicher.meldung()") === "", "Die Prüfung darf den Speicher nicht sperren");
   }
 });
+
+test("SPRECH: Systemstimme pausiert, setzt fort, duckt Musik und ignoriert verspätetes onend", () => {
+  const g = game({ vorleseStimme: "system", sound: "an" }, { now: JETZT });
+  g.run(`
+    window.__gesprochen = [];
+    window.__sys = { pausiert: 0, fortgesetzt: 0, abgebrochen: 0 };
+    window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+    window.speechSynthesis = {
+      getVoices: function () { return []; },
+      speak: function (u) { window.__gesprochen.push(u); },
+      pause: function () { window.__sys.pausiert += 1; },
+      resume: function () { window.__sys.fortgesetzt += 1; },
+      cancel: function () { window.__sys.abgebrochen += 1; }
+    };
+  `);
+  g.run("sprech.oeffnen()");
+  offneEinheitMitSatz(g, 1, 1);
+  const knopf = () => g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0];
+  knopf().emit("click");
+  assert.equal(g.run("window.__gesprochen.length"), 1);
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
+  assert.equal(knopf().textContent, "⏸ Pause");
+  assert(g.run("musik.lautstaerke()") < 0.25, "Musik muss während Systemstimme leiser werden");
+
+  knopf().emit("click"); // Pause
+  assert.equal(g.run("window.__sys.pausiert"), 1);
+  assert.equal(knopf().textContent, "▶ Weiter");
+
+  knopf().emit("click"); // Weiter
+  assert.equal(g.run("window.__sys.fortgesetzt"), 1);
+  assert.equal(knopf().textContent, "⏸ Pause");
+
+  // Ein neues Vorlesen startet eine zweite Ausgabe; verspätetes onend der ersten darf nichts abbrechen.
+  g.run("sprechAudio.spiele('tag01-text', 'Neu')");
+  assert.equal(g.run("window.__gesprochen.length"), 2);
+  g.run("window.__gesprochen[0].onend()");
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
+  g.run("window.__gesprochen[1].onend()");
+  assert.equal(g.run("sprechAudio.aktuell()"), null);
+  assert(g.run("window.__sys.abgebrochen") >= 1);
+});
+
+test("SPRECH: Schrittwechsel, Startseite und Hinweis-Vorlesen stoppen bzw. nutzen Audio sauber", () => {
+  const g = game({}, { now: JETZT });
+  g.run("sprech.oeffnen()");
+  offneEinheitMitSatz(g, 1, 1);
+  g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0].emit("click");
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
+
+  // Weiter in Schritt 2 muss das Vorlesen aus Schritt 1 stoppen.
+  weiter(g);
+  assert.equal(g.run("sprechAudio.aktuell()"), null);
+
+  // Bis Schritt 4 (Erzählen): der Hinweis hat jetzt einen eigenen Vorlese-Knopf.
+  weiter(g);
+  weiter(g);
+  const hinweisKnopf = g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0];
+  assert(hinweisKnopf, "Hinweis-Vorleseknopf fehlt in Schritt 4");
+  hinweisKnopf.emit("click");
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-hinweis");
+
+  // Startseite-Knopf stoppt die laufende Sprachausgabe.
+  g.nodes.get("abbruchKnopf").emit("click");
+  assert.equal(g.run("sprechAudio.aktuell()"), null);
+});
+
+test("NAVI: Kopfzeile wechselt Titel und Unterzeile zwischen Mathe und Deutsch", () => {
+  const g = game({}, { now: JETZT });
+  assert.equal(g.nodes.get("kopfTitel").textContent, "Mathe üben");
+  assert.match(g.nodes.get("kopfZeile").textContent, /Raum 1000/);
+  g.nodes.get("deutschUmschalter").emit("click");
+  assert.equal(g.nodes.get("kopfTitel").textContent, "Deutsch üben");
+  assert.match(g.nodes.get("kopfZeile").textContent, /Sprechtraining/);
+  g.nodes.get("matheUmschalter").emit("click");
+  assert.equal(g.nodes.get("kopfTitel").textContent, "Mathe üben");
+});
+
+test("TON: Vorlesen-Regler ändert laufende Stimmprobe live und Musik-Regler hält Ducking", () => {
+  const g = game({ sound: "an" }, { now: JETZT });
+  g.run("zeigeFortschritt('ton')");
+  const probe = g.nodes.get("tonInhalt").querySelectorAll("button")
+    .find(b => /Stimmprobe/.test(b.textContent));
+  probe.emit("click");
+  const regler = g.nodes.get("tonInhalt").querySelectorAll("input");
+  regler[0].value = "40";
+  regler[0].emit("input");
+  assert.equal(g.audios[g.audios.length - 1].volume, 0.4);
+  regler[1].value = "60";
+  regler[1].emit("input");
+  assert(Math.abs(g.run("musik.lautstaerke()") - 0.27) < 0.001,
+    "Musik bleibt während der Stimmprobe geduckt (45 % von 0.6 = 0.27)");
+});

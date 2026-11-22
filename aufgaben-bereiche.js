@@ -91,6 +91,7 @@
       darstellung: darstellung,
       layout: opts.layout || "einfach",
       text: opts.text || "",
+      frage: opts.frage || "",
       schluessel: opts.schluessel || bereich + "|" + darstellung,
       felder: felder
     };
@@ -331,13 +332,13 @@
     gabby: ["Gabby", "Pandy", "Kuchi", "Meerkatze", "Kitty Fee", "Carlita",
       "Ratkatz", "Marty", "DJ Katzenminze", "Baby Box", "Kuschelkatze"],
     doozie: ["Doozie", "Puggie", "Sahnepf\u00F6tchen", "Bastelpf\u00F6tchen", "Pogi",
-      "Crouton", "Seaquin", "DreamPup", "PixiePup", "GamePup", "Swaggy"]
+      "Crouton", "Paillette", "Traumpf\u00F6tchen", "Pixiepf\u00F6tchen", "Spielpf\u00F6tchen", "Swenny"]
   };
 
   var KNOBEL_SACHE = {
     gemischt: ["Muscheln", "Sticker", "B\u00E4lle", "Kekse"],
-    bluey: ["Muscheln", "St\u00F6cke", "Tenndis-B\u00E4lle", "Kekse"],
-    gabby: ["Stern-Sticker", "Cakey-Kekse", "Glitzersteine", "Cupcakes"],
+    bluey: ["Muscheln", "St\u00F6cke", "Tennisb\u00E4lle", "Kekse"],
+    gabby: ["Stern-Sticker", "Kuchi-Kekse", "Glitzersteine", "Cupcakes"],
     doozie: ["Leckerlis", "Knochen-Kekse", "Quietschb\u00E4lle", "Pfoten-Abzeichen"]
   };
 
@@ -405,7 +406,7 @@
       }
       loesung = start + 5 * schritt;
     } else if (art === 2) { // Verdoppeln
-      var anfang = zufall(2, 4);
+      var anfang = zufall(2, 3);
       for (i = 0; i < 5; i++) {
         reihe.push(anfang * Math.pow(2, i));
       }
@@ -545,12 +546,12 @@
     });
   }
 
-  // Einkaufen: mit welchem Geldst\u00fcck wurde bezahlt?
+  // Einkaufen: mit welchem Geldschein wurde bezahlt?
   function knobelaufgabeKauf(welt) {
     var figuren = mische(knobelFiguren(welt));
     var person = figuren[0];
     var preis = zufall(23, 88);
-    if (preis % 10 === 0 || preis === 50) {
+    if (preis % 10 === 0) {
       preis += 3;
     }
     var schein = preis < 50 ? 50 : 100;
@@ -558,7 +559,7 @@
     return karte("bonus", "knobel-kauf", "", [feld(schein)], {
       layout: "text",
       text: person + " kauft ein Spielzeug f\u00fcr " + preis + " \u20ac und bekommt " + zurueck +
-        " \u20ac zur\u00fcck. Mit welchem Geldst\u00fcck hat " + person + " bezahlt?",
+        " \u20ac zur\u00fcck. Mit welchem Geldschein hat " + person + " bezahlt?",
       frage: "Welcher Betrag?",
       schluessel: "knobel-kauf|" + preis + "|" + zurueck
     });

@@ -128,7 +128,7 @@
         alltag: ["Murmeln", "Briefmarken", "Buntstifte", "Kristalle"],
         bluey: ["Muscheln", "St\u00F6cke", "Kieselsteine", "Federn"],
         gabby: ["Kekse", "Cupcakes", "Glitzersteine", "Sticker"],
-        doozie: ["Leckerlis", "Tenndis-B\u00E4lle", "Pfoten-Abzeichen", "Knochen-Kekse"]
+        doozie: ["Leckerlis", "Tennisb\u00E4lle", "Pfoten-Abzeichen", "Knochen-Kekse"]
       },
       zahlen: [{ min: 24, max: 58 }, { min: 12, max: 34 }],
       regeln: function (z) { return z[0] + z[1] <= 100; },
@@ -144,7 +144,7 @@
       kategorie: "normal",
       themen: ["alltag", "bluey", "gabby", "doozie"],
       sache: {
-        alltag: ["Sticker", "Äpfel", "Kreise", "Perlen"],
+        alltag: ["Sticker", "Äpfel", "Kreisel", "Perlen"],
         bluey: ["Muscheln", "Bl\u00E4tter", "Zweige"],
         gabby: ["Kekse", "Bonbons", "Stern-Aufkleber"],
         doozie: ["Leckerlis", "Gummib\u00E4lle", "Kauknochen"]
@@ -166,7 +166,7 @@
         alltag: ["Karten", "B\u00FCcher", "T\u00FCrme aus Baukl\u00F6tzen"],
         bluey: ["Tore", "Muscheln", "H\u00FCpfpunkte"],
         gabby: ["Kissen", "Lichter", "Tassen"],
-        doozie: ["Hindernisse", "Schwanzwedel-Punkte", "Apportel-B\u00E4lle"]
+        doozie: ["Hindernisse", "Schwanzwedel-Punkte", "Apportier-B\u00E4lle"]
       },
       zahlen: [{ min: 15, max: 60 }, { min: 12, max: 35 }],
       regeln: function (z) { return z[0] + z[1] <= 100; },
@@ -185,7 +185,7 @@
         alltag: ["Bonbons", "Figuren", "Stifte"],
         bluey: ["B\u00E4lle", "Schnecken", "Bl\u00E4tter"],
         gabby: ["Cupcakes", "Muffins", "Kerzen"],
-        doozie: ["Tenndis-B\u00E4lle", "Knochen", "Quietsch-Enten"]
+        doozie: ["Tennisb\u00E4lle", "Knochen", "Quietsch-Enten"]
       },
       zahlen: [{ min: 35, max: 88 }, { min: 13, max: 34 }],
       regeln: function (z) { return z[0] - z[1] >= 5; },
@@ -220,7 +220,7 @@
       kategorie: "normal",
       themen: ["alltag", "bluey", "gabby", "doozie"],
       sache: {
-        alltag: ["Stifte", "Kaugummis", "Murmeln", "Kreise"],
+        alltag: ["Stifte", "Kaugummis", "Murmeln", "Kreisel"],
         bluey: ["N\u00FCsse", "Muscheln", "Zeichnungen"],
         gabby: ["Kekse", "Bonbons", "Kerzen"],
         doozie: ["Leckerlis", "Knochen-Kekse", "Muscheln"]
@@ -341,7 +341,7 @@
         alltag: ["T\u00FCrme", "Fotos", "Lieder", "Runden mit dem Fahrrad"],
         bluey: ["Tore", "Saltos", "Muschelketten"],
         gabby: ["Lieder", "T\u00E4nze", "Zaubertricks"],
-        doozie: ["Pfoten-Abzeichen", "\u00DCbungen", "Apportel-St\u00F6cke"]
+        doozie: ["Pfoten-Abzeichen", "\u00DCbungen", "Apportier-St\u00F6cke"]
       },
       zahlen: [{ min: 13, max: 45 }],
       regeln: function (z) { return 2 * z[0] <= 100; },
@@ -360,7 +360,7 @@
         alltag: ["Socken", "Handschuhe", "Untersetzer"],
         bluey: ["Flaschenverschl\u00FCsse", "Muscheln", "Stifte"],
         gabby: ["Handschuhe", "L\u00F6ffel", "Kerzen"],
-        doozie: ["Quietsch-Enten", "Knochen", "Tenndis-B\u00E4lle"]
+        doozie: ["Quietsch-Enten", "Knochen", "Tennisb\u00E4lle"]
       },
       zahlen: [{ min: 18, max: 48 }],
       regeln: function (z) { return z[0] % 2 === 0; },
@@ -413,7 +413,7 @@
         alltag: ["Murmeln", "Pilze", "Kristalle", "Kastanien"],
         bluey: ["Muscheln", "St\u00F6cke", "Eicheln"],
         gabby: ["Kekse", "Stern-Sticker", "Glitzerperlen"],
-        doozie: ["Leckerlis", "Apportel-B\u00E4lle", "Knochen"]
+        doozie: ["Leckerlis", "Apportier-B\u00E4lle", "Knochen"]
       },
       zahlen: [{ min: 22, max: 48 }, { min: 11, max: 32 }, { min: 9, max: 28 }],
       regeln: function (z) { return z[0] + z[1] <= 100 && z[0] + z[1] - z[2] >= 5; },
@@ -433,7 +433,7 @@
         alltag: ["Karten", "Murmeln", "Perlen"],
         bluey: ["Muscheln", "Flaschen", "Zeichnungen"],
         gabby: ["Sticker", "Kugeln", "Kerzen"],
-        doozie: ["Leckerlis", "Tenndis-B\u00E4lle", "Knochen"]
+        doozie: ["Leckerlis", "Tennisb\u00E4lle", "Knochen"]
       },
       zahlen: [{ min: 45, max: 88 }, { min: 13, max: 34 }, { min: 8, max: 27 }],
       regeln: function (z) { return z[2] <= z[1] && z[0] - z[1] >= 3 && z[0] - z[1] + z[2] <= 100; },
@@ -488,10 +488,10 @@
       kategorie: "normal",
       themen: ["alltag", "bluey", "gabby", "doozie"],
       sache: {
-        alltag: ["Kreise", "Sterne", "Aufkleber"],
+        alltag: ["Kreisel", "Sterne", "Aufkleber"],
         bluey: ["Tore", "Muscheln", "H\u00FCpfpunkte"],
         gabby: ["Kekse", "Lichter", "Tassen"],
-        doozie: ["Quietsch-Enten", "Tenndis-B\u00E4lle", "Pfoten-Abzeichen"]
+        doozie: ["Quietsch-Enten", "Tennisb\u00E4lle", "Pfoten-Abzeichen"]
       },
       zahlen: [{ min: 13, max: 48 }, { min: 7, max: 29 }],
       regeln: function (z) { return 2 * z[0] <= 100 && 2 * z[0] - z[1] >= 5; },
@@ -529,8 +529,8 @@
       themen: ["alltag", "bluey", "gabby", "doozie"],
       sache: {
         alltag: ["Murmel-Kugeln", "Bonbons", "Figuren"],
-        bluey: ["Tenndis-B\u00E4lle", "Muscheln", "Ringe"],
-        gabby: ["Cakey-Kekse", "Lichter", "Tassen"],
+        bluey: ["Tennisb\u00E4lle", "Muscheln", "Ringe"],
+        gabby: ["Kuchi-Kekse", "Lichter", "Tassen"],
         doozie: ["Kauknochen", "Quietschb\u00E4lle", "Pfoten-Abzeichen"]
       },
       zahlen: [{ min: 8, max: 30 }, { min: 6, max: 30 }],
@@ -551,7 +551,7 @@
         alltag: ["Stifte", "\u00C4pfel", "B\u00FCcher"],
         bluey: ["Muscheln", "Zweige", "Steine"],
         gabby: ["Kerzen", "B\u00E4nder", "Servietten"],
-        doozie: ["Leckerlis", "Apportel-B\u00E4lle", "Schwimmflossen"]
+        doozie: ["Leckerlis", "Apportier-B\u00E4lle", "Schwimmflossen"]
       },
       zahlen: [{ min: 3, max: 8 }, { min: 5, max: 11 }, { min: 4, max: 22 }],
       regeln: function (z) { return z[0] * z[1] + z[2] <= 100; },
@@ -607,7 +607,7 @@
       regeln: function (z) { return (z[0] * 100 + z[1] * 10) * 2 <= 10000; },
       text: function (c) {
         return "Ein Eis kostet " + c.z[0] + " \u20AC " + (c.z[1] * 10) +
-          " Cent. " + c.p1 + " und " + c.p2 + " wollen jedes ein Eis. Was kosten beide Eise zusammen?";
+          " Cent. " + c.p1 + " und " + c.p2 + " wollen beide ein Eis. Was kosten beide Eis zusammen?";
       },
       frage: "Antwort in Euro und Cent",
       feld: function (c) {
@@ -657,7 +657,7 @@
       sache: {
         alltag: ["Muffins", "Cupcakes", "T\u00FCten Gummib\u00E4rchen"],
         bluey: ["Kekse", "Donuts", "T\u00FCten Popcorn"],
-        gabby: ["Cakey-Kekse", "Muffins", "Glasur-Sterne"],
+        gabby: ["Kuchi-Kekse", "Muffins", "Glasur-Sterne"],
         doozie: ["Knochen-Kekse", "Leckerli-T\u00FCten", "Pfoten-Waffeln"]
       },
       zahlen: [{ min: 3, max: 9 }],
@@ -957,7 +957,7 @@
         var zusammen = c.z[0] + c.z[1];
         var stunde = c.extra.stunde + Math.floor(zusammen / 60);
         var minute = zusammen % 60;
-        return feld(zusammen, {
+        return feld(stunde * 60 + minute, {
           typ: "zeit",
           zeit: { stunde: stunde, minute: minute },
           anzeige: uhrSprechText(stunde, minute)
@@ -1010,7 +1010,7 @@
       regeln: z => z[0] % z[1] !== 0,
       text: c => c.p1 + " teilt " + c.z[0] + " Kinder auf Tretboote auf. In jedes Boot kommen genau " +
         c.z[1] + " Kinder. Nur volle Boote fahren los. Wie viele Kinder bleiben am Steg?",
-      losung: c => c.z[0] % c.z[1], einheit: "Kinder"
+      losung: c => c.z[0] % c.z[1], einheit: "Kinder", frage: "Wie viele Kinder?"
     },
     {
       id: "zahlenweg-huepfen", themen: ALLE_WELTEN, stufe: 1, kategorie: "normal",
@@ -1131,7 +1131,9 @@
     var themen = [];
     var mischung = modus === "bluey" ? ["bluey"]
       : modus === "gabby" ? ["gabby"]
-      : ["doozie"];
+      : modus === "doozie" ? ["doozie"]
+      : modus === "alltag" ? ["alltag"]
+      : ["bluey", "gabby", "doozie"];
     for (var i = 0; i < anzahl; i++) {
       themen.push(mischung[i % mischung.length]);
     }
