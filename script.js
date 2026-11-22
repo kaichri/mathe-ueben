@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const VERSION_STAND = "22. November 2026";
 
 const EINSTELLUNGEN = {
@@ -5252,8 +5252,52 @@ const extraUebung = (function () {
         });
       } else if (aufgabe.typ === "dreieck") {
         const box = element("div", "rechendreieck");
+        const buehne = element("div", "rechendreieck-feld");
+        const svg = svgEl("svg", {
+          class: "rechendreieck-svg",
+          viewBox: "0 0 400 320",
+          "aria-hidden": "true"
+        });
+        // Großes Dreieck (Innenraum klar von den Außenfeldern getrennt)
+        svg.appendChild(svgEl("polygon", {
+          class: "rechendreieck-form",
+          points: "200,18 72,238 328,238"
+        }));
+        // Drei Kammern im Inneren (Mittelpunkt zu den drei Seitenmitten)
+        [
+          [200, 165, 136, 128],
+          [200, 165, 264, 128],
+          [200, 165, 200, 238]
+        ].forEach(function (linie) {
+          svg.appendChild(svgEl("line", {
+            class: "rechendreieck-teiler",
+            x1: linie[0], y1: linie[1], x2: linie[2], y2: linie[3]
+          }));
+        });
+        svg.appendChild(svgEl("circle", {
+          class: "rechendreieck-punkt",
+          cx: 200, cy: 165, r: 3.5
+        }));
+        // Verbindungsstriche von den Seitenmitten zu den drei Außenzahlen
+        [
+          [136, 128, 102, 118],
+          [264, 128, 298, 118],
+          [200, 238, 200, 262]
+        ].forEach(function (zeiger) {
+          svg.appendChild(svgEl("line", {
+            class: "rechendreieck-zeiger",
+            x1: zeiger[0], y1: zeiger[1], x2: zeiger[2], y2: zeiger[3]
+          }));
+          svg.appendChild(svgEl("circle", {
+            class: "rechendreieck-kantenpunkt",
+            cx: zeiger[0], cy: zeiger[1], r: 4
+          }));
+        });
+        buehne.appendChild(svg);
+
         const eingaben = [];
-        function feldOderWert(eintrag, rolle) {
+        function feldOderWert(eintrag, rolle, posKlasse, beschriftung) {
+          const platz = element("div", "dreieck-platz " + posKlasse);
           if (eintrag.offen) {
             const inp = element("input", "eingabe dreieck-eingabe " + rolle);
             inp.type = "text";
@@ -5261,26 +5305,21 @@ const extraUebung = (function () {
             inp.autocomplete = "off";
             inp.placeholder = "?";
             inp.maxLength = 4;
-            inp.setAttribute("aria-label", "Zahl im Rechendreieck");
+            inp.setAttribute("aria-label", beschriftung);
             eingaben.push({ inp: inp, korrekt: eintrag.wert });
-            return inp;
+            platz.appendChild(inp);
+          } else {
+            platz.appendChild(element("span", "dreieck-fest " + rolle, String(eintrag.wert)));
           }
-          return element("span", "dreieck-fest " + rolle, String(eintrag.wert));
+          return platz;
         }
-        // Visuelles 3x3 Raster: oben i1, links-mitte a12, rechts-mitte a13, unten-links i2, unten-mitte a23, unten-rechts i3
-        const z1 = element("div", "dreieck-zeile dreieck-oben");
-        z1.appendChild(feldOderWert(aufgabe.innen[0], "dreieck-innen"));
-        const z2 = element("div", "dreieck-zeile dreieck-mitte");
-        z2.appendChild(feldOderWert(aufgabe.aussen[0], "dreieck-aussen"));
-        z2.appendChild(element("span", "dreieck-kern", "△"));
-        z2.appendChild(feldOderWert(aufgabe.aussen[2], "dreieck-aussen"));
-        const z3 = element("div", "dreieck-zeile dreieck-unten");
-        z3.appendChild(feldOderWert(aufgabe.innen[1], "dreieck-innen"));
-        z3.appendChild(feldOderWert(aufgabe.aussen[1], "dreieck-aussen"));
-        z3.appendChild(feldOderWert(aufgabe.innen[2], "dreieck-innen"));
-        box.appendChild(z1);
-        box.appendChild(z2);
-        box.appendChild(z3);
+        buehne.appendChild(feldOderWert(aufgabe.innen[0], "dreieck-innen", "pos-i1", "Innenzahl oben"));
+        buehne.appendChild(feldOderWert(aufgabe.innen[1], "dreieck-innen", "pos-i2", "Innenzahl links unten"));
+        buehne.appendChild(feldOderWert(aufgabe.innen[2], "dreieck-innen", "pos-i3", "Innenzahl rechts unten"));
+        buehne.appendChild(feldOderWert(aufgabe.aussen[0], "dreieck-aussen", "pos-a12", "Außenzahl links (Summe)"));
+        buehne.appendChild(feldOderWert(aufgabe.aussen[2], "dreieck-aussen", "pos-a13", "Außenzahl rechts (Summe)"));
+        buehne.appendChild(feldOderWert(aufgabe.aussen[1], "dreieck-aussen", "pos-a23", "Außenzahl unten (Summe)"));
+        box.appendChild(buehne);
         karte.appendChild(box);
         pruefer.push(function () {
           let ok = true;

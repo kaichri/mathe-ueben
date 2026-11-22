@@ -1845,52 +1845,115 @@ main {
   color: var(--akzent-dunkel);
 }
 
-/* Rechendreieck */
+/* Rechendreieck (echtes Dreieck mit 3 Innenkammern + 3 Außenfeldern an den Kanten) */
 .rechendreieck {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 6px 0;
 }
 
-.dreieck-zeile {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
+.rechendreieck-feld {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 400 / 320;
 }
+
+.rechendreieck-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rechendreieck-form {
+  fill: var(--akzent-hell);
+  stroke: var(--akzent);
+  stroke-width: 4.5;
+  stroke-linejoin: round;
+}
+
+.rechendreieck-teiler {
+  stroke: var(--akzent);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  opacity: 0.65;
+}
+
+.rechendreieck-punkt {
+  fill: var(--akzent);
+}
+
+.rechendreieck-zeiger {
+  stroke: #c48f1f;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+}
+
+.rechendreieck-kantenpunkt {
+  fill: #c48f1f;
+}
+
+.dreieck-platz {
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.dreieck-platz.pos-i1  { left: 50%;    top: 35.5%; }
+.dreieck-platz.pos-i2  { left: 36.5%;  top: 62.5%; }
+.dreieck-platz.pos-i3  { left: 63.5%;  top: 62.5%; }
+.dreieck-platz.pos-a12 { left: 16.5%;  top: 36.9%; }
+.dreieck-platz.pos-a13 { left: 83.5%;  top: 36.9%; }
+.dreieck-platz.pos-a23 { left: 50%;    top: 89.4%; }
 
 .dreieck-fest,
 .dreieck-eingabe {
-  width: 82px;
-  height: 48px;
-  border-radius: 12px;
-  font-size: 22px;
+  width: 68px;
+  height: 42px;
+  border-radius: 11px;
+  font-size: 21px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  padding: 2px 4px;
   box-sizing: border-box;
 }
 
 .dreieck-fest.dreieck-innen {
-  background: var(--akzent-hell);
+  background: #ffffff;
+  border: 3px solid var(--akzent);
+  color: var(--akzent-dunkel);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.dreieck-eingabe.dreieck-innen:not(.richtig):not(.falsch) {
+  background: #ffffff;
   border: 3px solid var(--akzent);
   color: var(--akzent-dunkel);
 }
 
 .dreieck-fest.dreieck-aussen {
   background: #fff4d4;
-  border: 2px dashed #c48f1f;
+  border: 3px solid #c48f1f;
   color: #7a5c11;
+  border-radius: 999px;
 }
 
-.dreieck-kern {
-  font-size: 32px;
-  color: var(--akzent);
-  user-select: none;
+.dreieck-eingabe.dreieck-aussen:not(.richtig):not(.falsch) {
+  background: #fffaf0;
+  border: 3px dashed #c48f1f;
+  color: #7a5c11;
+  border-radius: 999px;
+}
+
+.dreieck-eingabe.dreieck-aussen.richtig,
+.dreieck-eingabe.dreieck-aussen.falsch {
+  border-radius: 999px;
 }
 
 /* Schriftliches Rechnen untereinander (H / Z / E) */
@@ -1969,7 +2032,7 @@ main {
 @media (max-width: 640px) {
   .themen-kacheln { grid-template-columns: minmax(0, 1fr); }
   .mauer-stein-fest, .mauer-stein-eingabe { width: 72px; height: 46px; font-size: 20px; }
-  .dreieck-fest, .dreieck-eingabe { width: 68px; height: 44px; font-size: 19px; }
+  .dreieck-fest, .dreieck-eingabe { width: 56px; height: 36px; font-size: 17px; }
   .schriftlich-gitter { grid-template-columns: 38px repeat(3, 48px); padding: 10px; }
   .eingabe.schriftlich-erg { width: 44px; font-size: 22px; }
 }

@@ -531,6 +531,13 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.1 — Rechendreiecke als echtes SVG-Dreieck
+
+- **Rechendreiecke klarer dargestellt:** Unter *Mathe → Rechenmauern & Dreiecke*
+  werden Rechendreiecke nun als echtes, farbig gefülltes SVG-Dreieck mit drei
+  getrennten Innenkammern und drei deutlich außerhalb der Kanten liegenden,
+  runden Außenzahlen-Feldern (inkl. Kanten-Verbindungsstrichen) gezeichnet.
+
 ### 1.3.0 — Neues Gutschein-System (Wunschliste, Freitext, JPG-Export, Überraschung & Eltern-Bestätigung)
 
 - **Neue Standard-Wunschliste** (`Gemütlicher Familien-Filmabend mit Popcorn`,

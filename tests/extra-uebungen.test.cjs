@@ -178,3 +178,24 @@ test("UI: Deutsch-Übersicht zeigt 5 selbstständige Übungen inkl. Satzbau-Puzz
   g.nodes.get("abbruchKnopf").emit("click");
   assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".themen-kachel").length, 5);
 });
+
+test("UI: Rechendreieck zeichnet echtes SVG-Dreieck mit 3 Innen- und 3 Außenfeldern", () => {
+  const g = game({}, { now: JETZT });
+  g.run("extraUebung.oeffneMatheThema('mauern')");
+  const inhalt = g.nodes.get("matheThemaInhalt");
+  const dreiecke = inhalt.querySelectorAll(".rechendreieck");
+  assert(dreiecke.length >= 1, "Mindestens ein Rechendreieck erwartet");
+  for (const d of dreiecke) {
+    const buehne = d.querySelector(".rechendreieck-feld");
+    assert(buehne, "Rechendreieck-Bühne fehlt");
+    const svg = buehne.children.find(c => c.type === "svg");
+    assert(svg, "SVG-Dreieck fehlt");
+    assert.equal(svg.getAttribute("class"), "rechendreieck-svg");
+    assert(svg.children.some(c => c.getAttribute("class") === "rechendreieck-form"), "Dreiecks-Polygon fehlt");
+    assert.equal(svg.children.filter(c => c.getAttribute("class") === "rechendreieck-teiler").length, 3, "3 innere Trennlinien erwartet");
+    assert.equal(svg.children.filter(c => c.getAttribute("class") === "rechendreieck-zeiger").length, 3, "3 Außen-Verbindungslinien erwartet");
+    assert.equal(d.querySelectorAll(".dreieck-platz").length, 6, "6 Zahlenfelder (3 innen + 3 außen) erwartet");
+    assert.equal(d.querySelectorAll(".dreieck-innen").length, 3, "3 Innenzahlen erwartet");
+    assert.equal(d.querySelectorAll(".dreieck-aussen").length, 3, "3 Außenzahlen erwartet");
+  }
+});
