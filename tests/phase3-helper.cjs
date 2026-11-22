@@ -80,6 +80,7 @@ function game(saved = {}, options = {}) {
   let writes = 0;
   const document = {
     body: node("body"), createElement: node, createElementNS(ns, type) { return node(type); },
+    createTextNode(text) { const n = node("#text"); n.textContent = String(text); return n; },
     createDocumentFragment() { return node("#fragment"); },
     documentElement: { clientWidth: 1024, clientHeight: 768 },
     getElementById(id) {
@@ -136,7 +137,9 @@ function game(saved = {}, options = {}) {
       removeItem(key) { speicher.delete(key); }
     },
     AUFGABEN: require("../aufgaben-bereiche.js"), GESCHICHTEN: require("../geschichten.js"),
+    MATHE_THEMEN: require("../mathe-themen.js"),
     SPRECHTRAINING: require("../sprechtraining.js"),
+    DEUTSCH_UEBUNGEN: require("../deutsch-uebungen.js"),
     AudioContext, matchMedia() { return { matches: true }; }, scrollTo() {}, alert() {},
     location: { reload() { reloads += 1; } },
     Blob, URL: { createObjectURL(blob) { const id='blob:'+blobs.size; blobs.set(id,blob); return id; }, revokeObjectURL(id) { revoked.push(id); blobs.delete(id); } },

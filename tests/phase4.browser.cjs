@@ -13,7 +13,7 @@ const engines=[['Chrome',process.env.CHROME_PATH || 'C:/Program Files/Google/Chr
   ['Edge',process.env.EDGE_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe']];
 const result={date:new Date().toISOString(),output,engines:[],unavailable:[],checks:[]};
 let currentPage;
-const allowed=new Set(['index.html','style.css','script.js','geschichten.js','aufgaben-bereiche.js','sprechtraining.js','videos.js']);
+const allowed=new Set(['index.html','style.css','script.js','geschichten.js','aufgaben-bereiche.js','mathe-themen.js','sprechtraining.js','deutsch-uebungen.js','videos.js']);
 const server=http.createServer((req,res)=>{
   const name=decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\//,'') || 'index.html';
   if(!(allowed.has(name) || /^musik\/[\w-]+\.mp[34]$/.test(name) || /^bilder\/[\w-]+\.(?:webp|ico)$/.test(name) || /^audio\/sprechtraining\/(?:thorsten|ramona)\/[\w-]+\.mp3$/.test(name))) {res.writeHead(404);return res.end();}

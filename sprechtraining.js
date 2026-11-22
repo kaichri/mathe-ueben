@@ -511,6 +511,198 @@
       hinweis: "Lass Emma zuerst frei erzählen. Danach könnt ihr gemeinsam schauen, was schon gut gelingt.",
       wichtigePunkte: ["erstmals allein fahren", "Helm auf", "Freundin getroffen", "stolz"],
       musterloesung: "Ella darf zum ersten Mal allein mit dem Fahrrad zum Park fahren. Ihre Mutter erklärt ihr die Regeln. Ella setzt ihren Helm auf und fährt los. Im Park trifft sie ihre Freundin. Am Ende ist sie stolz, weil alles gut geklappt hat."
+    },
+    {
+      tag: 15,
+      titel: "Hundewelt: Zusammen spielen",
+      ziel: "Wuffi und der rote Ball.",
+      text: "Wuffi und Coco laufen am Nachmittag über die große Hundewiese. Plötzlich rollt ihr roter Ball in ein dichtes Gebüsch. Wuffi kriecht vorsichtig unter die Zweige und sucht überall. Mit einem fröhlichen Bellen bringt er den Ball wieder heraus. Coco wedelt begeistert mit dem Schwanz, und beide spielen sofort weiter.",
+      fragenSets: [
+        [
+          { frage: "Wer läuft über die Hundewiese?", antwort: "Wuffi und Coco." },
+          { frage: "Wohin rollt der rote Ball?", antwort: "In ein dichtes Gebüsch." },
+          { frage: "Wer holt den Ball wieder heraus?", antwort: "Wuffi." }
+        ],
+        [
+          { frage: "Welche Farbe hat der Ball?", antwort: "Rot." },
+          { frage: "Wie kriecht Wuffi unter die Zweige?", antwort: "Vorsichtig." },
+          { frage: "Wie reagiert Coco, als Wuffi zurückkommt?", antwort: "Sie wedelt begeistert mit dem Schwanz." }
+        ],
+        [
+          { frage: "Wann sind Wuffi und Coco auf der Wiese?", antwort: "Am Nachmittag." },
+          { frage: "Was passiert mit dem Ball?", antwort: "Er rollt in ein dichtes Gebüsch." },
+          { frage: "Was machen beide am Ende?", antwort: "Sie spielen sofort weiter." }
+        ],
+        [
+          { frage: "Wo spielen die beiden Welpen?", antwort: "Auf der großen Hundewiese." },
+          { frage: "Woran merkt man, dass Wuffi den Ball gefunden hat?", antwort: "Er bellt fröhlich und bringt ihn heraus." },
+          { frage: "Wie endet die Geschichte?", antwort: "Coco freut sich und beide spielen weiter." }
+        ]
+      ],
+      satzAnfaenge: ["Wuffi und Coco …", "Plötzlich rollt …", "Wuffi kriecht …", "Am Ende …"],
+      hinweis: "Achte auf lebendige Verben wie laufen, rollen, kriechen und wedeln.",
+      wichtigePunkte: ["Wuffi und Coco", "roter Ball im Gebüsch", "Wuffi holt ihn", "spielen weiter"],
+      musterloesung: "Wuffi und Coco spielen auf der Hundewiese. Ihr roter Ball rollt ins Gebüsch. Wuffi kriecht vorsichtig hinein und holt ihn heraus. Coco freut sich und sie spielen weiter."
+    },
+    {
+      tag: 16,
+      titel: "Hundewelt: Mutig sein",
+      ziel: "Flocki beim Tierarzt.",
+      text: "Heute hat der kleine Welpe Flocki einen Termin beim Tierarzt. Zuerst zittert er ein bisschen und versteckt sich hinter Bellos Pfote. Die Tierärztin streichelt ihn sanft hinter den Ohren und gibt ihm ein Leckerli. Danach lässt sich Flocki ganz ruhig untersuchen. Auf dem Heimweg trabt er stolz nach Hause, weil er so mutig war.",
+      fragenSets: [
+        [
+          { frage: "Wohin geht Flocki heute?", antwort: "Zum Tierarzt." },
+          { frage: "Wo versteckt sich Flocki zuerst?", antwort: "Hinter Bellos Pfote." },
+          { frage: "Was gibt die Tierärztin ihm?", antwort: "Ein Leckerli." }
+        ],
+        [
+          { frage: "Wie fühlt sich Flocki am Anfang?", antwort: "Er ist nervös und zittert ein bisschen." },
+          { frage: "Wie beruhigt die Tierärztin Flocki?", antwort: "Sie streichelt ihn sanft hinter den Ohren und gibt ihm ein Leckerli." },
+          { frage: "Warum trabt Flocki am Ende stolz nach Hause?", antwort: "Weil er so mutig war." }
+        ],
+        [
+          { frage: "Wer begleitet Flocki?", antwort: "Bello." },
+          { frage: "Wie verhält sich Flocki bei der Untersuchung?", antwort: "Er bleibt ganz ruhig." },
+          { frage: "Wie geht es Flocki auf dem Heimweg?", antwort: "Er ist stolz." }
+        ],
+        [
+          { frage: "Was macht Flocki zuerst vor Angst?", antwort: "Er zittert und versteckt sich." },
+          { frage: "Wo streichelt ihn die Tierärztin?", antwort: "Hinter den Ohren." },
+          { frage: "Was hat Flocki heute geschafft?", antwort: "Er war beim Tierarzt ganz mutig." }
+        ]
+      ],
+      satzAnfaenge: ["Flocki muss heute …", "Zuerst hat er …", "Die Tierärztin …", "Am Ende ist er stolz, weil …"],
+      hinweis: "Frage nach den Gefühlen am Anfang und am Ende: erst ängstlich, dann stolz.",
+      wichtigePunkte: ["Tierarzt", "zittert zuerst", "Leckerli und streicheln", "ruhig untersucht", "stolz"],
+      musterloesung: "Flocki geht zum Tierarzt und hat zuerst Angst. Die Tierärztin streichelt ihn und gibt ihm ein Leckerli. Danach bleibt er ganz ruhig und geht stolz nach Hause."
+    },
+    {
+      tag: 17,
+      titel: "Hamsterwelt: Etwas Neues ausprobieren",
+      ziel: "Knuspels neues Laufrad.",
+      text: "Im Hamsterzimmer steht seit heute ein großes, buntes Laufrad. Knuspel schnuppert neugierig daran und setzt vorsichtig eine Pfote hinein. Das Rad dreht sich sofort, und Knuspel hopst überrascht wieder heraus. Seine Freundin Nussi zeigt ihm, wie man langsam losläuft. Schon nach wenigen Minuten flitzen beide abwechselnd durch das Rad und kichern vergnügt.",
+      fragenSets: [
+        [
+          { frage: "Was steht neu im Hamsterzimmer?", antwort: "Ein großes, buntes Laufrad." },
+          { frage: "Was passiert, als Knuspel eine Pfote hineinsetzt?", antwort: "Das Rad dreht sich und er hopst überrascht heraus." },
+          { frage: "Wer zeigt ihm, wie es geht?", antwort: "Seine Freundin Nussi." }
+        ],
+        [
+          { frage: "Wie sieht das neue Laufrad aus?", antwort: "Groß und bunt." },
+          { frage: "Wie nähert sich Knuspel dem Rad?", antwort: "Neugierig und vorsichtig." },
+          { frage: "Was machen Knuspel und Nussi am Ende?", antwort: "Sie flitzen abwechselnd durch das Rad und kichern." }
+        ],
+        [
+          { frage: "Warum hopst Knuspel zuerst wieder heraus?", antwort: "Weil sich das Rad sofort dreht und ihn überrascht." },
+          { frage: "Was erklärt Nussi ihm?", antwort: "Wie man langsam losläuft." },
+          { frage: "Wie lange dauert es, bis es klappt?", antwort: "Nur wenige Minuten." }
+        ],
+        [
+          { frage: "Wer probiert das Laufrad zuerst aus?", antwort: "Knuspel." },
+          { frage: "Wie soll man laut Nussi starten?", antwort: "Langsam loslaufen." },
+          { frage: "Haben die beiden am Ende Spaß?", antwort: "Ja, sie flitzen abwechselnd und kichern vergnügt." }
+        ]
+      ],
+      satzAnfaenge: ["Im Hamsterzimmer steht …", "Als Knuspel …", "Nussi hilft ihm und …", "Am Ende …"],
+      hinweis: "Achte auf die Abfolge: Neugier, kleine Überraschung, Hilfe von der Freundin, Erfolg.",
+      wichtigePunkte: ["buntes Laufrad", "dreht sich überraschend", "Nussi zeigt es", "flitzen abwechselnd"],
+      musterloesung: "Im Hamsterzimmer steht ein buntes Laufrad. Zuerst erschrickt Knuspel, als es sich dreht. Nussi zeigt ihm, wie man langsam losläuft. Am Ende flitzen beide fröhlich darin."
+    },
+    {
+      tag: 18,
+      titel: "Hamsterwelt: Gemeinsam bauen",
+      ziel: "Bommel baut eine Brücke.",
+      text: "Bommel möchte von seinem Kuschelhaus schnell zur Futterschale kommen. Dazwischen liegt eine kleine Lücke, über die er nicht springen mag. Gemeinsam mit Flauschi sammelt er flache Holzstäbchen und legt sie sauber nebeneinander. Flauschi prüft vorsichtig, ob die Brücke auch wirklich hält. Als Bommel sicher hinübertrippelt, teilen sich beide als Belohnung eine süße Beere.",
+      fragenSets: [
+        [
+          { frage: "Wohin möchte Bommel gelangen?", antwort: "Von seinem Kuschelhaus zur Futterschale." },
+          { frage: "Wer hilft Bommel beim Bauen?", antwort: "Flauschi." },
+          { frage: "Was teilen sich die beiden am Ende?", antwort: "Eine süße Beere." }
+        ],
+        [
+          { frage: "Warum braucht Bommel eine Brücke?", antwort: "Weil dazwischen eine Lücke liegt, über die er nicht springen mag." },
+          { frage: "Woraus bauen die Hamster die Brücke?", antwort: "Aus flachen Holzstäbchen." },
+          { frage: "Was macht Flauschi, bevor Bommel hinüberläuft?", antwort: "Er prüft vorsichtig, ob die Brücke hält." }
+        ],
+        [
+          { frage: "Welche zwei Orte verbindet die Brücke?", antwort: "Das Kuschelhaus und die Futterschale." },
+          { frage: "Wie legen die beiden die Holzstäbchen hin?", antwort: "Sauber nebeneinander." },
+          { frage: "Wofür gibt es am Ende eine Beere?", antwort: "Als Belohnung, weil die Brücke hält." }
+        ],
+        [
+          { frage: "Was sammeln Bommel und Flauschi?", antwort: "Flache Holzstäbchen." },
+          { frage: "Hält die neue Brücke?", antwort: "Ja, Bommel trippelt sicher hinüber." },
+          { frage: "Wie schmeckt die Belohnung?", antwort: "Süß." }
+        ]
+      ],
+      satzAnfaenge: ["Bommel möchte …", "Deshalb sammeln …", "Flauschi prüft …", "Als Belohnung …"],
+      hinweis: "Übt „weil“ oder „deshalb“: Problem (Lücke) → Lösung (Brücke bauen).",
+      wichtigePunkte: ["Lücke zur Futterschale", "Holzstäbchen mit Flauschi", "Brücke geprüft", "süße Beere geteilt"],
+      musterloesung: "Bommel will zur Futterschale, aber dazwischen ist eine Lücke. Mit Flauschi baut er eine Brücke aus Holzstäbchen. Sie hält gut, und als Belohnung teilen beide eine Beere."
+    },
+    {
+      tag: 19,
+      titel: "Weihnachtswelt: Einander helfen",
+      ziel: "Rudolphs leuchtende Nase.",
+      text: "Am Abend vor Weihnachten zieht plötzlich dichter Nebel über die verschneiten Tannen. Der Weihnachtsmann kann den Weg durch die Wolken kaum noch erkennen. Da tritt das Rentier Rudolph nach vorn, und seine rote Nase leuchtet hell wie eine Laterne. Alle anderen Rentiere folgen dem warmen Licht sicher durch die Nacht. Der Weihnachtsmann bedankt sich bei Rudolph, weil alle Geschenke pünktlich ankommen.",
+      fragenSets: [
+        [
+          { frage: "Was zieht plötzlich über die Tannen?", antwort: "Dichter Nebel." },
+          { frage: "Wie hilft Rudolph?", antwort: "Seine rote Nase leuchtet hell wie eine Laterne." },
+          { frage: "Warum bedankt sich der Weihnachtsmann?", antwort: "Weil alle Geschenke pünktlich ankommen." }
+        ],
+        [
+          { frage: "Wann spielt die Geschichte?", antwort: "Am Abend vor Weihnachten." },
+          { frage: "Welches Problem hat der Weihnachtsmann?", antwort: "Er kann den Weg im Nebel kaum erkennen." },
+          { frage: "Was machen die anderen Rentiere?", antwort: "Sie folgen dem warmen Licht sicher durch die Nacht." }
+        ],
+        [
+          { frage: "Womit wird Rudolphs Nase verglichen?", antwort: "Mit einer hellen Laterne." },
+          { frage: "Welche Farbe hat Rudolphs Nase?", antwort: "Rot." },
+          { frage: "Kommen die Geschenke rechtzeitig an?", antwort: "Ja, alle kommen pünktlich an." }
+        ],
+        [
+          { frage: "Worüber zieht der Nebel?", antwort: "Über die verschneiten Tannen." },
+          { frage: "Wer tritt nach vorn, um zu helfen?", antwort: "Das Rentier Rudolph." },
+          { frage: "Wie endet der Flug?", antwort: "Sicher und pünktlich, und der Weihnachtsmann bedankt sich." }
+        ]
+      ],
+      satzAnfaenge: ["Am Abend vor Weihnachten …", "Der Weihnachtsmann kann …", "Deshalb tritt Rudolph …", "Am Ende …"],
+      hinweis: "Schöne Geschichte für Ursache und Lösung – ermutige zu ganzen Sätzen mit „weil“.",
+      wichtigePunkte: ["dichter Nebel", "Weg nicht sichtbar", "Rudolphs rote Nase leuchtet", "Geschenke pünktlich"],
+      musterloesung: "Vor Weihnachten kommt dichter Nebel auf, und der Weihnachtsmann sieht den Weg nicht. Rudolph leuchtet mit seiner roten Nase wie eine Laterne voran. So kommen alle Geschenke pünktlich an."
+    },
+    {
+      tag: 20,
+      titel: "Weihnachtswelt: Duft in der Backstube",
+      ziel: "Zimtsterne für den Wichtel.",
+      text: "In der warmen Weihnachtsbäckerei rollt die kleine Elfe den Teig dünn aus. Der Wichtel sticht mit einer goldenen Form viele hübsche Sterne aus und legt sie aufs Blech. Kurz darauf duftet die ganze Werkstatt herrlich nach Zimt und Vanille. Als die Plätzchen abgekühlt sind, streuen beide weißen Puderzucker wie Schnee darüber. Zum Schluss stellen sie eine bunte Schale für den Weihnachtsmann auf den Tisch.",
+      fragenSets: [
+        [
+          { frage: "Wer arbeitet in der Weihnachtsbäckerei?", antwort: "Die kleine Elfe und der Wichtel." },
+          { frage: "Was sticht der Wichtel aus?", antwort: "Viele hübsche Sterne mit einer goldenen Form." },
+          { frage: "Für wen stellen sie am Ende eine Schale auf den Tisch?", antwort: "Für den Weihnachtsmann." }
+        ],
+        [
+          { frage: "Was macht die Elfe zuerst?", antwort: "Sie rollt den Teig dünn aus." },
+          { frage: "Wonach duftet die ganze Werkstatt?", antwort: "Nach Zimt und Vanille." },
+          { frage: "Was streuen sie über die abgekühlten Plätzchen?", antwort: "Weißen Puderzucker wie Schnee." }
+        ],
+        [
+          { frage: "Welche Farbe hat die Ausstechform?", antwort: "Gold." },
+          { frage: "Wann streuen sie den Puderzucker auf die Sterne?", antwort: "Als die Plätzchen abgekühlt sind." },
+          { frage: "Worauf legen sie die ausgestochenen Sterne?", antwort: "Aufs Blech." }
+        ],
+        [
+          { frage: "Wie bereiten die beiden die Zimtsterne zu?", antwort: "Teig ausrollen, Sterne ausstechen, backen und mit Puderzucker bestreuen." },
+          { frage: "Wie sieht der Puderzucker aus?", antwort: "Wie weißer Schnee." },
+          { frage: "Wo steht am Ende die bunte Schale?", antwort: "Auf dem Tisch." }
+        ]
+      ],
+      satzAnfaenge: ["In der Weihnachtsbäckerei …", "Der Wichtel …", "Danach duftet …", "Zum Schluss …"],
+      hinweis: "Tolle Reihenfolge-Übung: zuerst Teig, dann ausstechen, dann Puderzucker, zum Schluss auf den Tisch.",
+      wichtigePunkte: ["Elfe rollt Teig", "Wichtel sticht Sterne aus", "Duft nach Zimt", "Puderzucker", "Schale für Weihnachtsmann"],
+      musterloesung: "Die Elfe rollt den Teig aus, und der Wichtel sticht Sterne aus. Es duftet nach Zimt und Vanille. Nach dem Abkühlen streuen sie Puderzucker darauf und stellen eine Schale für den Weihnachtsmann bereit."
     }
   ];
 

@@ -41,14 +41,26 @@ auch an Folgetagen – mit allen bisherigen Antworten fortgesetzt. Nach dem
 Abschluss lässt sich direkt ein neues Quiz in jeder gewünschten Welt starten.
 
 
-Deutsch üben (Sprechtraining)
------------------------------
-Über den Umschalter "Mathe | Deutsch" in der Kopfzeile öffnet sich das
-Sprechtraining (Eltern-Kind-Modus) mit 14 kurzen Geschichten, drei eigenen
-Welten ("Süße Hunde", "Flauschige Hamster", "Weihnachtswelt") und eingebetteter
-Vorlesefunktion. Jede Übung läuft in vier Schritten: Zuhören, Verstehen,
-Satz bilden und Erzählen. Alle Geschichten sind jederzeit in beliebiger
-Reihenfolge spielbar.
+Weitere Mathe-Themen zum Entdecken
+----------------------------------
+Auf der Mathe-Startseite gibt es zusätzlich sieben frei wählbare Themen:
+Längen & Gewichte, Stellenwert & Nachbarn, Runden & Überschlagen, Analoge Uhr,
+Geometrie & Spiegelbilder (inkl. Würfelgebäude), Rechenmauern & Dreiecke
+sowie Schriftliches Rechnen untereinander (mit Merkfeld). Diese Übungen
+laufen unabhängig vom 50er-Quiz und den Bonussternen.
+
+
+Deutsch üben (Sprechtraining & selbstständige Übungen)
+------------------------------------------------------
+Über den Umschalter "Mathe | Deutsch" in der Kopfzeile öffnet sich der
+Deutsch-Bereich mit zwei Teilen:
+  1. Sprechtraining (Eltern-Kind-Modus) mit 20 kurzen Geschichten (inkl.
+     Geschichten zu "Süße Hunde", "Flauschige Hamster" und "Weihnachtswelt")
+     und eingebetteter Vorlesefunktion.
+  2. Fünf selbstständige Übungen zum allein Spielen: Rechtschreib-Detektiv,
+     Wortarten sortieren (Namenwort/Nomen, Tunwort/Verb, Wiewort/Adjektiv),
+     Satzbau-Puzzle, Leseverständnis und Wort-Training (Gegenteile, Mehrzahl,
+     Wortfamilien, Vergangenheit).
 
 
 Das Mathe-Quiz (auch über mehrere Tage spielbar)

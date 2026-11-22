@@ -203,6 +203,8 @@ function knobelAntwort(text) {
     return Number(m[1]) + Number(m[2]);
   if ((m = text.match(/Zwei Seiten sind (\d+) m und (\d+) m lang, der ganze Zaun ist (\d+) m/)))
     return Number(m[3]) - Number(m[1]) - Number(m[2]);
+  if ((m = text.match(/Unten liegen die drei Steine (\d+), (\d+) und (\d+)/)))
+    return Number(m[1]) + 2 * Number(m[2]) + Number(m[3]);
   return null;
 }
 
@@ -226,7 +228,7 @@ test("AUDIT Bonusaufgaben: Text und Lösung stimmen überein (alle Typen, 3000 A
     }
   }
   assert(geprueft >= 1500, "zu wenige Bonusaufgaben geprüft: " + geprueft);
-  assert.equal(typen.size, 14, "nicht alle Knobeltypen erzeugt: " + [...typen].sort().join(","));
+  assert.equal(typen.size, 15, "nicht alle Knobeltypen erzeugt: " + [...typen].sort().join(","));
 });
 
 test("AUDIT Bonusaufgaben: Merkzettel, Eindeutigkeit und Tageskontingent", () => {

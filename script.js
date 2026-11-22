@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.1.9";
+const APP_VERSION = "1.2.0";
 const VERSION_STAND = "22. November 2026";
 
 const EINSTELLUNGEN = {
@@ -40,8 +40,10 @@ const GESCHENKE = [
 
 const SPEICHER_NAME = "mathe-ueben-fuer-emma";
 
-/* Deutsch üben (sprechtraining.js lädt vor script.js). */
+/* Deutsch üben & Extra-Themen (laden vor script.js). */
 const SPRECHTRAINING = window.SPRECHTRAINING;
+const MATHE_THEMEN = window.MATHE_THEMEN;
+const DEUTSCH_UEBUNGEN = window.DEUTSCH_UEBUNGEN;
 
 const BONUS_STUFEN_SCHRITT = 25;
 const MEILENSTEINE = [
@@ -1306,7 +1308,7 @@ function aktualisiereBereichsSchalter() {
   const zeile = document.getElementById("kopfZeile");
   if (zeile) {
     zeile.textContent = bereichAktuell === "deutsch"
-      ? "3. Klasse \u00B7 Sprechtraining"
+      ? "3. Klasse \u00B7 Deutsch & Sprechtraining"
       : "3. Klasse \u00B7 Raum 1000";
   }
 }
@@ -1315,7 +1317,9 @@ function zeigeBildschirm(id) {
   if (id !== "uebungsBildschirm") { pausiereUebezeit(); }
   if (id !== "sprechBildschirm") { sprechAudio.stoppe(); }
   if (id === "sprechBildschirm") { bereichAktuell = "deutsch"; }
-  else if (id === "startBildschirm" || id === "uebungsBildschirm") { bereichAktuell = "mathe"; }
+  else if (id === "startBildschirm" || id === "uebungsBildschirm" || id === "matheThemaBildschirm") {
+    bereichAktuell = "mathe";
+  }
   musik.modusWechsel(); // Melodie wechselt mit, sobald der Bereich (und damit die Musik) wechselt
   aktualisiereBereichsSchalter();
   document.querySelectorAll(".bildschirm").forEach(function (schirm) {
@@ -4412,11 +4416,614 @@ const sprechAudio = (function () {
   };
 })();
 
+/* ------------- Interaktive Extra-Übungen (Mathe-Themen & Deutsch-Übungen) ------------- */
+
+const extraUebung = (function () {
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function svgEl(tag, attrs, text) {
+    const n = document.createElementNS(SVG_NS, tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) { n.setAttribute(k, String(attrs[k])); });
+    }
+    if (text !== undefined) { n.textContent = String(text); }
+    return n;
+  }
+
+  /* Klare analoge SVG-Uhr mit Ziffern 1–12, rotem Stunden- und blauem Minutenzeiger. */
+  function baueUhrSvg(stunde, minute) {
+    const svg = svgEl("svg", { class: "extra-uhr-svg", viewBox: "0 0 140 140", "aria-hidden": "true" });
+    svg.appendChild(svgEl("circle", { cx: 70, cy: 70, r: 64, fill: "#fffdf6", stroke: "#466080", "stroke-width": 4 }));
+    for (let i = 0; i < 60; i++) {
+      const w = (i * 6 - 90) * Math.PI / 180;
+      const lang = i % 5 === 0 ? 8 : 4;
+      svg.appendChild(svgEl("line", {
+        x1: (70 + Math.cos(w) * (60 - lang)).toFixed(1),
+        y1: (70 + Math.sin(w) * (60 - lang)).toFixed(1),
+        x2: (70 + Math.cos(w) * 60).toFixed(1),
+        y2: (70 + Math.sin(w) * 60).toFixed(1),
+        stroke: i % 5 === 0 ? "#385779" : "#9bb1c9",
+        "stroke-width": i % 5 === 0 ? 2.4 : 1.1
+      }));
+    }
+    for (let z = 1; z <= 12; z++) {
+      const w = (z * 30 - 90) * Math.PI / 180;
+      svg.appendChild(svgEl("text", {
+        x: (70 + Math.cos(w) * 44).toFixed(1),
+        y: (74 + Math.sin(w) * 44).toFixed(1),
+        "text-anchor": "middle",
+        "font-size": 12,
+        "font-weight": 700,
+        fill: "#2c3e50"
+      }, z));
+    }
+    const minW = (minute * 6 - 90) * Math.PI / 180;
+    const stdW = (((stunde % 12) + minute / 60) * 30 - 90) * Math.PI / 180;
+    // Minutenzeiger (blau, lang)
+    svg.appendChild(svgEl("line", {
+      x1: 70, y1: 70,
+      x2: (70 + Math.cos(minW) * 46).toFixed(1),
+      y2: (70 + Math.sin(minW) * 46).toFixed(1),
+      stroke: "#2b78c5", "stroke-width": 3.4, "stroke-linecap": "round"
+    }));
+    // Stundenzeiger (rot, kürzer)
+    svg.appendChild(svgEl("line", {
+      x1: 70, y1: 70,
+      x2: (70 + Math.cos(stdW) * 31).toFixed(1),
+      y2: (70 + Math.sin(stdW) * 31).toFixed(1),
+      stroke: "#d64550", "stroke-width": 4.8, "stroke-linecap": "round"
+    }));
+    svg.appendChild(svgEl("circle", { cx: 70, cy: 70, r: 4.5, fill: "#2c3e50" }));
+    return svg;
+  }
+
+  /* Geometrie-Formen, 3D-Körper, Spiegelachsen und isometrische Würfelgebäude. */
+  function baueGeometrieSvg(bild) {
+    const svg = svgEl("svg", { class: "extra-geo-svg", viewBox: "0 0 180 130", "aria-hidden": "true" });
+    const art = bild && bild.art;
+    if (art === "quadrat") {
+      svg.appendChild(svgEl("rect", { x: 50, y: 25, width: 80, height: 80, fill: "#9ad0f5", stroke: "#2c5282", "stroke-width": 3 }));
+    } else if (art === "rechteck") {
+      svg.appendChild(svgEl("rect", { x: 25, y: 35, width: 130, height: 60, fill: "#fbd38d", stroke: "#9c4221", "stroke-width": 3 }));
+    } else if (art === "dreieck") {
+      svg.appendChild(svgEl("polygon", { points: "90,18 32,108 148,108", fill: "#9ae6b4", stroke: "#22543d", "stroke-width": 3 }));
+    } else if (art === "fuenfeck") {
+      svg.appendChild(svgEl("polygon", { points: "90,15 142,52 122,110 58,110 38,52", fill: "#fbb6ce", stroke: "#97266d", "stroke-width": 3 }));
+    } else if (art === "sechseck") {
+      svg.appendChild(svgEl("polygon", { points: "60,20 120,20 148,65 120,110 60,110 32,65", fill: "#d6bcfa", stroke: "#553c9a", "stroke-width": 3 }));
+    } else if (art === "wuerfel") {
+      svg.appendChild(svgEl("polygon", { points: "90,16 138,40 90,64 42,40", fill: "#bee3f8", stroke: "#2b6cb0", "stroke-width": 2.5 }));
+      svg.appendChild(svgEl("polygon", { points: "42,40 90,64 90,114 42,90", fill: "#90cdf4", stroke: "#2b6cb0", "stroke-width": 2.5 }));
+      svg.appendChild(svgEl("polygon", { points: "90,64 138,40 138,90 90,114", fill: "#63b3ed", stroke: "#2b6cb0", "stroke-width": 2.5 }));
+    } else if (art === "quader") {
+      svg.appendChild(svgEl("polygon", { points: "75,24 152,44 105,66 28,46", fill: "#fed7aa", stroke: "#9c4221", "stroke-width": 2.5 }));
+      svg.appendChild(svgEl("polygon", { points: "28,46 105,66 105,104 28,84", fill: "#fbd38d", stroke: "#9c4221", "stroke-width": 2.5 }));
+      svg.appendChild(svgEl("polygon", { points: "105,66 152,44 152,82 105,104", fill: "#f6ad55", stroke: "#9c4221", "stroke-width": 2.5 }));
+    } else if (art === "spiegel-herz-ja") {
+      svg.appendChild(svgEl("path", { d: "M90 108 C40 78 30 42 54 28 C70 18 85 30 90 42 C95 30 110 18 126 28 C150 42 140 78 90 108 Z", fill: "#feb2b2", stroke: "#9b2c2c", "stroke-width": 3 }));
+      svg.appendChild(svgEl("line", { x1: 90, y1: 10, x2: 90, y2: 120, stroke: "#d64550", "stroke-width": 3, "stroke-dasharray": "6 5" }));
+    } else if (art === "spiegel-rechteck-nein") {
+      svg.appendChild(svgEl("rect", { x: 26, y: 34, width: 128, height: 62, fill: "#bee3f8", stroke: "#2b6cb0", "stroke-width": 3 }));
+      svg.appendChild(svgEl("line", { x1: 20, y1: 31, x2: 160, y2: 99, stroke: "#d64550", "stroke-width": 3, "stroke-dasharray": "6 5" }));
+    } else if (art === "spiegel-pfeil-nein") {
+      svg.appendChild(svgEl("polygon", { points: "30,52 104,52 104,30 152,65 104,100 104,78 30,78", fill: "#c6f6d5", stroke: "#276749", "stroke-width": 3 }));
+      svg.appendChild(svgEl("line", { x1: 90, y1: 12, x2: 90, y2: 118, stroke: "#d64550", "stroke-width": 3, "stroke-dasharray": "6 5" }));
+    } else if (art === "spiegel-haus-ja") {
+      svg.appendChild(svgEl("rect", { x: 52, y: 58, width: 76, height: 52, fill: "#fefcbf", stroke: "#744210", "stroke-width": 3 }));
+      svg.appendChild(svgEl("polygon", { points: "44,58 90,20 136,58", fill: "#fc8181", stroke: "#9b2c2c", "stroke-width": 3 }));
+      svg.appendChild(svgEl("rect", { x: 78, y: 80, width: 24, height: 30, fill: "#90cdf4", stroke: "#2b6cb0", "stroke-width": 2.5 }));
+      svg.appendChild(svgEl("line", { x1: 90, y1: 10, x2: 90, y2: 120, stroke: "#d64550", "stroke-width": 3, "stroke-dasharray": "6 5" }));
+    } else if (art === "wuerfelbau" && Array.isArray(bild.gitter)) {
+      const gitter = bild.gitter;
+      const dx = 22, dy = 11, dz = 22;
+      const startX = 76, startY = 82;
+      for (let r = 0; r < gitter.length; r++) {
+        for (let c = 0; c < gitter[r].length; c++) {
+          const hoehe = gitter[r][c];
+          for (let z = 0; z < hoehe; z++) {
+            const cx = startX + (c - r) * dx;
+            const cy = startY + (c + r) * dy - z * dz;
+            // Oben
+            svg.appendChild(svgEl("polygon", {
+              points: cx + "," + (cy - dy) + " " + (cx + dx) + "," + cy + " " + cx + "," + (cy + dy) + " " + (cx - dx) + "," + cy,
+              fill: "#fef08a", stroke: "#854d0e", "stroke-width": 1.8
+            }));
+            // Links
+            svg.appendChild(svgEl("polygon", {
+              points: (cx - dx) + "," + cy + " " + cx + "," + (cy + dy) + " " + cx + "," + (cy + dy + dz) + " " + (cx - dx) + "," + (cy + dz),
+              fill: "#fde047", stroke: "#854d0e", "stroke-width": 1.8
+            }));
+            // Rechts
+            svg.appendChild(svgEl("polygon", {
+              points: cx + "," + (cy + dy) + " " + (cx + dx) + "," + cy + " " + (cx + dx) + "," + (cy + dz) + " " + cx + "," + (cy + dy + dz),
+              fill: "#eab308", stroke: "#854d0e", "stroke-width": 1.8
+            }));
+          }
+        }
+      }
+    }
+    return svg;
+  }
+
+  /* Rendert einen Satz mit **markiertem Wort** für Wortarten-Übungen. */
+  function wortartSatzKnoten(satz) {
+    const p = element("p", "extra-frage extra-wortart-satz");
+    const teile = String(satz || "").split(/\*\*(.+?)\*\*/);
+    teile.forEach(function (teil, idx) {
+      if (idx % 2 === 1) {
+        p.appendChild(element("mark", "wort-markiert", teil));
+      } else if (teil) {
+        p.appendChild(document.createTextNode(teil));
+      }
+    });
+    return p;
+  }
+
+  function rendereRunde(behaelter, paket, optionen) {
+    const opts = optionen || {};
+    behaelter.textContent = "";
+    const pruefer = [];
+    let geprueft = false;
+
+    // Kopfzeile der Übung
+    const kopf = element("div", "sprech-kopf extra-kopf");
+    const zurueck = element("button", "knopf schlicht", "◀ Übersicht");
+    zurueck.type = "button";
+    zurueck.addEventListener("click", function () {
+      if (opts.aufZurueck) { opts.aufZurueck(); }
+    });
+    kopf.appendChild(zurueck);
+    kopf.appendChild(element("h3", null, paket.thema.symbol + " " + paket.thema.titel));
+    if (opts.figur) {
+      kopf.appendChild(figurBild(opts.figur, "sprech-figur"));
+    }
+    kopf.appendChild(element("p", "sprech-ziel", paket.thema.kurz));
+    behaelter.appendChild(kopf);
+
+    // Optionaler Lesetext (bei Leseverständnis)
+    if (paket.lesetext) {
+      const leseKarte = element("div", "sterne-karte extra-lesetext");
+      leseKarte.appendChild(element("h4", null, "📖 " + paket.lesetext.titel));
+      leseKarte.appendChild(element("p", "sprech-text", paket.lesetext.text));
+      behaelter.appendChild(leseKarte);
+    }
+
+    const liste = element("div", "extra-aufgaben-liste");
+    paket.aufgaben.forEach(function (aufgabe, index) {
+      const karte = element("div", "aufgabe extra-aufgabe");
+      const nummer = element("div", "extra-aufgabe-kopf");
+      nummer.appendChild(element("span", "extra-nummer", "Aufgabe " + (index + 1)));
+      if (aufgabe.badge) {
+        nummer.appendChild(element("span", "extra-badge", aufgabe.badge));
+      }
+      karte.appendChild(nummer);
+
+      if (aufgabe.typ === "wortart") {
+        karte.appendChild(wortartSatzKnoten(aufgabe.satz));
+      } else if (aufgabe.frage) {
+        karte.appendChild(element("p", "extra-frage", aufgabe.frage));
+      }
+
+      if (aufgabe.uhr) {
+        const uhrBox = element("div", "extra-grafik");
+        uhrBox.appendChild(baueUhrSvg(aufgabe.uhr.stunde, aufgabe.uhr.minute));
+        karte.appendChild(uhrBox);
+      }
+      if (aufgabe.bild) {
+        const geoBox = element("div", "extra-grafik");
+        geoBox.appendChild(baueGeometrieSvg(aufgabe.bild));
+        karte.appendChild(geoBox);
+      }
+
+      const kontrolle = element("div", "kontrolle");
+
+      if (aufgabe.typ === "felder") {
+        const zeile = element("div", "extra-eingabezeile");
+        if (aufgabe.ausdruck) {
+          zeile.appendChild(element("span", "extra-ausdruck", aufgabe.ausdruck));
+        }
+        const knotenListe = aufgabe.felder.map(function (f) {
+          const inp = element("input", "eingabe extra-zahl");
+          inp.type = "text";
+          inp.inputMode = "numeric";
+          inp.autocomplete = "off";
+          inp.spellcheck = false;
+          inp.placeholder = "?";
+          if (f.max) { inp.maxLength = f.max; }
+          inp.setAttribute("aria-label", f.einheit ? "Antwort in " + f.einheit : "Antwort");
+          zeile.appendChild(inp);
+          if (f.einheit) {
+            zeile.appendChild(element("span", "extra-einheit", f.einheit));
+          }
+          return { inp: inp, korrekt: f.korrekt };
+        });
+        karte.appendChild(zeile);
+        pruefer.push(function () {
+          let ok = true;
+          knotenListe.forEach(function (eintrag) {
+            const wert = parseZahl(eintrag.inp.value);
+            const stimmt = wert !== null && wert === eintrag.korrekt;
+            if (!stimmt) { ok = false; }
+            eintrag.inp.classList.add(stimmt ? "richtig" : "falsch");
+            eintrag.inp.disabled = true;
+          });
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "uhr-eingabe") {
+        const zeile = element("div", "extra-eingabezeile");
+        const inp = element("input", "eingabe mittel");
+        inp.type = "text";
+        inp.inputMode = "text";
+        inp.autocomplete = "off";
+        inp.spellcheck = false;
+        inp.placeholder = "3:25";
+        inp.setAttribute("aria-label", "Uhrzeit eingeben");
+        zeile.appendChild(inp);
+        zeile.appendChild(element("span", "extra-einheit", "Uhr"));
+        karte.appendChild(zeile);
+        pruefer.push(function () {
+          const parsed = parseZeit(inp.value);
+          const ok = Boolean(MATHE_THEMEN && MATHE_THEMEN.uhrAntwortStimmt(parsed, aufgabe.ziel));
+          inp.classList.add(ok ? "richtig" : "falsch");
+          inp.disabled = true;
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "auswahl" || aufgabe.typ === "wortart") {
+        let gewaehlt = null;
+        const gruppe = element("div", "extra-optionen");
+        const knoepfe = aufgabe.optionen.map(function (optText, optIdx) {
+          const k = element("button", "extra-option", optText);
+          k.type = "button";
+          k.setAttribute("aria-pressed", "false");
+          k.addEventListener("click", function () {
+            if (geprueft) { return; }
+            gewaehlt = optIdx;
+            knoepfe.forEach(function (anderer, j) {
+              anderer.classList.toggle("aktiv", j === optIdx);
+              anderer.setAttribute("aria-pressed", String(j === optIdx));
+            });
+          });
+          gruppe.appendChild(k);
+          return k;
+        });
+        karte.appendChild(gruppe);
+        pruefer.push(function () {
+          const ok = gewaehlt === aufgabe.richtig;
+          knoepfe.forEach(function (k, j) {
+            k.disabled = true;
+            if (j === aufgabe.richtig) { k.classList.add("opt-richtig"); }
+            else if (j === gewaehlt) { k.classList.add("opt-falsch"); }
+          });
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "ordnen") {
+        let reihenfolge = [];
+        const zielBox = element("div", "extra-ordnen-ziel");
+        const vorratBox = element("div", "extra-ordnen-vorrat");
+        const leerenKnopf = element("button", "knopf schlicht klein extra-leeren", "↺ Neu legen");
+        leerenKnopf.type = "button";
+
+        function zeichneOrdnen() {
+          zielBox.textContent = "";
+          if (reihenfolge.length === 0) {
+            zielBox.appendChild(element("span", "rand", "Klicke die Bausteine unten der Reihe nach an …"));
+          } else {
+            reihenfolge.forEach(function (idx, pos) {
+              const chip = element("button", "extra-chip gewaehlt", aufgabe.bausteine[idx]);
+              chip.type = "button";
+              chip.disabled = geprueft;
+              chip.addEventListener("click", function () {
+                if (geprueft) { return; }
+                reihenfolge.splice(pos, 1);
+                zeichneOrdnen();
+              });
+              zielBox.appendChild(chip);
+            });
+          }
+          vorratBox.textContent = "";
+          aufgabe.bausteine.forEach(function (text, idx) {
+            const benutzt = reihenfolge.includes(idx);
+            const chip = element("button", "extra-chip" + (benutzt ? " benutzt" : ""), text);
+            chip.type = "button";
+            chip.disabled = geprueft || benutzt;
+            chip.addEventListener("click", function () {
+              if (geprueft || reihenfolge.includes(idx)) { return; }
+              reihenfolge.push(idx);
+              zeichneOrdnen();
+            });
+            vorratBox.appendChild(chip);
+          });
+          leerenKnopf.disabled = geprueft || reihenfolge.length === 0;
+        }
+        leerenKnopf.addEventListener("click", function () {
+          if (geprueft) { return; }
+          reihenfolge = [];
+          zeichneOrdnen();
+        });
+        zeichneOrdnen();
+        karte.appendChild(zielBox);
+        karte.appendChild(vorratBox);
+        karte.appendChild(leerenKnopf);
+        pruefer.push(function () {
+          const gebaut = reihenfolge.map(function (idx) { return aufgabe.bausteine[idx]; });
+          const ok = gebaut.length === aufgabe.loesung.length &&
+            gebaut.every(function (t, i) { return t === aufgabe.loesung[i]; });
+          zeichneOrdnen();
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "mauer") {
+        const mauer = element("div", "rechenmauer");
+        const eingaben = [];
+        const reihen = [
+          [aufgabe.steine[0]],
+          [aufgabe.steine[1], aufgabe.steine[2]],
+          [aufgabe.steine[3], aufgabe.steine[4], aufgabe.steine[5]]
+        ];
+        reihen.forEach(function (reihe) {
+          const rKnoten = element("div", "mauer-reihe");
+          reihe.forEach(function (stein) {
+            if (stein.offen) {
+              const inp = element("input", "eingabe mauer-stein-eingabe");
+              inp.type = "text";
+              inp.inputMode = "numeric";
+              inp.autocomplete = "off";
+              inp.placeholder = "?";
+              inp.maxLength = 4;
+              inp.setAttribute("aria-label", "Mauerstein");
+              rKnoten.appendChild(inp);
+              eingaben.push({ inp: inp, korrekt: stein.wert });
+            } else {
+              rKnoten.appendChild(element("span", "mauer-stein-fest", String(stein.wert)));
+            }
+          });
+          mauer.appendChild(rKnoten);
+        });
+        karte.appendChild(mauer);
+        pruefer.push(function () {
+          let ok = true;
+          eingaben.forEach(function (eintrag) {
+            const wert = parseZahl(eintrag.inp.value);
+            const stimmt = wert !== null && wert === eintrag.korrekt;
+            if (!stimmt) { ok = false; }
+            eintrag.inp.classList.add(stimmt ? "richtig" : "falsch");
+            eintrag.inp.disabled = true;
+          });
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "dreieck") {
+        const box = element("div", "rechendreieck");
+        const eingaben = [];
+        function feldOderWert(eintrag, rolle) {
+          if (eintrag.offen) {
+            const inp = element("input", "eingabe dreieck-eingabe " + rolle);
+            inp.type = "text";
+            inp.inputMode = "numeric";
+            inp.autocomplete = "off";
+            inp.placeholder = "?";
+            inp.maxLength = 4;
+            inp.setAttribute("aria-label", "Zahl im Rechendreieck");
+            eingaben.push({ inp: inp, korrekt: eintrag.wert });
+            return inp;
+          }
+          return element("span", "dreieck-fest " + rolle, String(eintrag.wert));
+        }
+        // Visuelles 3x3 Raster: oben i1, links-mitte a12, rechts-mitte a13, unten-links i2, unten-mitte a23, unten-rechts i3
+        const z1 = element("div", "dreieck-zeile dreieck-oben");
+        z1.appendChild(feldOderWert(aufgabe.innen[0], "dreieck-innen"));
+        const z2 = element("div", "dreieck-zeile dreieck-mitte");
+        z2.appendChild(feldOderWert(aufgabe.aussen[0], "dreieck-aussen"));
+        z2.appendChild(element("span", "dreieck-kern", "△"));
+        z2.appendChild(feldOderWert(aufgabe.aussen[2], "dreieck-aussen"));
+        const z3 = element("div", "dreieck-zeile dreieck-unten");
+        z3.appendChild(feldOderWert(aufgabe.innen[1], "dreieck-innen"));
+        z3.appendChild(feldOderWert(aufgabe.aussen[1], "dreieck-aussen"));
+        z3.appendChild(feldOderWert(aufgabe.innen[2], "dreieck-innen"));
+        box.appendChild(z1);
+        box.appendChild(z2);
+        box.appendChild(z3);
+        karte.appendChild(box);
+        pruefer.push(function () {
+          let ok = true;
+          eingaben.forEach(function (eintrag) {
+            const wert = parseZahl(eintrag.inp.value);
+            const stimmt = wert !== null && wert === eintrag.korrekt;
+            if (!stimmt) { ok = false; }
+            eintrag.inp.classList.add(stimmt ? "richtig" : "falsch");
+            eintrag.inp.disabled = true;
+          });
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      } else if (aufgabe.typ === "schriftlich") {
+        const gitter = element("div", "schriftlich-gitter");
+        const ziffern = function (n) {
+          return [Math.floor(n / 100), Math.floor((n % 100) / 10), n % 10];
+        };
+        const aZ = ziffern(aufgabe.a);
+        const bZ = ziffern(aufgabe.b);
+        const eZ = ziffern(aufgabe.ergebnis);
+
+        ["", "H", "Z", "E"].forEach(function (kopfText) {
+          gitter.appendChild(element("span", "schriftlich-kopf", kopfText));
+        });
+        gitter.appendChild(element("span", "schriftlich-op", ""));
+        aZ.forEach(function (d) { gitter.appendChild(element("span", "schriftlich-ziffer", String(d))); });
+
+        gitter.appendChild(element("span", "schriftlich-op", aufgabe.op));
+        bZ.forEach(function (d) { gitter.appendChild(element("span", "schriftlich-ziffer", String(d))); });
+
+        // Merkfeld-Zeile (optional, zählt nie als Fehler)
+        gitter.appendChild(element("span", "schriftlich-merk-titel", "Merk"));
+        const merkFelder = [0, 1, 2].map(function (spalte) {
+          if (spalte === 2) {
+            const leer = element("span", "schriftlich-merk-leer", "");
+            gitter.appendChild(leer);
+            return null;
+          }
+          const m = element("input", "schriftlich-merk");
+          m.type = "text";
+          m.inputMode = "numeric";
+          m.maxLength = 1;
+          m.placeholder = "·";
+          m.setAttribute("aria-label", spalte === 0 ? "Merkfeld Hunderter" : "Merkfeld Zehner");
+          gitter.appendChild(m);
+          return m;
+        });
+
+        gitter.appendChild(element("span", "schriftlich-strich"));
+
+        // Ergebnis-Ziffern (H, Z, E) mit Auto-Sprung von rechts nach links (E -> Z -> H)
+        gitter.appendChild(element("span", "schriftlich-op", "="));
+        const ergFelder = [0, 1, 2].map(function (spalte) {
+          const inp = element("input", "eingabe schriftlich-erg");
+          inp.type = "text";
+          inp.inputMode = "numeric";
+          inp.autocomplete = "off";
+          inp.maxLength = 1;
+          inp.placeholder = "?";
+          inp.setAttribute("aria-label", spalte === 0 ? "Ergebnis Hunderter" : spalte === 1 ? "Ergebnis Zehner" : "Ergebnis Einer");
+          gitter.appendChild(inp);
+          return inp;
+        });
+        ergFelder.forEach(function (inp, spalte) {
+          inp.addEventListener("input", function () {
+            if (inp.value.trim().length === 1 && spalte > 0) {
+              ergFelder[spalte - 1].focus();
+            }
+          });
+        });
+        karte.appendChild(gitter);
+        pruefer.push(function () {
+          const h = parseZahl(ergFelder[0].value);
+          const z = parseZahl(ergFelder[1].value);
+          const e = parseZahl(ergFelder[2].value);
+          const ok = h !== null && z !== null && e !== null && (h * 100 + z * 10 + e === aufgabe.ergebnis);
+          ergFelder.forEach(function (inp, spalte) {
+            const zifferStimmt = parseZahl(inp.value) === eZ[spalte];
+            inp.classList.add(zifferStimmt ? "richtig" : "falsch");
+            inp.disabled = true;
+          });
+          merkFelder.forEach(function (m) { if (m) { m.disabled = true; } });
+          return { ok: ok, karte: karte, kontrolle: kontrolle, aufgabe: aufgabe };
+        });
+      }
+
+      karte.appendChild(kontrolle);
+      liste.appendChild(karte);
+    });
+    behaelter.appendChild(liste);
+
+    const ergebnisBox = element("div", "ergebnis-kasten extra-ergebnis");
+    ergebnisBox.hidden = true;
+    behaelter.appendChild(ergebnisBox);
+
+    const aktionen = element("div", "sprech-zeile extra-aktionen");
+    const pruefenKnopf = element("button", "knopf primaer extra-pruefen", "Prüfen ✓");
+    pruefenKnopf.type = "button";
+    const neuKnopf = element("button", "knopf primaer extra-neu", "▶ Neue Runde");
+    neuKnopf.type = "button";
+    neuKnopf.hidden = true;
+    const uebersichtUnten = element("button", "knopf schlicht", "◀ Übersicht");
+    uebersichtUnten.type = "button";
+    uebersichtUnten.addEventListener("click", function () {
+      if (opts.aufZurueck) { opts.aufZurueck(); }
+    });
+    neuKnopf.addEventListener("click", function () {
+      if (opts.aufNeu) { opts.aufNeu(); }
+    });
+
+    pruefenKnopf.addEventListener("click", function () {
+      if (geprueft) { return; }
+      geprueft = true;
+      let richtig = 0;
+      pruefer.forEach(function (fn) {
+        const res = fn();
+        res.kontrolle.textContent = "";
+        if (res.ok) {
+          richtig += 1;
+          res.karte.classList.add("richtig");
+          res.kontrolle.appendChild(element("span", "markierung", "✓ Richtig!"));
+        } else {
+          res.karte.classList.add("falsch");
+          res.kontrolle.appendChild(element("span", "markierung", "Fast! "));
+          if (res.aufgabe.erklaerung) {
+            res.kontrolle.appendChild(element("span", "loesung", res.aufgabe.erklaerung));
+          }
+        }
+      });
+      const gesamt = pruefer.length;
+      const anteil = gesamt > 0 ? richtig / gesamt : 0;
+      ergebnisBox.textContent = "";
+      ergebnisBox.hidden = false;
+      ergebnisBox.appendChild(element("p", "ergebnis-zeile", richtig + " von " + gesamt + " richtig!"));
+      ergebnisBox.appendChild(element("p", "ergebnis-lob", lobFuerAnteil(anteil)));
+      pruefenKnopf.hidden = true;
+      neuKnopf.hidden = false;
+      if (anteil >= 0.8) {
+        musik.fanfare(anteil === 1 ? 5 : 4);
+        if (EINSTELLUNGEN.spaessig) { sternenRegen(anteil === 1); }
+      }
+      meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig gelöst.");
+      if (typeof ergebnisBox.scrollIntoView === "function") {
+        ergebnisBox.scrollIntoView({ block: "nearest" });
+      }
+    });
+
+    aktionen.appendChild(uebersichtUnten);
+    aktionen.appendChild(pruefenKnopf);
+    aktionen.appendChild(neuKnopf);
+    behaelter.appendChild(aktionen);
+  }
+
+  function oeffneMatheThema(themaId) {
+    if (!MATHE_THEMEN) { return; }
+    const paket = MATHE_THEMEN.erzeuge(themaId, modus);
+    const inhalt = document.getElementById("matheThemaInhalt");
+    if (!inhalt) { return; }
+    rendereRunde(inhalt, paket, {
+      figur: themenSymbol(),
+      aufZurueck: function () {
+        zeigeStartErgebnis();
+        zeigeBildschirm("startBildschirm");
+      },
+      aufNeu: function () {
+        oeffneMatheThema(themaId);
+      }
+    });
+    zeigeBildschirm("matheThemaBildschirm");
+  }
+
+  function fuelleMatheThemenListe() {
+    const liste = document.getElementById("matheThemenListe");
+    if (!liste || !MATHE_THEMEN) { return; }
+    liste.textContent = "";
+    MATHE_THEMEN.THEMEN.forEach(function (thema) {
+      const kachel = element("button", "themen-kachel");
+      kachel.type = "button";
+      kachel.dataset.matheThema = thema.id;
+      kachel.appendChild(element("span", "kachel-symbol", thema.symbol));
+      kachel.appendChild(element("span", "kachel-titel", thema.titel));
+      kachel.appendChild(element("span", "kachel-text", thema.kurz));
+      kachel.addEventListener("click", function () {
+        oeffneMatheThema(thema.id);
+      });
+      liste.appendChild(kachel);
+    });
+  }
+
+  return {
+    rendereRunde: rendereRunde,
+    oeffneMatheThema: oeffneMatheThema,
+    fuelleMatheThemenListe: fuelleMatheThemenListe
+  };
+})();
+
 /* ------------- Deutsch üben: Ablauf ------------- */
 
 const sprech = (function () {
   const SCHRITTE = ["Zuhören", "Verstehen", "Satz bilden", "Erzählen"];
   let einheit = null;        // geöffnete Geschichte oder null (Übersicht)
+  let deutschUebungId = null; // geöffnete selbstständige Deutsch-Übung oder null
+  let letzteLeseId = null;
   let frageSetNummer = 1;    // welcher der vier Fragensätze gerade dran ist
   let schritt = 0;
   let hilfeSichtbar = false;
@@ -4434,7 +5041,15 @@ const sprech = (function () {
   function oeffneStart() {
     sprechAudio.stoppe();
     einheit = null;
+    deutschUebungId = null;
     oeffnen();
+  }
+  function oeffneDeutschUebung(themaId) {
+    sprechAudio.stoppe();
+    einheit = null;
+    deutschUebungId = themaId;
+    rendere();
+    if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
   }
   function waehleFragenSet(e) {
     const anzahl = (Array.isArray(e.fragenSets) && e.fragenSets.length) || 1;
@@ -4469,6 +5084,7 @@ const sprech = (function () {
   function zurueckZurUebersicht() {
     sprechAudio.stoppe();
     einheit = null;
+    deutschUebungId = null;
     rendere();
   }
   function rendere() {
@@ -4479,6 +5095,17 @@ const sprech = (function () {
       if (ueberschrift) { ueberschrift.textContent = "Deutsch üben"; }
       if (reihe) { reihe.hidden = true; }
       rendereEinheit();
+    } else if (deutschUebungId && DEUTSCH_UEBUNGEN) {
+      if (ueberschrift) { ueberschrift.textContent = "Deutsch üben"; }
+      if (reihe) { reihe.hidden = true; }
+      const inhalt = document.getElementById("sprechInhalt");
+      const paket = DEUTSCH_UEBUNGEN.erzeuge(deutschUebungId, deutschWeltId(), letzteLeseId);
+      if (paket.lesetext) { letzteLeseId = paket.lesetext.id; }
+      extraUebung.rendereRunde(inhalt, paket, {
+        figur: DEUTSCH_WELTEN[deutschWeltId()].figur,
+        aufZurueck: zurueckZurUebersicht,
+        aufNeu: function () { oeffneDeutschUebung(deutschUebungId); }
+      });
     } else {
       if (ueberschrift) { ueberschrift.textContent = "Hallo " + SPIELERIN + "!"; }
       if (reihe) { reihe.hidden = false; }
@@ -4600,7 +5227,29 @@ const sprech = (function () {
     wahl.appendChild(raster);
     inhalt.appendChild(wahl);
 
-    inhalt.appendChild(elternKasten("So läuft die Übung"));
+    inhalt.appendChild(elternKasten("So läuft das Sprechtraining"));
+
+    if (DEUTSCH_UEBUNGEN) {
+      const extraBlock = element("div", "extra-themen-bereich");
+      extraBlock.appendChild(element("h3", "extra-ueberschrift", "Selbstständig Deutsch üben"));
+      extraBlock.appendChild(element("p", "rand",
+        "Diese fünf Übungen kann " + SPIELERIN + " auch ganz allein spielen – mit sofortiger Hilfe."));
+      const kacheln = element("div", "themen-kacheln");
+      DEUTSCH_UEBUNGEN.THEMEN.forEach(function (thema) {
+        const kachel = element("button", "themen-kachel");
+        kachel.type = "button";
+        kachel.dataset.deutschThema = thema.id;
+        kachel.appendChild(element("span", "kachel-symbol", thema.symbol));
+        kachel.appendChild(element("span", "kachel-titel", thema.titel));
+        kachel.appendChild(element("span", "kachel-text", thema.kurz));
+        kachel.addEventListener("click", function () {
+          oeffneDeutschUebung(thema.id);
+        });
+        kacheln.appendChild(kachel);
+      });
+      extraBlock.appendChild(kacheln);
+      inhalt.appendChild(extraBlock);
+    }
   }
 
   function schrittLeiste() {
@@ -4853,6 +5502,7 @@ const sprech = (function () {
     oeffnen: oeffnen,
     oeffneStart: oeffneStart,
     oeffneEinheit: oeffneEinheit,
+    oeffneDeutschUebung: oeffneDeutschUebung,
     starteZufaellig: starteZufaellig,
     rendere: rendere
   };
@@ -5356,6 +6006,7 @@ document.getElementById("geschenkWegKnopf").addEventListener("click", function (
 
 document.body.dataset.thema = modus;
 setzeModus(modus);
+extraUebung.fuelleMatheThemenListe();
 aktualisiereBonusAnzeige();
 aktualisiereGutscheinAnzeige();
 zeigeStartErgebnis();

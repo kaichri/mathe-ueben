@@ -61,7 +61,7 @@ function setzeStufe(g, kriterium, stufe) {
 
 test("DATEN: jede Geschichte hat 4 Fragensätze und alle Audio-Clips vorhanden", () => {
   const ordner = path.join(__dirname, "..", "audio", "sprechtraining");
-  assert.equal(SPRECHTRAINING.EINHEITEN.length, 14);
+  assert.equal(SPRECHTRAINING.EINHEITEN.length, 20);
   for (const e of SPRECHTRAINING.EINHEITEN) {
     const nr = ("0" + e.tag).slice(-2);
     assert(Array.isArray(e.fragenSets) && e.fragenSets.length >= 4,
@@ -122,7 +122,7 @@ test("SPRECH: Übersicht zeigt Welten, Los-Knopf und alle Geschichten offen", ()
   assert.equal(welten.length, 3);
   assert.equal(inhalt.querySelectorAll(".sprech-los").length, 1, "großer Start-Knopf");
   const tage = tageInhalte(g);
-  assert.equal(tage.length, 14);
+  assert.equal(tage.length, 20);
   assert(tage.every(t => !t.disabled), "keine Geschichte ist gesperrt");
   assert.match(inhalt.textContent, /bestimmte Geschichte aussuchen/);
   const namen = plain(g.run("DEUTSCH_WELTEN.hunde.namen"));

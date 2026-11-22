@@ -531,6 +531,24 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.2.0 — 7 Mathe-Themen, 5 selbstständige Deutsch-Übungen & 6 neue Welt-Geschichten
+
+- **7 frei wählbare Mathe-Themen** auf der Mathe-Startseite (unabhängig vom
+  50er-Quiz): **Längen & Gewichte**, **Stellenwert & Nachbarn** (inkl. Ordnen),
+  **Runden & Überschlagen**, **Analoge Uhr** (SVG-Zifferblatt), **Geometrie &
+  Spiegelbilder** (Formen, Körper, Spiegelachsen, 3D-Würfelgebäude),
+  **Rechenmauern & Rechendreiecke** sowie **Schriftliches Rechnen** untereinander
+  mit Merkfeld. Rechenmauern gibt es zusätzlich auch in der Bonuswelt.
+- **5 selbstständige Deutsch-Übungen** im Deutsch-Bereich: **Rechtschreib-Detektiv**
+  (Groß/Klein, ie/i, Doppelmitlaute, ck/tz, b/p/d/t/g/k, ä/äu), **Wortarten
+  sortieren** (*Namenwort (Nomen)*, *Tunwort (Verb)*, *Wiewort (Adjektiv)*),
+  **Satzbau-Puzzle**, **Leseverständnis** (Geschichten aus Hunde-, Hamster- und
+  Weihnachtswelt) sowie **Wort-Training** (Gegenteile, Mehrzahl, Wortfamilien,
+  Vergangenheit).
+- **6 neue Sprechtraining-Geschichten** (Übung 15–20, je zwei für Süße Hunde,
+  Flauschige Hamster und Weihnachtswelt) inkl. neu erzeugter Offline-MP3s für
+  Thorsten und Ramona.
+
 ### 1.1.9 — Leichtere Aufgaben im Zahlenraum 1000
 
 - **Aufgaben im Zahlenraum 1000 kindgerechter abgestuft** (3. Klasse

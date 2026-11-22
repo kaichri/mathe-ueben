@@ -632,6 +632,24 @@
     });
   }
 
+  // Rechenmauer (3 Steine unten -> welche Zahl steht ganz oben an der Spitze?)
+  function knobelaufgabeMauer() {
+    var a = zufall(12, 45);
+    var b = zufall(12, 45);
+    var c = zufall(12, 45);
+    var spitze = a + 2 * b + c;
+    if (spitze > 200) {
+      return null;
+    }
+    return karte("bonus", "knobel-mauer", "", [feld(spitze)], {
+      layout: "text",
+      text: "Rechenmauer: Unten liegen die drei Steine " + a + ", " + b + " und " + c +
+        ". Immer zwei Nachbarsteine ergeben zusammen den Stein dar\u00fcber. Welche Zahl steht ganz oben an der Spitze?",
+      frage: "Zahl an der Spitze:",
+      schluessel: "knobel-mauer|" + a + "|" + b + "|" + c
+    });
+  }
+
   // anzahl Knobelaufgaben f\u00fcr den Bonusbereich holen.
   // welt: Figuren der aktuellen Welt, zuletzt: Schl\u00fcssel der letzten Knobelaufgaben
   // (damit sich nicht jede Woche dieselben R\u00e4tsel wiederholen).
@@ -647,7 +665,8 @@
       function () { return knobelaufgabeZweiSchritt(); },
       function () { return knobelaufgabeKauf(welt); },
       function () { return knobelaufgabeViereck(); },
-      function () { return knobelaufgabeVerdreifacht(); }
+      function () { return knobelaufgabeVerdreifacht(); },
+      function () { return knobelaufgabeMauer(); }
     ]);
     var liste = [];
     var stelle = 0;
