@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const VERSION_STAND = "22. November 2026";
 
 const EINSTELLUNGEN = {
@@ -28,15 +28,26 @@ const EINSTELLUNGEN = {
   zeigerSpur: true            // kleine Welt-Symbole folgen der Maus?
 };
 
-/* Die Gutscheine – Mama kann diese Liste jederzeit ändern. */
+/* Die Standard-Gutscheine – Mama & Papa können die Liste auch direkt in den Einstellungen anpassen. */
 const GESCHENKE = [
-  { text: "Ein Geschenk für 2 €" },
-  { text: "Zwei Nächte mit Mama oder Papa schlafen" },
-  { text: "90 Minuten Film oder Serie anschauen" },
-  { text: "Filmabend mit Popcorn" },
-  { text: "90 Minuten Videospiel spielen" },
-  { text: "Wunsch frei – such dir etwas aus und sag es Mama!" }
+  { text: "Gemütlicher Familien-Filmabend mit Popcorn" },
+  { text: "2 Stunden Videospiele spielen oder Lieblingsserie schauen" },
+  { text: "Dein Lieblingsessen zu Hause oder ein Besuch im Restaurant" },
+  { text: "Ein toller Familien-Ausflug nach deinem Wunsch" },
+  { text: "Ein kleines Geschenk selbst aussuchen" },
+  { text: "Eigener Wunsch – schreib deine Idee selbst auf!", freitext: true }
 ];
+
+/* Migration früherer Standard-Gutscheine auf die neue Wunschliste.
+   Wünsche ohne passenden Ersatz werden als „Eigener Wunsch“ samt altem Text erhalten. */
+const ALT_GUTSCHEIN_ZUORDNUNG = {
+  "Filmabend mit Popcorn": "Gemütlicher Familien-Filmabend mit Popcorn",
+  "90 Minuten Film oder Serie anschauen": "2 Stunden Videospiele spielen oder Lieblingsserie schauen",
+  "90 Minuten Videospiel spielen": "2 Stunden Videospiele spielen oder Lieblingsserie schauen",
+  "Ein Geschenk für 2 €": "Ein kleines Geschenk selbst aussuchen",
+  "Zwei Nächte mit Mama oder Papa schlafen": "Eigener Wunsch: Zwei Nächte mit Mama oder Papa schlafen",
+  "Wunsch frei – such dir etwas aus und sag es Mama!": "Eigener Wunsch"
+};
 
 const SPEICHER_NAME = "mathe-ueben-fuer-emma";
 
@@ -93,6 +104,21 @@ function uebezeitSumme(zeiten) {
 
 function geschenkIstTauschbar(geschenk) {
   return !geschenk.eingeloestAm;
+}
+
+/* Alte Standard-Wünsche werden einmalig auf die neue Wunschliste umgestellt
+   (ohne Match als „Eigener Wunsch: <alter Wunsch>“). Individuelle Texte bleiben unberührt. */
+function migriereAltGutscheinText(geschenke) {
+  return geschenke.map(function (geschenk) {
+    if (!geschenk || !Object.prototype.hasOwnProperty.call(ALT_GUTSCHEIN_ZUORDNUNG, geschenk.text)) {
+      return geschenk;
+    }
+    const kopie = { ...geschenk, text: ALT_GUTSCHEIN_ZUORDNUNG[geschenk.text] };
+    if (!kopie.id || kopie.id.startsWith("alt-")) {
+      kopie.urspruenglicherWunsch = geschenk.urspruenglicherWunsch ?? geschenk.text;
+    }
+    return kopie;
+  });
 }
 
 /* Frühere Umtausche haben einen Nachfolger angelegt. Dessen Wunsch und
@@ -157,6 +183,8 @@ const speicher = (function () {
     tagesSet: null,    // { datum, welt, fertig, runde, antworten, abschnitt } – das heutige Quiz
     vortagSchluessel: [], // die Aufgaben von gestern: nur zum Ausschluss beim Bauen
     bonusGesamt: 0, bonusStufenOffen: [], geschenke: [], bereichPunkte: {}, sound: null,
+    wunschListe: null,          // null = Standard-GESCHENKE; sonst Array von { text, freitext? }
+    wunschListeZeit: 0,         // Zeitstempel (ms) der letzten Wunschlisten-Änderung für Abgleich
     bonusTag: null,     // { datum, verteilt } – wie viele Bonussterne heute schon vergeben sind
     bonusWelten: [],    // ["bluey", ...] – welche Bonuswelten sind heute schon offen
     vorleseStimme: null,        // null = Standard ("thorsten"); "thorsten", "ramona" oder "system"
@@ -177,8 +205,8 @@ const speicher = (function () {
        behandeln, sondern wie beschädigte Daten schützen. */
     const BEKANNTE_FELDER = ["version", "sterneGesamt", "modus", "deutschWelt", "runden", "zuletzt",
       "knobelZuletzt", "tagesSet", "bonusSet", "vortagSchluessel", "bonussterne", "bonusGesamt",
-      "geschenke", "bereichPunkte", "sound", "bonusTag", "bonusWelten", "bonusStufenOffen",
-      "vorleseStimme", "vorleseSystemStimme", "stimmeLautstaerke", "musikLautstaerke"];
+      "geschenke", "wunschListe", "wunschListeZeit", "bereichPunkte", "sound", "bonusTag", "bonusWelten",
+      "bonusStufenOffen", "vorleseStimme", "vorleseSystemStimme", "stimmeLautstaerke", "musikLautstaerke"];
     if (!BEKANNTE_FELDER.some(function (name) {
       return Object.prototype.hasOwnProperty.call(geladen, name);
     })) {
@@ -232,7 +260,29 @@ const speicher = (function () {
           "wunschGeaendertAm", "urspruenglicherWunsch"]) &&
         ["datum", "umgetauschtAm", "eingeloestAm"].every(function (name) { return !g[name] || datum(g[name]); });
     });
-    if (neu.geschenke) { neu.geschenke = migriereGutscheinUmtausch(neu.geschenke); }
+    if (neu.geschenke) {
+      neu.geschenke = migriereAltGutscheinText(migriereGutscheinUmtausch(neu.geschenke));
+    }
+    if (neu.wunschListe !== undefined && neu.wunschListe !== null) {
+      if (!Array.isArray(neu.wunschListe) || neu.wunschListe.length === 0 ||
+          !neu.wunschListe.every(function (w) {
+            return objekt(w) && typeof w.text === "string" && w.text.trim().length > 0 &&
+              (w.freitext === undefined || typeof w.freitext === "boolean");
+          })) {
+        problem();
+        neu.wunschListe = null;
+      } else {
+        neu.wunschListe = neu.wunschListe.map(function (w) {
+          const eintrag = { text: w.text.trim() };
+          if (w.freitext === true) { eintrag.freitext = true; }
+          return eintrag;
+        });
+      }
+    }
+    if (neu.wunschListeZeit !== undefined && !zahl(neu.wunschListeZeit)) {
+      problem();
+      neu.wunschListeZeit = 0;
+    }
     ["zuletzt", "knobelZuletzt", "vortagSchluessel"].forEach(function (name) {
       liste(name, function (wert) { return typeof wert === "string"; });
     });
@@ -382,6 +432,8 @@ const speicher = (function () {
             bonusGesamt: Number(geladen.bonusGesamt) || 0,
             bonusStufenOffen: geladen.bonusStufenOffen || [],
             geschenke: Array.isArray(geladen.geschenke) ? geladen.geschenke : [],
+            wunschListe: Array.isArray(geladen.wunschListe) ? geladen.wunschListe : null,
+            wunschListeZeit: Number.isSafeInteger(geladen.wunschListeZeit) ? geladen.wunschListeZeit : 0,
             bereichPunkte: (geladen.bereichPunkte && typeof geladen.bereichPunkte === "object")
               ? geladen.bereichPunkte : {},
             sound: geladen.sound || null,
@@ -801,6 +853,15 @@ function verschmelzeSpielstande(lokal, fremd) {
     stufenNeu.push(stufe);
   }
 
+  const wunschZeitA = Number.isSafeInteger(A.wunschListeZeit) ? A.wunschListeZeit : 0;
+  const wunschZeitB = Number.isSafeInteger(B.wunschListeZeit) ? B.wunschListeZeit : 0;
+  let wunschListe = A.wunschListe !== undefined ? A.wunschListe : null;
+  let wunschListeZeit = wunschZeitA;
+  if (wunschZeitB > wunschZeitA || (wunschZeitB === wunschZeitA && !wunschListe && B.wunschListe)) {
+    wunschListe = B.wunschListe !== undefined ? B.wunschListe : null;
+    wunschListeZeit = wunschZeitB;
+  }
+
   return {
     version: 3,
     modus: A.modus || B.modus || "bluey",
@@ -818,6 +879,8 @@ function verschmelzeSpielstande(lokal, fremd) {
     bonusStufenOffen: offeneStufenOhneGutschein(
       liste(A.bonusStufenOffen).concat(liste(B.bonusStufenOffen), stufenNeu), geschenke),
     geschenke: geschenke,
+    wunschListe: wunschListe,
+    wunschListeZeit: wunschListeZeit,
     bereichPunkte: bereichPunkte,
     sound: A.sound !== undefined ? A.sound : (B.sound !== undefined ? B.sound : null),
     bonusTag: bonusTag,
@@ -1239,7 +1302,10 @@ function aktualisiereSpeicherHinweis() {
 }
 
 function datenHerunterladen(inhalt, typ, dateiname) {
-  const url = window.URL.createObjectURL(new window.Blob([inhalt], { type: typ }));
+  const blob = (typeof window.Blob === "function" && inhalt instanceof window.Blob)
+    ? inhalt
+    : new window.Blob([inhalt], { type: typ });
+  const url = window.URL.createObjectURL(blob);
   const knoten = element("a");
   try {
     knoten.href = url;
@@ -2890,23 +2956,45 @@ function dialogOeffnen(id) {
     ? document.getElementById(startFokus) : dialogFelder(dialog)[0] || dialog);
 }
 
-/* Allgemeine Ja/Nein-Rückfrage: wird vor dem Abgeben einer fast leeren Runde
-   und beim Tageswechsel mit noch offenen Antworten verwendet. */
+/* Allgemeine Ja/Nein-Rückfrage: wird vor dem Abgeben einer fast leeren Runde,
+   beim Tageswechsel mit noch offenen Antworten und mit optionaler Eltern-Bestätigung
+   beim Einlösen von Gutscheinen verwendet. */
 let frageAngelegenheit = null;
+let frageBrauchtEltern = false;
+
+function frageElternZuruecksetzen() {
+  frageBrauchtEltern = false;
+  const box = document.getElementById("frageElternPruefung");
+  const haken = document.getElementById("frageElternHaken");
+  const ja = document.getElementById("frageJaKnopf");
+  if (box) { box.hidden = true; }
+  if (haken) { haken.checked = false; }
+  if (ja) { ja.disabled = false; }
+}
 
 function zeigeFrage(optionen) {
   const angaben = optionen || {};
   document.getElementById("frageTitel").textContent = angaben.titel || "Bist du sicher?";
   document.getElementById("frageText").textContent = angaben.text || "";
-  document.getElementById("frageJaKnopf").textContent = angaben.ja || "Ja";
+  const ja = document.getElementById("frageJaKnopf");
+  ja.textContent = angaben.ja || "Ja";
   document.getElementById("frageNeinKnopf").textContent = angaben.nein || "Abbrechen";
   frageAngelegenheit = angaben.dann || null;
+  frageBrauchtEltern = !!angaben.elternPruefung;
+  const box = document.getElementById("frageElternPruefung");
+  const haken = document.getElementById("frageElternHaken");
+  if (box && haken) {
+    box.hidden = !frageBrauchtEltern;
+    haken.checked = false;
+  }
+  ja.disabled = frageBrauchtEltern;
   dialogOeffnen("frageUeberlagerung");
 }
 
 function frageSchliessen() {
   dialogSchliessen("frageUeberlagerung");
   frageAngelegenheit = null;
+  frageElternZuruecksetzen();
 }
 
 function dialogSchliessen(id) {
@@ -2929,7 +3017,7 @@ document.addEventListener("keydown", function (ereignis) {
     const id = aktiverDialog.id;
     dialogSchliessen(id);
     if (id === "versuchUeberlagerung") { versuchAngelegenheit = null; }
-    if (id === "frageUeberlagerung") { frageAngelegenheit = null; }
+    if (id === "frageUeberlagerung") { frageAngelegenheit = null; frageElternZuruecksetzen(); }
   } else if (ereignis.key === "Tab") {
     ereignis.preventDefault();
     const felder = dialogFelder(aktiverDialog);
@@ -2949,31 +3037,77 @@ document.addEventListener("focusin", function (ereignis) {
 });
 
 let geschenkModus = { art: "neu", tauschId: null };
+let aktuelleAuswahlListe = [];
+
+function aktuelleWunschListe() {
+  const eigen = speicher.daten().wunschListe;
+  if (Array.isArray(eigen) && eigen.length > 0) { return eigen; }
+  return GESCHENKE;
+}
+
+function istFreitextWunsch(geschenk) {
+  return !!(geschenk && (geschenk.freitext === true ||
+    String(geschenk.text || "").startsWith("Eigener Wunsch")));
+}
 
 function geschenkAuswahlOeffnen(modusOptionen, ueberschrift) {
-  const optionen = modusOptionen || { art: "neu", tauschId: null };
+  const optionen = Object.assign({ art: "neu", tauschId: null }, modusOptionen || {});
   const stufe = speicher.daten().bonusStufenOffen[0];
   geschenkModus = optionen;
-  const lager = document.getElementById("geschenkUeberlagerung");
   const titel = document.getElementById("geschenkTitel");
   const raster = document.getElementById("geschenkeRaster");
+  const freitextBox = document.getElementById("geschenkFreitextBox");
+  const freitextEingabe = document.getElementById("geschenkFreitextEingabe");
+  const freitextLabel = document.getElementById("geschenkFreitextLabel");
+  const ueberraschungKnopf = document.getElementById("geschenkUeberraschungKnopf");
+  if (freitextBox) { freitextBox.hidden = true; }
+  if (freitextEingabe) { freitextEingabe.value = ""; }
+
+  aktuelleAuswahlListe = aktuelleWunschListe();
+
   titel.textContent = ueberschrift || (optionen.art === "tausch"
     ? "🔄 Was möchtest du stattdessen haben?"
     : stufe ? "🎉 " + stufe + " Bonussterne! Such dir etwas aus!" : "Such dir ein Geschenk aus!");
   raster.textContent = "";
-  GESCHENKE.forEach(function (geschenk) {
+  aktuelleAuswahlListe.forEach(function (geschenk) {
     const karte = element("button", "geschenk-karte");
     karte.type = "button";
     karte.appendChild(symbol("geschenk"));
     karte.appendChild(element("span", "geschenk-text", geschenk.text));
-    karte.appendChild(element("span", "geschenk-waehlen", "Das möchte ich!"));
+    const freitext = istFreitextWunsch(geschenk);
+    karte.appendChild(element("span", "geschenk-waehlen", freitext ? "Selbst aufschreiben ✏️" : "Das möchte ich!"));
     karte.addEventListener("click", function () {
+      if (freitext && freitextBox && freitextEingabe) {
+        if (freitextLabel) {
+          freitextLabel.textContent = "Was ist dein eigener Wunsch?";
+        }
+        freitextBox.hidden = false;
+        dialogFokus(freitextEingabe);
+        return;
+      }
       geschenkAusgewaehlt(geschenk.text);
     });
     raster.appendChild(karte);
   });
+  if (ueberraschungKnopf) {
+    const kandidaten = aktuelleAuswahlListe.filter(g => !istFreitextWunsch(g));
+    ueberraschungKnopf.hidden = kandidaten.length === 0;
+  }
   dialogOeffnen("geschenkUeberlagerung");
   musik.ton("freude");
+}
+
+function geschenkFreitextAbsenden() {
+  const eingabe = document.getElementById("geschenkFreitextEingabe");
+  const text = String((eingabe && eingabe.value) || "").trim();
+  geschenkAusgewaehlt(text ? "Eigener Wunsch: " + text : "Eigener Wunsch");
+}
+
+function geschenkUeberraschungZiehen() {
+  const kandidaten = aktuelleAuswahlListe.filter(g => !istFreitextWunsch(g));
+  if (kandidaten.length === 0) { return; }
+  const wahl = kandidaten[Math.floor(Math.random() * kandidaten.length)];
+  geschenkAusgewaehlt(wahl.text);
 }
 
 function geschenkAusgewaehlt(text) {
@@ -3349,6 +3483,237 @@ function zeigeSterneInhalt() {
   }
 }
 
+/* Gutschein als JPG-Bildkarte speichern (reines Canvas-2D, funktioniert auch offline per file://). */
+function gutscheinDateiname(geschenk) {
+  const datum = (geschenk && geschenk.datum) || heutigesDatum();
+  const kurz = String((geschenk && geschenk.text) || "gutschein")
+    .toLowerCase()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-").slice(0, 32).replace(/^-+|-+$/g, "") || "gutschein";
+  return "gutschein-" + SPIELERIN.toLowerCase() + "-" + datum + "-" + kurz + ".jpg";
+}
+
+function zeichneAbgerundetesRechteck(ctx, x, y, breite, hoehe, radius) {
+  const r = Math.min(radius, breite / 2, hoehe / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + breite - r, y);
+  ctx.quadraticCurveTo(x + breite, y, x + breite, y + r);
+  ctx.lineTo(x + breite, y + hoehe - r);
+  ctx.quadraticCurveTo(x + breite, y + hoehe, x + breite - r, y + hoehe);
+  ctx.lineTo(x + r, y + hoehe);
+  ctx.quadraticCurveTo(x, y + hoehe, x, y + hoehe - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function zeichneStern(ctx, cx, cy, aussen, innen, zacken) {
+  ctx.beginPath();
+  for (let i = 0; i < zacken * 2; i++) {
+    const r = i % 2 === 0 ? aussen : innen;
+    const winkel = (Math.PI * i) / zacken - Math.PI / 2;
+    const x = cx + Math.cos(winkel) * r;
+    const y = cy + Math.sin(winkel) * r;
+    if (i === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function zeichneGeschenkSymbol(ctx, cx, cy, kastenFarbe, bandFarbe) {
+  ctx.save();
+  ctx.fillStyle = kastenFarbe;
+  zeichneAbgerundetesRechteck(ctx, cx - 34, cy - 18, 68, 52, 8);
+  ctx.fill();
+  zeichneAbgerundetesRechteck(ctx, cx - 40, cy - 30, 80, 18, 6);
+  ctx.fill();
+  ctx.fillStyle = bandFarbe;
+  ctx.fillRect(cx - 7, cy - 30, 14, 64);
+  ctx.fillRect(cx - 34, cy + 2, 68, 12);
+  ctx.strokeStyle = bandFarbe;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.ellipse(cx - 14, cy - 38, 13, 8, -0.35, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(cx + 14, cy - 38, 13, 8, 0.35, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function umbrecheCanvasText(ctx, text, maxBreite, maxZeilen) {
+  const woerter = String(text || "").split(/\s+/).filter(Boolean);
+  const zeilen = [];
+  let aktuell = "";
+  woerter.forEach(function (wort) {
+    const test = aktuell ? aktuell + " " + wort : wort;
+    if (ctx.measureText(test).width <= maxBreite || !aktuell) {
+      aktuell = test;
+    } else {
+      zeilen.push(aktuell);
+      aktuell = wort;
+    }
+  });
+  if (aktuell) { zeilen.push(aktuell); }
+  if (zeilen.length > maxZeilen) {
+    const gekuerzt = zeilen.slice(0, maxZeilen);
+    gekuerzt[maxZeilen - 1] = gekuerzt[maxZeilen - 1].replace(/[.,;:\s]+$/, "") + " …";
+    return gekuerzt;
+  }
+  return zeilen;
+}
+
+function ladeGutscheinAlsJpg(geschenk) {
+  if (!geschenk) { return false; }
+  const leinwand = document.createElement("canvas");
+  leinwand.width = 1200;
+  leinwand.height = 750;
+  const ctx = typeof leinwand.getContext === "function" ? leinwand.getContext("2d") : null;
+  if (!ctx) {
+    meldeRueckmeldung("Das Speichern als Bild wird in diesem Browser leider nicht unterstützt.");
+    return false;
+  }
+  const W = leinwand.width;
+  const H = leinwand.height;
+
+  // Hintergrund-Verlauf
+  const verlauf = ctx.createLinearGradient(0, 0, W, H);
+  verlauf.addColorStop(0, "#fffdf5");
+  verlauf.addColorStop(1, "#fff0c4");
+  ctx.fillStyle = verlauf;
+  ctx.fillRect(0, 0, W, H);
+
+  // Äußerer & innerer Rahmen
+  ctx.strokeStyle = "#d8a723";
+  ctx.lineWidth = 14;
+  zeichneAbgerundetesRechteck(ctx, 28, 28, W - 56, H - 56, 36);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.strokeStyle = "#e4c76a";
+  ctx.lineWidth = 4;
+  if (typeof ctx.setLineDash === "function") { ctx.setLineDash([14, 10]); }
+  zeichneAbgerundetesRechteck(ctx, 52, 52, W - 104, H - 104, 24);
+  ctx.stroke();
+  ctx.restore();
+
+  // Sterne in den Ecken
+  ctx.fillStyle = "#e7b62c";
+  [[104, 104], [W - 104, 104], [104, H - 104], [W - 104, H - 104]].forEach(function (punkt) {
+    zeichneStern(ctx, punkt[0], punkt[1], 24, 11, 5);
+  });
+  ctx.fillStyle = "#f4c430";
+  [[152, 118], [W - 152, 118], [152, H - 118], [W - 152, H - 118]].forEach(function (punkt) {
+    zeichneStern(ctx, punkt[0], punkt[1], 12, 5, 5);
+  });
+
+  // Geschenk-Illustration oben mittig
+  zeichneGeschenkSymbol(ctx, W / 2, 132, "#e06d53", "#f4c430");
+
+  // Kopfzeile & Name
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#7a5c11";
+  ctx.font = "bold 52px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText("GUTSCHEIN", W / 2, 224);
+
+  ctx.fillStyle = "#5c4a1e";
+  ctx.font = "bold 30px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText("Für " + SPIELERIN, W / 2, 276);
+
+  // Weißer Wunsch-Kasten in der Mitte
+  ctx.fillStyle = "#ffffff";
+  zeichneAbgerundetesRechteck(ctx, 110, 318, W - 220, 232, 24);
+  ctx.fill();
+  ctx.strokeStyle = "#e4c76a";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // Wunschtext automatisch skalieren und umbrechen
+  const wunschText = String(geschenk.text || "");
+  let schriftGroesse = wunschText.length > 55 ? 32 : wunschText.length > 34 ? 38 : 44;
+  ctx.font = "bold " + schriftGroesse + "px 'Segoe UI', Arial, sans-serif";
+  const zeilen = umbrecheCanvasText(ctx, wunschText, W - 290, 4);
+  const zeilenHoehe = Math.round(schriftGroesse * 1.32);
+  const startY = 434 - ((zeilen.length - 1) * zeilenHoehe) / 2;
+  ctx.fillStyle = "#2b2b36";
+  zeilen.forEach(function (zeile, idx) {
+    ctx.fillText(zeile, W / 2, startY + idx * zeilenHoehe);
+  });
+
+  // Fußzeile (Datum & Status)
+  ctx.fillStyle = "#6e5a2b";
+  ctx.font = "600 24px 'Segoe UI', Arial, sans-serif";
+  const linksText = geschenk.datum ? "Erhalten am " + datumText(geschenk.datum) : "Gutschein";
+  const rechtsText = geschenk.eingeloestAm
+    ? "✓ Eingelöst am " + datumText(geschenk.eingeloestAm)
+    : "★ Offen · Einlösbar bei Mama & Papa";
+  ctx.textAlign = "left";
+  ctx.fillText(linksText, 120, 610);
+  ctx.textAlign = "right";
+  ctx.fillText(rechtsText, W - 120, 610);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#9c8960";
+  ctx.font = "600 19px 'Segoe UI', Arial, sans-serif";
+  ctx.fillText("Mathe & Deutsch üben · " + SPIELERIN, W / 2, 666);
+
+  // Stempel falls bereits eingelöst
+  if (geschenk.eingeloestAm) {
+    ctx.save();
+    ctx.translate(W - 220, 178);
+    ctx.rotate(-0.18);
+    ctx.strokeStyle = "#1f7a4c";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+    ctx.lineWidth = 6;
+    zeichneAbgerundetesRechteck(ctx, -118, -32, 236, 64, 12);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#1f7a4c";
+    ctx.font = "bold 30px 'Segoe UI', Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("EINGELÖST ✓", 0, 2);
+    ctx.restore();
+  }
+
+  const dateiname = gutscheinDateiname(geschenk);
+  try {
+    if (typeof leinwand.toBlob === "function") {
+      leinwand.toBlob(function (blob) {
+        if (!blob) {
+          meldeRueckmeldung("Der Gutschein konnte leider nicht als JPG erstellt werden.");
+          return;
+        }
+        try {
+          datenHerunterladen(blob, "image/jpeg", dateiname);
+          meldeRueckmeldung("Gutschein als JPG gespeichert.");
+        } catch (fehler) {
+          meldeRueckmeldung("Das Herunterladen hat leider nicht geklappt.");
+        }
+      }, "image/jpeg", 0.94);
+      return true;
+    }
+    if (typeof leinwand.toDataURL === "function") {
+      const dataUrl = leinwand.toDataURL("image/jpeg", 0.94);
+      const link = element("a");
+      link.href = dataUrl;
+      link.download = dateiname;
+      document.body.appendChild(link);
+      try { link.click(); } finally {
+        if (link.parentNode) { link.parentNode.removeChild(link); }
+      }
+      meldeRueckmeldung("Gutschein als JPG gespeichert.");
+      return true;
+    }
+  } catch (fehler) {
+    meldeRueckmeldung("Der Gutschein konnte leider nicht als JPG gespeichert werden.");
+  }
+  return false;
+}
+
+let wunschEditorOffen = false;
+
 function zeigeGeschenkeInhalt() {
   const inhalt = document.getElementById("geschenkeInhalt");
   inhalt.textContent = "";
@@ -3360,6 +3725,7 @@ function zeigeGeschenkeInhalt() {
     abholen.addEventListener("click", function () { geschenkAuswahlOeffnen(); });
     inhalt.appendChild(abholen);
   }
+
   if (daten.geschenke.length === 0 && !daten.bonusStufenOffen.length) {
     inhalt.appendChild(element("p", null, "Hier erscheinen deine Gutscheine, sobald du einen abgeholt hast."));
   } else {
@@ -3391,6 +3757,7 @@ function zeigeGeschenkeInhalt() {
             text: "„" + geschenk.text + "“ wird mit dem heutigen Datum als eingelöst gespeichert.",
             ja: "Als eingelöst markieren",
             nein: "Abbrechen",
+            elternPruefung: true,
             dann: function () {
               const aktuell = findeGutschein(geschenk.id);
               if (!aktuell || !geschenkIstTauschbar(aktuell)) { return; }
@@ -3406,10 +3773,103 @@ function zeigeGeschenkeInhalt() {
         });
         karte.appendChild(einloesen);
       }
+      const jpgKnopf = element("button", "knopf klein schlicht", "🖼️ Als JPG speichern");
+      jpgKnopf.type = "button";
+      jpgKnopf.addEventListener("click", function () {
+        ladeGutscheinAlsJpg(geschenk);
+      });
+      karte.appendChild(jpgKnopf);
       inhalt.appendChild(karte);
     });
   }
 
+  // Wunschliste bearbeiten (für Eltern, ohne Code anzufassen)
+  const editor = element("details", "sterne-karte wunschliste-editor");
+  if (wunschEditorOffen) { editor.open = true; editor.setAttribute("open", ""); }
+  editor.addEventListener("toggle", function () { wunschEditorOffen = !!editor.open; });
+  const titel = element("summary", "wunschliste-titel", "⚙️ Wunschliste bearbeiten (für Eltern)");
+  editor.appendChild(titel);
+  editor.appendChild(element("p", "rand",
+    "Hier kannst du die Gutschein-Wünsche für neue Auswahlen anpassen. Änderungen werden beim Abgleich mit anderen PCs übernommen."));
+
+  const aktuelle = aktuelleWunschListe();
+  const ul = element("ul", "wunschliste-zeilen");
+  aktuelle.forEach(function (wunsch, idx) {
+    const li = element("li", "wunschliste-zeile");
+    li.appendChild(element("span", "wunschliste-text",
+      wunsch.text + (istFreitextWunsch(wunsch) ? " (mit Freitext)" : "")));
+    const entfernen = element("button", "knopf klein schlicht wunschliste-loeschen", "✕");
+    entfernen.type = "button";
+    entfernen.setAttribute("aria-label", "Wunsch „" + wunsch.text + "“ entfernen");
+    entfernen.disabled = aktuelle.length <= 1;
+    entfernen.addEventListener("click", function () {
+      if (aktuelle.length <= 1) { return; }
+      const neu = aktuelle.filter(function (_, i) { return i !== idx; })
+        .map(w => w.freitext ? { text: w.text, freitext: true } : { text: w.text });
+      daten.wunschListe = neu;
+      daten.wunschListeZeit = Date.now();
+      wunschEditorOffen = true;
+      speicher.speichere();
+      sync.nachAenderung(true);
+      zeigeGeschenkeInhalt();
+      meldeRueckmeldung("Wunsch entfernt.");
+    });
+    li.appendChild(entfernen);
+    ul.appendChild(li);
+  });
+  editor.appendChild(ul);
+
+  const neuZeile = element("div", "wunschliste-neu");
+  const eingabe = element("input", "eingabe wunschliste-eingabe");
+  eingabe.type = "text";
+  eingabe.maxLength = 80;
+  eingabe.placeholder = "Neuer Wunsch, z. B. Eis essen gehen";
+  eingabe.setAttribute("aria-label", "Neuer Gutschein-Wunsch");
+  const hinzuKnopf = element("button", "knopf klein primaer", "+ Hinzufügen");
+  hinzuKnopf.type = "button";
+  function fuegeWunschHinzu() {
+    const text = String(eingabe.value || "").trim();
+    if (!text) { return; }
+    if (aktuelle.some(w => w.text.toLowerCase() === text.toLowerCase())) {
+      meldeRueckmeldung("Dieser Wunsch steht schon in der Liste.");
+      return;
+    }
+    const neu = aktuelle.map(w => w.freitext ? { text: w.text, freitext: true } : { text: w.text });
+    neu.push({ text: text });
+    daten.wunschListe = neu;
+    daten.wunschListeZeit = Date.now();
+    wunschEditorOffen = true;
+    speicher.speichere();
+    sync.nachAenderung(true);
+    zeigeGeschenkeInhalt();
+    meldeRueckmeldung("Wunsch hinzugefügt.");
+  }
+  hinzuKnopf.addEventListener("click", fuegeWunschHinzu);
+  eingabe.addEventListener("keydown", function (ereignis) {
+    if (ereignis.key === "Enter") {
+      ereignis.preventDefault();
+      fuegeWunschHinzu();
+    }
+  });
+  neuZeile.appendChild(eingabe);
+  neuZeile.appendChild(hinzuKnopf);
+  editor.appendChild(neuZeile);
+
+  if (daten.wunschListe !== null) {
+    const zurueck = element("button", "knopf klein schlicht", "Standardliste wiederherstellen");
+    zurueck.type = "button";
+    zurueck.addEventListener("click", function () {
+      daten.wunschListe = null;
+      daten.wunschListeZeit = Date.now();
+      wunschEditorOffen = true;
+      speicher.speichere();
+      sync.nachAenderung(true);
+      zeigeGeschenkeInhalt();
+      meldeRueckmeldung("Standard-Wunschliste wiederhergestellt.");
+    });
+    editor.appendChild(zurueck);
+  }
+  inhalt.appendChild(editor);
 }
 
 /* ------------- Spielstand sichern und laden (Umzug auf einen anderen PC) --------------- */
@@ -5918,14 +6378,24 @@ document.getElementById("versuchBestaetigenKnopf").addEventListener("click", fun
   }
 });
 
-/* Rückfrage vor dem Abgeben bzw. beim Tageswechsel. */
+/* Rückfrage vor dem Abgeben, beim Tageswechsel bzw. beim Gutschein-Einlösen. */
 document.getElementById("frageNeinKnopf").addEventListener("click", frageSchliessen);
+const frageElternHakenKnoten = document.getElementById("frageElternHaken");
+if (frageElternHakenKnoten) {
+  frageElternHakenKnoten.addEventListener("change", function () {
+    if (frageBrauchtEltern) {
+      document.getElementById("frageJaKnopf").disabled = !frageElternHakenKnoten.checked;
+    }
+  });
+}
 document.getElementById("frageJaKnopf").addEventListener("click", function (ereignis) {
   // Der zweite Klick eines Doppelklicks darf die Aktion nicht wiederholen.
   if (ereignis && ereignis.detail > 1) { return; }
+  if (frageBrauchtEltern && !(frageElternHakenKnoten && frageElternHakenKnoten.checked)) { return; }
   const dann = frageAngelegenheit;
   dialogSchliessen("frageUeberlagerung");
   frageAngelegenheit = null;
+  frageElternZuruecksetzen();
   if (dann) {
     dann();
   }
@@ -6001,6 +6471,23 @@ document.getElementById("musikKnopf").addEventListener("click", musik.umschalten
 document.getElementById("geschenkWegKnopf").addEventListener("click", function () {
   dialogSchliessen("geschenkUeberlagerung");
 });
+const geschenkUeberraschungKnopfKnoten = document.getElementById("geschenkUeberraschungKnopf");
+if (geschenkUeberraschungKnopfKnoten) {
+  geschenkUeberraschungKnopfKnoten.addEventListener("click", geschenkUeberraschungZiehen);
+}
+const geschenkFreitextSpeichernKnoten = document.getElementById("geschenkFreitextSpeichern");
+if (geschenkFreitextSpeichernKnoten) {
+  geschenkFreitextSpeichernKnoten.addEventListener("click", geschenkFreitextAbsenden);
+}
+const geschenkFreitextEingabeKnoten = document.getElementById("geschenkFreitextEingabe");
+if (geschenkFreitextEingabeKnoten) {
+  geschenkFreitextEingabeKnoten.addEventListener("keydown", function (ereignis) {
+    if (ereignis.key === "Enter") {
+      ereignis.preventDefault();
+      geschenkFreitextAbsenden();
+    }
+  });
+}
 
 /* ------------- Start ------------- */
 

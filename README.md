@@ -531,6 +531,28 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.0 — Neues Gutschein-System (Wunschliste, Freitext, JPG-Export, Überraschung & Eltern-Bestätigung)
+
+- **Neue Standard-Wunschliste** (`Gemütlicher Familien-Filmabend mit Popcorn`,
+  `2 Stunden Videospiele spielen oder Lieblingsserie schauen`, `Dein
+  Lieblingsessen zu Hause oder ein Besuch im Restaurant`, `Ein toller
+  Familien-Ausflug nach deinem Wunsch`, `Ein kleines Geschenk selbst aussuchen`,
+  `Eigener Wunsch – schreib deine Idee selbst auf!` mit Freitext). Bestehende
+  Gutscheine mit früheren Standardtexten werden automatisch passend umgestellt
+  (ohne Match als `Eigener Wunsch: <alter Wunsch>`).
+- **Wunschliste in den Einstellungen bearbeiten:** Unter *Einstellungen →
+  Gutscheine* können Eltern Wünsche hinzufügen, entfernen oder auf die
+  Standardliste zurücksetzen – ganz ohne Code, inklusive Abgleich über
+  GitHub-Sync und Spielstand-Merge.
+- **Eigener Wunsch mit Freitext** (beim Abholen und beim Umtausch) sowie
+  **„🎲 Überraschung ziehen!“** für eine zufällige Auswahl.
+- **Gutschein als JPG speichern:** Jede Gutschein-Karte lässt sich direkt als
+  schöne Bildkarte (`gutschein-emma-….jpg`, reines Canvas-2D, auch offline unter
+  `file://`, ohne automatisches Drucken) herunterladen.
+- **Eltern-Bestätigung beim Einlösen:** Zum Markieren eines Gutscheins als
+  eingelöst ist ein Bestätigungshaken nötig, damit nichts versehentlich
+  weggeklickt wird.
+
 ### 1.2.0 — 7 Mathe-Themen, 5 selbstständige Deutsch-Übungen & 6 neue Welt-Geschichten
 
 - **7 frei wählbare Mathe-Themen** auf der Mathe-Startseite (unabhängig vom

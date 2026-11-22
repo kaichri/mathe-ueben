@@ -96,10 +96,22 @@ normalen Welt. Mit dem Haus oben geht es zurück zur Startseite.
     eine neue Stufe und kannst dir einen Gutschein aussuchen. Deine
     Bonussterne sammelst du weiter.
 
-Gutschein umtauschen: Unter "Einstellungen" -> "Gutscheine" kann Emma
-jeden offenen Gutschein jederzeit umtauschen. Der neue Wunsch steht
-danach am selben Platz und trägt das ursprüngliche Datum.
-Erhaltene Geschenke lassen sich dort als eingelöst markieren.
+Gutscheine (Einstellungen -> Gutscheine):
+  * Neue Wunschliste: Gemütlicher Familien-Filmabend mit Popcorn, 2 Stunden
+    Videospiele spielen oder Lieblingsserie schauen, Dein Lieblingsessen zu
+    Hause oder ein Besuch im Restaurant, Ein toller Familien-Ausflug nach
+    deinem Wunsch, Ein kleines Geschenk selbst aussuchen sowie "Eigener
+    Wunsch – schreib deine Idee selbst auf!" mit Freitext.
+  * "Überraschung ziehen!" lost einen zufälligen Wunsch aus.
+  * Umtauschen: Offene Gutscheine lassen sich jederzeit umtauschen (Datum und
+    Platz bleiben erhalten).
+  * Als JPG speichern: Jeder Gutschein lässt sich als festliche Bildkarte
+    herunterladen (ohne direktes Drucken).
+  * Einlösen: Erst mit Eltern-Bestätigungshaken wird ein Gutschein als
+    eingelöst markiert.
+  * Wunschliste bearbeiten: Direkt unter Einstellungen -> Gutscheine lassen
+    sich Wünsche hinzufügen, entfernen oder zurücksetzen (ohne Code, inklusive
+    PC-Synchronisierung).
 
 In script.js lässt sich das bei EINSTELLUNGEN verstellen:
    bonusSterneProTag: 5   - wie viele Bonussterne es höchstens pro Tag gibt
@@ -107,10 +119,6 @@ In script.js lässt sich das bei EINSTELLUNGEN verstellen:
    BONUS_STUFEN_SCHRITT = 25  - Abstand zwischen Gutschein-Stufen
    merkzettelGroesse: 12  - wie viele letzte Geschichten gemerkt werden
    knobelMerken: 9        - wie viele letzte Knobelaufgaben gemerkt werden
-
-Die Gutscheine selbst stehen in script.js bei
-   const GESCHENKE = [ ... ]
-und können jederzeit umgeschrieben werden.
 
 
 Ablauf

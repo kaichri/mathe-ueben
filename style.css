@@ -1025,6 +1025,78 @@ main {
   font-size: 19px;
 }
 
+.geschenk-freitext-box {
+  background: #fff8e4;
+  border: 2px solid #e4c76a;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.geschenk-freitext-label {
+  display: block;
+  font-weight: 700;
+  color: #7a5c11;
+  margin-bottom: 8px;
+}
+
+.geschenk-freitext-zeile {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.geschenk-freitext-eingabe {
+  flex: 1 1 260px;
+  width: auto;
+  max-width: 100%;
+  text-align: left;
+  font-size: 20px;
+  padding: 8px 12px;
+}
+
+.geschenk-aktionen {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ueberraschung-knopf {
+  background: #fff3cf;
+  border: 3px solid #d8a723;
+  color: #7a5c11;
+}
+
+.ueberraschung-knopf:hover {
+  background: #ffe69c;
+}
+
+.eltern-pruefung {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff8e2;
+  border: 2px solid #e4c76a;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 600;
+  color: #5c4610;
+  cursor: pointer;
+}
+
+.eltern-pruefung input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--akzent);
+}
+
 
 /* =========================================================
    Sternen- und Herzenregen
@@ -1207,6 +1279,63 @@ main {
 
 .gutschein-text { font-size: 20px; font-weight: 700; margin: 4px 0 10px; }
 .gutschein-karte .knopf.klein { margin: 4px 8px 4px 0; }
+
+.wunschliste-editor {
+  margin-top: 18px;
+}
+
+.wunschliste-titel {
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--akzent-dunkel);
+  cursor: pointer;
+}
+
+.wunschliste-zeilen {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wunschliste-zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #fffdf5;
+  border: 2px solid #ece3c8;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+
+.wunschliste-text {
+  font-weight: 600;
+}
+
+.wunschliste-loeschen {
+  padding: 4px 10px;
+  min-width: 38px;
+}
+
+.wunschliste-neu {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.wunschliste-eingabe {
+  flex: 1 1 240px;
+  width: auto;
+  max-width: 100%;
+  text-align: left;
+  font-size: 18px;
+  padding: 8px 12px;
+}
 
 /* ---------------- Kleine Bildschirme ---------------- */
 

@@ -428,7 +428,17 @@
   <div class="geschenk-kasten">
     <h2 class="geschenk-ueberschrift" id="geschenkTitel">🎉 Such dir ein Geschenk aus!</h2>
     <div class="geschenke-raster" id="geschenkeRaster"></div>
-    <button class="knopf schlicht" id="geschenkWegKnopf" type="button">Lieber später aussuchen</button>
+    <div class="geschenk-freitext-box" id="geschenkFreitextBox" hidden>
+      <label class="geschenk-freitext-label" for="geschenkFreitextEingabe" id="geschenkFreitextLabel">Was ist dein eigener Wunsch?</label>
+      <div class="geschenk-freitext-zeile">
+        <input class="eingabe geschenk-freitext-eingabe" id="geschenkFreitextEingabe" type="text" maxlength="100" placeholder="z. B. Eis essen mit Mama und Papa">
+        <button class="knopf primaer" id="geschenkFreitextSpeichern" type="button">Wunsch speichern ✓</button>
+      </div>
+    </div>
+    <div class="geschenk-aktionen">
+      <button class="knopf ueberraschung-knopf" id="geschenkUeberraschungKnopf" type="button">🎲 Überraschung ziehen!</button>
+      <button class="knopf schlicht" id="geschenkWegKnopf" type="button">Lieber später aussuchen</button>
+    </div>
   </div>
 </div>
 
@@ -453,6 +463,10 @@
   <div class="geschenk-kasten versuch-kasten">
     <h2 class="geschenk-ueberschrift" id="frageTitel">Bist du sicher?</h2>
     <p class="versuch-text" id="frageText"></p>
+    <label class="eltern-pruefung" id="frageElternPruefung" hidden>
+      <input type="checkbox" id="frageElternHaken">
+      <span>Eltern-Bestätigung: Mama oder Papa bestätigt, dass dieser Gutschein eingelöst wird.</span>
+    </label>
     <div class="versuch-knoepfe">
       <button class="knopf primaer" id="frageJaKnopf" type="button">Ja</button>
       <button class="knopf schlicht" id="frageNeinKnopf" type="button">Abbrechen</button>

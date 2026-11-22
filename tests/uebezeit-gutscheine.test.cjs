@@ -43,6 +43,15 @@ test("Einlösen speichert das Datum und sperrt Umtausch auch nach erneutem Laden
   g.nodes.get("frageNeinKnopf").emit("click");
   assert.equal(g.data().geschenke[0].eingeloestAm, undefined);
   knopf.emit("click");
+  // Ohne Eltern-Bestätigung bleibt der Ja-Knopf gesperrt.
+  assert.equal(g.nodes.get("frageJaKnopf").disabled, true);
+  g.nodes.get("frageJaKnopf").emit("click");
+  assert.equal(g.data().geschenke[0].eingeloestAm, undefined);
+  // Erst mit Eltern-Haken wird das Einlösen freigegeben.
+  const haken = g.nodes.get("frageElternHaken");
+  haken.checked = true;
+  haken.emit("change");
+  assert.equal(g.nodes.get("frageJaKnopf").disabled, false);
   g.nodes.get("frageJaKnopf").emit("click");
   assert.equal(g.nodes.get("offeneGutscheine").textContent, "0");
   const neu = game(g.saved(), { now: START });
