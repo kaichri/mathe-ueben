@@ -14,11 +14,11 @@ Was drin ist
 Pro Tag gibt es ein festes Set aus 50 Aufgaben. Gerechnet wird Abschnitt
 für Abschnitt (erst Addition, dann Subtraktion usw.):
 
-  10 Aufgaben  Addition       (mit Übertrag, auch 3 Zahlen hintereinander)
-  10 Aufgaben  Subtraktion    (mit Borgen, auch Ketten wie 634 - 217 + 45)
-  10 Aufgaben  Multiplikation (Einmaleins, Zehnermaleins, halbschriftlich wie 94 x 4)
-  10 Aufgaben  Division       (davon 4 mit Rest, z. B. 454 ÷ 7 = 64 Rest 6)
-   5 Aufgaben  Zahlenrätsel   (z. B. □ + 127 = 485)
+  10 Aufgaben  Addition       (mit Übertrag, auch 3 Zahlen wie 316 + 100 + 29)
+  10 Aufgaben  Subtraktion    (mit Borgen, auch Ketten wie 459 - 50 + 17)
+  10 Aufgaben  Multiplikation (Einmaleins, Zehnermaleins, halbschriftlich wie 38 x 4)
+  10 Aufgaben  Division       (davon 4 mit Rest, z. B. 89 ÷ 7 = 12 Rest 5)
+   5 Aufgaben  Zahlenrätsel   (z. B. □ + 40 = 385 oder 240 ÷ □ = 80)
    5 Aufgaben  Rechengeschichten (davon 2 mit Euro/Cent oder Uhr/Minuten)
 
 Niveau: 3. Klasse Volksschule, alles im Raum 1000, keine negativen Zahlen.
@@ -246,7 +246,7 @@ ein oder aus.
 Division mit Rest eingeben
 --------------------------
 Bei diesen Aufgaben gibt es zwei Felder: erst das Ergebnis, dann der Rest.
-Beispiel: 454 ÷ 7 = [64] Rest [6]
+Beispiel: 89 ÷ 7 = [12] Rest [5]
 
 
 Geld und Uhrzeit eingeben

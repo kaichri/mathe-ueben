@@ -100,26 +100,34 @@
   /* ---------------- Addition ---------------- */
 
   function additionUebertrag() {
-    var a = zufall(113, 887);
-    var b = zufall(23, 287);
+    var a = zufall(115, 785);
+    var b = Math.random() < 0.5 ? zufall(15, 88) : zufall(112, 248);
     if (a + b > 1000) {
       return null;
     }
     if (a % 10 + b % 10 < 11) {
       return null; // ohne Übertrag wäre für die 3. Klasse zu leicht
     }
+    // Kein doppelter Übertrag (Einer-Übertrag reicht, Zehner bleiben unter 10).
+    if (Math.floor((a % 100) / 10) + Math.floor((b % 100) / 10) + 1 >= 10) {
+      return null;
+    }
     return karte("add", "addition", a + " + " + b + " =", [feld(a + b)]);
   }
 
   function additionDreiZahlen() {
-    var a = zufall(111, 446);
-    var b = zufall(111, 348);
-    var c = zufall(14, 97);
+    var a = zufall(115, 580);
+    var b = waehle([20, 30, 40, 50, 60, 70, 80, 100, 200]);
+    var c = zufall(14, 48);
     if (a + b + c > 1000) {
       return null;
     }
-    if (a % 10 + b % 10 < 11 && b % 10 + c % 10 < 11) {
-      return null; // mindestens ein Übertrag soll vorkommen
+    if (a % 10 + c % 10 < 11) {
+      return null; // ein sauberer Einer-Übertrag soll vorkommen
+    }
+    var zwischen = a + b;
+    if (Math.floor((zwischen % 100) / 10) + Math.floor((c % 100) / 10) + 1 >= 10) {
+      return null;
     }
     return karte("add", "addition-drei", a + " + " + b + " + " + c + " =", [feld(a + b + c)]);
   }
@@ -127,31 +135,39 @@
   /* ---------------- Subtraktion ---------------- */
 
   function subtraktionBorgen() {
-    var a = zufall(231, 987);
-    var b = zufall(23, 287);
-    if (a - b < 3) {
+    var a = Math.random() < 0.5 ? zufall(135, 895) : zufall(245, 895);
+    var b = a >= 245 && Math.random() < 0.5 ? zufall(112, 238) : zufall(14, 88);
+    if (a - b < 10) {
       return null;
     }
     if (a % 10 >= b % 10) {
       return null; // Zehnerübergang (Borgen) muss nötig sein
+    }
+    // Kein doppeltes Borgen (Zehnerstelle bleibt nach dem Borgen >= 0).
+    if (Math.floor((a % 100) / 10) <= Math.floor((b % 100) / 10)) {
+      return null;
     }
     return karte("sub", "subtraktion", a + " \u2212 " + b + " =", [feld(a - b)]);
   }
 
   function subtraktionKette() {
     if (Math.random() < 0.5) {
-      var a = zufall(445, 989);
-      var b = zufall(113, 250);
-      var c = zufall(16, 85);
-      if (a - b - c < 3 || a % 10 >= b % 10) {
+      var a = zufall(245, 895);
+      var b = waehle([20, 30, 40, 50, 60, 100, 200]);
+      var c = zufall(14, 45);
+      var zwischen = a - b;
+      if (zwischen - c < 10 || zwischen % 10 >= c % 10 ||
+          Math.floor((zwischen % 100) / 10) <= Math.floor((c % 100) / 10)) {
         return null;
       }
       return karte("sub", "subtraktion-kette", a + " \u2212 " + b + " \u2212 " + c + " =", [feld(a - b - c)]);
     }
-    var x = zufall(334, 888);
-    var y = zufall(115, 245);
-    var z = zufall(16, 90);
-    if (x - y < 2 || x - y + z > 1000 || x % 10 >= y % 10) {
+    var x = zufall(245, 850);
+    var y = waehle([20, 30, 40, 50, 60, 100, 200]);
+    var z = zufall(14, 45);
+    var zw = x - y;
+    if (zw < 20 || zw + z > 1000 || zw % 10 + z % 10 < 11 ||
+        Math.floor((zw % 100) / 10) + Math.floor((z % 100) / 10) + 1 >= 10) {
       return null;
     }
     return karte("sub", "subtraktion-kette", x + " \u2212 " + y + " + " + z + " =", [feld(x - y + z)]);
@@ -180,8 +196,8 @@
   }
 
   function multiplikationHalbschriftlich() {
-    var zweistellig = zufall(13, 97);
-    var einstieg = zufall(3, 9);
+    var zweistellig = zufall(12, 49);
+    var einstieg = zufall(3, 5);
     if (zweistellig % 10 === 0) {
       return null;
     }
@@ -229,20 +245,20 @@
   }
 
   function divisionZweistelligOhneRest() {
-    var d = zufall(3, 9);
-    var q = zufall(12, 99);
-    if (d * q > 1000 || q % 10 === 0) {
+    var d = zufall(2, 5);
+    var q = zufall(12, 49);
+    if (d * q > 250 || q % 10 === 0) {
       return null;
     }
     return karte("div", "division-zweistellig", d * q + " \u00F7 " + d + " =", [feld(q)]);
   }
 
   function divisionMitRestBauen() {
-    var d = zufall(3, 9);
-    var q = zufall(12, 99);
+    var d = zufall(3, 8);
+    var q = zufall(5, 19);
     var r = zufall(1, d - 1);
     var dividend = d * q + r;
-    if (dividend > 1000) {
+    if (dividend > 150) {
       return null;
     }
     return karte("div", "division-rest", dividend + " \u00F7 " + d + " =", [
@@ -254,9 +270,14 @@
   /* ---------------- Zahlenrätsel mit □ ---------------- */
 
   function raetselAddition() {
-    var loesung = zufall(113, 774);
-    var b = zufall(113, 226);
+    var loesung = zufall(120, 750);
+    var b = Math.random() < 0.5
+      ? waehle([20, 30, 40, 50, 60, 70, 80, 100, 200])
+      : zufall(15, 75);
     if (loesung + b > 1000) {
+      return null;
+    }
+    if (Math.floor((loesung % 100) / 10) + Math.floor((b % 100) / 10) + (loesung % 10 + b % 10 >= 10 ? 1 : 0) >= 10) {
       return null;
     }
     var text = Math.random() < 0.5
@@ -266,10 +287,15 @@
   }
 
   function raetselSubtraktion() {
-    var a = zufall(112, 760);
-    var b = zufall(113, 240);
+    var a = zufall(120, 750);
+    var b = Math.random() < 0.5
+      ? waehle([20, 30, 40, 50, 60, 70, 80, 100, 200])
+      : zufall(15, 75);
     var gesamt = a + b;
     if (gesamt > 1000) {
+      return null;
+    }
+    if (Math.floor((a % 100) / 10) + Math.floor((b % 100) / 10) + (a % 10 + b % 10 >= 10 ? 1 : 0) >= 10) {
       return null;
     }
     if (Math.random() < 0.5) {
@@ -283,12 +309,18 @@
   }
 
   function raetselMultiplikation() {
-    var a = zufall(13, 97);
-    var b = zufall(3, 9);
-    if (a % 10 === 0) {
-      return null;
+    var a, b;
+    if (Math.random() < 0.5) {
+      a = zufall(3, 9);
+      b = zufall(3, 10);
+    } else {
+      a = waehle([20, 30, 40, 50, 60, 70, 80, 90, 100, 200]);
+      b = zufall(2, 5);
     }
     var produkt = a * b;
+    if (produkt > 1000) {
+      return null;
+    }
     if (Math.random() < 0.5) {
       // □ × a = produkt   ->   □ = b
       return karte("raetsel", "luecke-multiplikation", LUECKE + " \u00D7 " + a + " = " + produkt,
@@ -300,20 +332,26 @@
   }
 
   function raetselDivision() {
-    var a = zufall(13, 97);
-    var b = zufall(3, 9);
-    if (a % 10 === 0) {
-      return null;
+    var a, b;
+    if (Math.random() < 0.5) {
+      a = zufall(3, 9);
+      b = zufall(3, 10);
+    } else {
+      a = waehle([20, 30, 40, 50, 60, 70, 80, 90, 100, 200]);
+      b = zufall(2, 5);
     }
     var produkt = a * b;
-    if (Math.random() < 0.5) {
-      // produkt ÷ □ = b   ->   □ = a
-      return karte("raetsel", "luecke-division", produkt + " \u00F7 " + LUECKE + " = " + b,
-        [feld(a, { beschriftung: LUECKE + " = " })], { layout: "luecke" });
+    if (produkt > 1000) {
+      return null;
     }
-    // produkt ÷ a = □   ->   □ = b
-    return karte("raetsel", "luecke-division", produkt + " \u00F7 " + a + " = " + LUECKE,
-      [feld(b, { beschriftung: LUECKE + " = " })], { layout: "luecke" });
+    if (Math.random() < 0.5) {
+      // produkt ÷ □ = a   ->   □ = b
+      return karte("raetsel", "luecke-division", produkt + " \u00F7 " + LUECKE + " = " + a,
+        [feld(b, { beschriftung: LUECKE + " = " })], { layout: "luecke" });
+    }
+    // produkt ÷ b = □   ->   □ = a
+    return karte("raetsel", "luecke-division", produkt + " \u00F7 " + b + " = " + LUECKE,
+      [feld(a, { beschriftung: LUECKE + " = " })], { layout: "luecke" });
   }
 
   function zahlerraetsel() {

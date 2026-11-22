@@ -531,6 +531,14 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.1.9 — Leichtere Aufgaben im Zahlenraum 1000
+
+- **Aufgaben im Zahlenraum 1000 kindgerechter abgestuft** (3. Klasse
+  Volksschule): Addition und Subtraktion ohne doppelten Übertrag bzw. ohne
+  doppeltes Borgen, Kettenaufgaben mit glatten Zehnern/Hundertern,
+  halbschriftliche Multiplikation bis 49 × 5, Division mit Rest bis 150 sowie
+  Zahlenrätsel mit Einmaleins und glatten Zehnern/Hundertern.
+
 ### 1.1.8 — Mehrtägige Quizze, freie Weltenwahl & Fehlerkorrekturen
 
 - **Quizze über mehrere Tage fortsetzen:** Ein angefangenes 50-Aufgaben-Quiz
