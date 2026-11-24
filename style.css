@@ -353,14 +353,21 @@ main {
 /* ---------------- Knöpfe ---------------- */
 
 .knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
   font: inherit;
   font-size: 21px;
   font-weight: 700;
+  line-height: 1.25;
+  min-height: 54px;
   color: var(--akzent-dunkel);
   background: var(--weiss);
   border: 3px solid var(--akzent);
   border-radius: 14px;
-  padding: 12px 22px;
+  padding: 10px 22px;
   cursor: pointer;
 }
 
@@ -376,7 +383,8 @@ main {
 
 .knopf.riesig {
   font-size: 28px;
-  padding: 18px 40px;
+  min-height: 70px;
+  padding: 16px 40px;
   border-radius: 999px;
 }
 
@@ -389,7 +397,8 @@ main {
 
 .knopf.klein {
   font-size: 16px;
-  padding: 8px 14px;
+  min-height: 40px;
+  padding: 6px 14px;
   border-width: 2px;
   border-radius: 10px;
 }
@@ -1436,35 +1445,426 @@ main {
 .sprech-tag-titel { font-size: 16px; }
 .sprech-tag-status { font-size: 14px; opacity: .8; }
 
-.sprech-kopf h3 { margin: 4px 0 2px; }
-.sprech-ziel { margin: 0 0 4px; font-weight: 700; color: var(--akzent-dunkel); }
+.sprech-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
 
-.sprech-schritte { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 14px; }
+.sprech-schritte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  background: #fffdf6;
+  border: 2px solid var(--linien);
+  border-radius: 14px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
 
-.sprech-schritt { opacity: .55; font-weight: 700; }
-.sprech-schritt.aktiv { opacity: 1; color: var(--akzent-dunkel); }
-.sprech-schritt.erledigt { opacity: .9; color: var(--gut); }
+.sprech-schritt {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-mild);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.sprech-schritt:hover { background: var(--akzent-hell); color: var(--akzent-dunkel); }
+.sprech-schritt.aktiv {
+  background: var(--akzent);
+  border-color: var(--akzent-dunkel);
+  color: #ffffff;
+}
+.sprech-schritt.erledigt {
+  background: var(--gut-hell);
+  color: var(--gut);
+}
+.sprech-schritt-trenner {
+  color: var(--text-mild);
+  font-weight: 700;
+  opacity: .6;
+  user-select: none;
+}
 
-.sprech-text { font-size: 21px; line-height: 1.55; }
+.sprech-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+.sprech-titel {
+  margin: 0;
+  font-size: 26px;
+  color: var(--akzent-dunkel);
+}
+.sprech-kopf .sprech-figur { height: 58px; width: auto; flex-shrink: 0; }
 
-.sprech-zeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.sprech-karte { padding: 18px 20px; }
+
+.sprech-geschichte-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 310px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+}
+.sprech-bild-knopf {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 16px;
+  cursor: zoom-in;
+  transition: transform 0.15s ease;
+}
+.sprech-bild-knopf:hover { transform: scale(1.02); }
+.sprech-bild-knopf:hover .sprech-bild { border-color: var(--akzent); }
+.sprech-bild-lupe {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+}
+.sprech-bild {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 3px solid var(--akzent-hell);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  background: #fffdf6;
+  display: block;
+}
+.bild-gross-kasten {
+  max-width: 920px;
+  width: min(94vw, 920px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bild-gross-img {
+  width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+  border-radius: 14px;
+  cursor: zoom-out;
+  display: block;
+}
+.sprech-geschichte-textspalte {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sprech-text { font-size: 21px; line-height: 1.6; margin-top: 0; }
+
+.sprech-zeile { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 
 .vorlesen-knopf { min-width: 150px; }
 
 .sprech-frage {
+  border-top: 1px solid var(--linien);
+  padding: 14px 0;
+}
+.sprech-frage:first-of-type { border-top: none; padding-top: 2px; }
+
+.sprech-frage-kopf {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 10px;
+}
+.sprech-frage-nr { font-size: 19px; font-weight: 800; color: var(--akzent-dunkel); }
+.sprech-frage-text { font-size: 19px; font-weight: 700; }
+.sprech-mehrfach-hinweis {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--akzent-dunkel);
+  background: var(--akzent-hell);
+  border: 1px solid var(--akzent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+.sprech-wahl-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sprech-wahl-zeile {
   display: flex;
   align-items: center;
   gap: 10px;
+  background: var(--weiss);
+  border: 2px solid var(--linien);
+  border-radius: 12px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1.35;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.sprech-wahl-zeile:hover { border-color: var(--akzent); background: #fffdf8; }
+.sprech-wahl-zeile.aktiv {
+  border-color: var(--akzent);
+  background: var(--akzent-hell);
+  color: var(--akzent-dunkel);
+  font-weight: 700;
+}
+.sprech-wahl-zeile.richtig {
+  border-color: var(--gut);
+  background: var(--gut-hell);
+  color: var(--gut);
+  font-weight: 700;
+}
+.sprech-wahl-zeile.falsch {
+  border-color: var(--schlecht);
+  background: var(--schlecht-hell);
+  color: var(--schlecht);
+  font-weight: 700;
+}
+.sprech-wahl-eingabe {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--akzent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.sprech-wahl-text { flex: 1; }
+
+/* Geschichten-Auswahl Pop-up */
+.geschichten-kasten {
+  max-width: 780px;
+  width: min(94vw, 780px);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.geschichten-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   flex-wrap: wrap;
-  border-top: 1px solid var(--linien);
-  padding: 8px 0;
+}
+.geschichten-kopf .geschenk-ueberschrift { margin: 0; text-align: left; }
+.geschichten-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 58vh;
+  padding: 2px;
+}
+.geschichte-karte {
+  font: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--weiss);
+  color: var(--text);
+  border: 2px solid var(--linien);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.geschichte-karte:hover {
+  border-color: var(--akzent);
+  background: var(--akzent-hell);
+}
+.geschichte-karte.aktiv {
+  border-color: var(--akzent);
+  background: var(--akzent-hell);
+  box-shadow: 0 2px 0 var(--akzent);
+}
+.geschichte-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--akzent-hell);
+  color: var(--akzent-dunkel);
+  font-weight: 800;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.geschichte-karte.aktiv .geschichte-nr {
+  background: var(--akzent);
+  color: #ffffff;
+}
+.geschichte-titel {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+}
+.geschichte-aktiv-hinweis {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--akzent-dunkel);
+  background: var(--weiss);
+  border-radius: 999px;
+  padding: 2px 8px;
 }
 
-.sprech-frage:first-of-type { border-top: none; }
-.sprech-frage-text { font-size: 19px; font-weight: 700; }
-.sprech-antwort { color: var(--akzent-dunkel); }
-.sprech-antwort.verborgen,
-.sprech-satzanfaenge.verborgen { visibility: hidden; }
+.sprech-satz-block {
+  border-top: 1px solid var(--linien);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sprech-satz-block:first-of-type { border-top: none; padding-top: 4px; }
+
+.sprech-verbinden-zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  font-size: 19px;
+  line-height: 1.5;
+}
+.sprech-verbinden-teil { font-weight: 600; }
+.sprech-bindewort-gruppe {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sprech-bindewort {
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--weiss);
+  color: var(--akzent-dunkel);
+  border: 2px solid var(--akzent);
+  border-radius: 999px;
+  padding: 4px 14px;
+  cursor: pointer;
+}
+.sprech-bindewort:hover:not(:disabled) { background: var(--akzent-hell); }
+.sprech-bindewort.aktiv { background: var(--akzent); color: #fff; border-color: var(--akzent-dunkel); }
+.sprech-bindewort.richtig { background: var(--gut-hell); border-color: var(--gut); color: var(--gut); }
+.sprech-bindewort.falsch { background: var(--schlecht-hell); border-color: var(--schlecht); color: var(--schlecht); }
+
+.sprech-satz-feedback {
+  margin: 8px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.sprech-satz-feedback.richtig { color: var(--gut); }
+.sprech-satz-feedback.falsch { color: var(--schlecht); }
+.sprech-ergebnis-kurz { font-size: 19px; font-weight: 700; color: var(--akzent-dunkel); margin: 8px 0 4px; }
+
+.sprech-abschluss-liste {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 14px 0 10px;
+}
+.sprech-abschluss-zeile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fffdf6;
+  border: 2px solid var(--linien);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.sprech-abschluss-zeile.gut {
+  background: var(--gut-hell);
+  border-color: var(--gut);
+}
+.sprech-abschluss-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-mild);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.sprech-abschluss-wert {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--akzent-dunkel);
+}
+.sprech-abschluss-zeile.gut .sprech-abschluss-wert {
+  color: var(--gut);
+}
+
+.sprech-bingo-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.sprech-bingo-karte {
+  font: inherit;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fffdf6;
+  border: 3px solid var(--akzent);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: var(--text);
+}
+.sprech-bingo-karte:hover { background: var(--akzent-hell); }
+.sprech-bingo-karte.verdeckt {
+  background: #f5f2eb;
+  border-style: dashed;
+  border-color: var(--linien);
+  color: var(--text-mild);
+}
+.sprech-bingo-karte.erzaehlt {
+  background: var(--gut-hell);
+  border-color: var(--gut);
+  color: var(--gut);
+}
+.sprech-bingo-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--akzent-hell);
+  color: var(--akzent-dunkel);
+  font-weight: 800;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.sprech-bingo-karte.erzaehlt .sprech-bingo-nr {
+  background: var(--gut);
+  color: #ffffff;
+}
+.sprech-bingo-text { font-size: 18px; font-weight: 700; }
 
 .sprech-satzanfaenge { margin: 6px 0; padding-left: 22px; font-size: 19px; }
 .sprech-satzanfaenge li { margin-bottom: 4px; }
@@ -1520,7 +1920,7 @@ main {
 .stufen-knopf:hover { border-color: var(--akzent); }
 .stufen-knopf.aktiv { background: var(--akzent); border-color: var(--akzent-dunkel); color: #fff; font-weight: 700; }
 
-.sprech-weiter { margin-bottom: 12px; }
+.sprech-navi { margin-bottom: 12px; }
 
 .ton-zeile {
   display: flex;
@@ -1563,10 +1963,6 @@ main {
 .deutsch-welt-titel { font-size: 21px; font-weight: 700; }
 .deutsch-welt-text { font-size: 15px; color: var(--text-mild); }
 
-.sprech-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sprech-kopf .sprech-figur { height: 64px; width: auto; margin-left: auto; }
-.sprech-kopf .sprech-ziel { flex-basis: 100%; }
-
 .sprech-feier { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 8px 0; }
 .sprech-figuren { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
 .sprech-figuren img { height: 76px; width: auto; }
@@ -1574,6 +1970,10 @@ main {
 
 @media (max-width: 640px) {
   .sprech-tage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sprech-geschichte-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .geschichten-raster { grid-template-columns: minmax(0, 1fr); }
+  .sprech-titel { font-size: 22px; }
+  .sprech-schritt { font-size: 14px; padding: 4px 10px; }
   .sprech-text { font-size: 19px; }
   .bereich-knopf { font-size: 15px; padding: 0 10px; min-height: 30px; }
 }

@@ -531,6 +531,31 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.4 — Sprechtraining komplett überarbeitet, Geschichten-Bilder & einheitliche Deutsch-Startseite
+
+- **Einheitliche Deutsch-Startseite:** Alle 6 Deutsch-Übungen (inkl. **Sprechtraining**)
+  stehen gleichberechtigt als Kacheln unter der Welt-Auswahl; ein Klick auf
+  *Sprechtraining* startet direkt in Schritt 1 ohne Zwischenseite und ohne
+  Anleitungskästen.
+- **Neues Layout & Geschichten-Pop-up:** Klickbare Breadcrumbs (*Zuhören ›
+  Verstehen › Satz bilden › Erzählen*) ganz oben, kein Mini-Ziel und keine
+  doppelten Schritt-Überschriften im Textblock; „📖 Andere Geschichte“ öffnet ein
+  Auswahl-Pop-up mit allen 20 Geschichten (plus Zufalls-Knopf). Einheitliche
+  Button-Höhen für *Zurück* und *Weiter*.
+- **Längere Geschichten (6 Sätze), neue MP3s & süße Bilder:** Alle 20 Geschichten
+  auf 6 Sätze ausgebaut, alle 40 Text-MP3s (Thorsten & Ramona) neu mit Piper
+  erzeugt und die ersten 12 liebevollen Aquarell-Illustrationen (960×720 `.webp`
+  inkl. Klick-Großansicht als Pop-up) auf Seite 1 eingebunden.
+- **Interaktives Verstehen-Quiz (Schritt 2):** 5 Verständnisfragen pro Runde mit
+  Radio-Buttons (Einzelauswahl) und Checkboxes (Mehrfachauswahl) sowie
+  „Antworten prüfen ✓“.
+- **Satz bilden ausgebaut (Schritt 3):** 4 Satz-Baukasten-Puzzles (mit `.benutzt`-
+  Sperrung und „↺ Neu legen“ wie beim Satzbau-Puzzle) + 4 Sätze-verbinden-Aufgaben
+  (`weil`, `deshalb`, `aber`, `danach`) pro Geschichte.
+- **Einfaches Erzählen & Gesamtauswertung (Schritt 4):** Direkte 4-Stationen-Karten
+  zum Abhaken (mit optionalem Verdecken) und vollständiger Abschlussübersicht über
+  *Verstehen*, *Satz bilden* und *Erzählen* (246 Node-Tests grün).
+
 ### 1.3.3 — Mehr Deutsch-Übungsaufgaben (245 Einträge) & erweiterte Tests
 
 - **Aufgabenpool der 5 Deutsch-Übungen mehr als verdoppelt** (`deutsch-uebungen.js`):

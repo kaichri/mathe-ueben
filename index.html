@@ -474,6 +474,31 @@
   </div>
 </div>
 
+<!-- --------------- Geschichten-Auswahl im Sprechtraining (Pop-up) --------------- -->
+<div class="ueberlagerung" id="geschichtenUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="geschichtenTitel" tabindex="-1" hidden>
+  <div class="geschenk-kasten geschichten-kasten">
+    <div class="geschichten-kopf">
+      <h2 class="geschenk-ueberschrift" id="geschichtenTitel">📖 Geschichte auswählen</h2>
+      <button class="knopf klein schlicht" id="geschichtenWegKnopf" type="button">Schließen ✕</button>
+    </div>
+    <div class="geschichten-raster" id="geschichtenRaster"></div>
+    <div class="geschenk-aktionen">
+      <button class="knopf primaer" id="geschichtenZufallKnopf" type="button">🎲 Zufällige Geschichte</button>
+    </div>
+  </div>
+</div>
+
+<!-- --------------- Großes Geschichten-Bild (Pop-up) --------------- -->
+<div class="ueberlagerung" id="bildUeberlagerung" role="dialog" aria-modal="true" aria-labelledby="bildTitel" tabindex="-1" hidden>
+  <div class="geschenk-kasten bild-gross-kasten">
+    <div class="geschichten-kopf">
+      <h2 class="geschenk-ueberschrift" id="bildTitel"></h2>
+      <button class="knopf klein schlicht" id="bildWegKnopf" type="button">Schließen ✕</button>
+    </div>
+    <img class="bild-gross-img" id="bildGrossImg" src="" alt="">
+  </div>
+</div>
+
 <!-- Sterne-/Herzenregen -->
 <div class="regen" id="regen" hidden aria-hidden="true"></div>
 <div class="winter-schnee" id="winterSchnee" hidden aria-hidden="true"></div>

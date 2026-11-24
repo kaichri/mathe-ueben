@@ -309,14 +309,15 @@ test("UI: Mathe-Startseite zeigt alle 7 Mathe-Themen und bewertet ohne Bonusster
   assert.equal(g.data().runden.length, 0, "Extra-Übungen verändern nicht die Quiz-Statistik");
 });
 
-test("UI: Deutsch-Übersicht zeigt 5 selbstständige Übungen inkl. Satzbau-Puzzle & Wortarten", () => {
+test("UI: Deutsch-Übersicht zeigt alle 6 Deutsch-Übungen inkl. Sprechtraining, Satzbau-Puzzle & Wortarten", () => {
   const g = game({}, { now: JETZT });
   g.nodes.get("deutschUmschalter").emit("click");
   const kacheln = g.nodes.get("sprechInhalt").querySelectorAll(".themen-kachel");
-  assert.equal(kacheln.length, 5);
+  assert.equal(kacheln.length, 6);
+  assert.equal(kacheln[0].dataset.deutschThema, "sprechtraining");
 
   // Wortarten öffnen und eine Option wählen
-  kacheln[1].emit("click"); // wortarten
+  kacheln[2].emit("click"); // wortarten (0=sprechtraining, 1=rechtschreibung, 2=wortarten)
   const inhalt = g.nodes.get("sprechInhalt");
   assert.match(inhalt.textContent, /Namenwort \(Nomen\)/);
   assert.match(inhalt.textContent, /Tunwort \(Verb\)/);
@@ -334,9 +335,9 @@ test("UI: Deutsch-Übersicht zeigt 5 selbstständige Übungen inkl. Satzbau-Puzz
   inhalt.querySelector(".extra-pruefen").emit("click");
   assert.equal(inhalt.querySelector(".extra-ergebnis").hidden, false);
 
-  // Startseite-Knopf führt zurück zur Deutsch-Übersicht
+  // Startseite-Knopf führt zurück zur Deutsch-Übersicht mit allen 6 Themen
   g.nodes.get("abbruchKnopf").emit("click");
-  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".themen-kachel").length, 5);
+  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".themen-kachel").length, 6);
 });
 
 test("UI: Rechendreieck zeichnet echtes SVG-Dreieck mit 3 Innen- und 3 Außenfeldern", () => {

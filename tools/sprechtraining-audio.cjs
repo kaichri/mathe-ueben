@@ -46,12 +46,6 @@ function schnipsel() {
   for (const e of SPRECHTRAINING.EINHEITEN) {
     const nr = ("0" + e.tag).slice(-2);
     liste.push({ id: "tag" + nr + "-text", text: e.text });
-    (e.fragenSets || []).forEach(function (satze, s) {
-      satze.forEach(function (f, i) {
-        liste.push({ id: "tag" + nr + "-s" + (s + 1) + "-f" + (i + 1), text: f.frage });
-      });
-    });
-    liste.push({ id: "tag" + nr + "-hinweis", text: e.hinweis });
   }
   return liste;
 }

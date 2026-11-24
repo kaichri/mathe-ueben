@@ -41,14 +41,18 @@ function tageInhalte(g) {
   return g.nodes.get("sprechInhalt").querySelectorAll(".sprech-tag");
 }
 function offneEinheit(g, nr) {
-  const knopf = tageInhalte(g)[nr - 1];
-  knopf.emit("click");
+  g.run("sprech.oeffneEinheit(SPRECHTRAINING.einheit(" + nr + "))");
 }
 function offneEinheitMitSatz(g, nr, satz) {
   g.run("sprech.oeffneEinheit(SPRECHTRAINING.einheit(" + nr + "), " + satz + ")");
 }
 function weiter(g) {
   g.nodes.get("sprechInhalt").querySelectorAll(".sprech-weiter").at(-1).emit("click");
+}
+function aktiverSchritt(g) {
+  const aktiv = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-schritt")
+    .find(k => k.classList.contains("aktiv"));
+  return aktiv ? aktiv.textContent : "";
 }
 function kriterien(g) {
   return g.nodes.get("sprechInhalt").querySelectorAll(".sprech-kriterium");
@@ -59,31 +63,57 @@ function setzeStufe(g, kriterium, stufe) {
 
 /* ------------------------------------------------------------------ Daten */
 
-test("DATEN: jede Geschichte hat 4 Fragensätze und alle Audio-Clips vorhanden", () => {
+test("DATEN: jede Geschichte hat 5–7 Sätze, 4×5 Auswahl-Fragen, 4+4 Satz-Übungen und alle Text-MP3s", () => {
   const ordner = path.join(__dirname, "..", "audio", "sprechtraining");
   assert.equal(SPRECHTRAINING.EINHEITEN.length, 20);
   for (const e of SPRECHTRAINING.EINHEITEN) {
     const nr = ("0" + e.tag).slice(-2);
+    const saetze = e.text.split(/[.!?]+/).filter(x => x.trim()).length;
+    assert(saetze >= 5 && saetze <= 7,
+      "Geschichte " + e.tag + " soll 5-7 Sätze haben, hat aber " + saetze);
     assert(Array.isArray(e.fragenSets) && e.fragenSets.length >= 4,
       "Geschichte " + e.tag + " braucht mindestens 4 Fragensätze");
     e.fragenSets.forEach(function (satz, s) {
-      assert(satz.length >= 3, "Fragensatz " + (s + 1) + " von Geschichte " + e.tag + " hat genug Fragen");
-      satz.forEach(function (f, i) {
+      assert.equal(satz.length, 5, "Fragensatz " + (s + 1) + " von Geschichte " + e.tag + " braucht genau 5 Fragen");
+      let einzel = 0;
+      let mehrfach = 0;
+      satz.forEach(function (f) {
         assert(typeof f.frage === "string" && f.frage.trim(), "Frage fehlt: Geschichte " + e.tag);
+        assert(Array.isArray(f.optionen) && f.optionen.length >= 3, "Mind. 3 Antwortoptionen: Geschichte " + e.tag);
+        assert(Array.isArray(f.richtig) && f.richtig.length >= 1, "Mind. 1 richtige Option: Geschichte " + e.tag);
+        f.richtig.forEach(idx => assert(idx >= 0 && idx < f.optionen.length, "Ungültiger Index: Geschichte " + e.tag));
         assert(typeof f.antwort === "string" && f.antwort.trim(), "Antwort fehlt: Geschichte " + e.tag);
-        for (const stimme of ["thorsten", "ramona"]) {
-          assert(fs.existsSync(path.join(ordner, stimme, "tag" + nr + "-s" + (s + 1) + "-f" + (i + 1) + ".mp3")),
-            "Audio fehlt: " + stimme + "/tag" + nr + "-s" + (s + 1) + "-f" + (i + 1) + ".mp3");
-        }
+        if (f.richtig.length > 1) { mehrfach += 1; } else { einzel += 1; }
       });
+      assert(einzel >= 1 && mehrfach >= 1,
+        "Fragensatz " + (s + 1) + " von Geschichte " + e.tag + " braucht Radio- und Checkbox-Fragen");
     });
-    for (const rest of ["text", "hinweis"]) {
-      for (const stimme of ["thorsten", "ramona"]) {
-        assert(fs.existsSync(path.join(ordner, stimme, "tag" + nr + "-" + rest + ".mp3")),
-          "Audio fehlt: " + stimme + "/tag" + nr + "-" + rest + ".mp3");
-      }
+    assert(Array.isArray(e.satzPuzzle) && e.satzPuzzle.length === 4, "4 Satzpuzzles erwartet: Geschichte " + e.tag);
+    e.satzPuzzle.forEach(function (p) {
+      assert(p.teile.length >= 3 && p.teile.length <= 5, "Puzzle-Bausteine: Geschichte " + e.tag);
+      assert.equal(p.teile.join(" "), p.satz, "Puzzle-Satz weicht ab: Geschichte " + e.tag);
+    });
+    assert(Array.isArray(e.satzVerbinden) && e.satzVerbinden.length === 4, "4 Sätze-verbinden erwartet: Geschichte " + e.tag);
+    e.satzVerbinden.forEach(function (v) {
+      assert.equal(v.optionen.length, 3);
+      assert(v.richtig >= 0 && v.richtig < 3);
+      assert(typeof v.loesung === "string" && v.loesung.includes(v.optionen[v.richtig]));
+    });
+    assert(Array.isArray(e.wichtigePunkte) && e.wichtigePunkte.length === 4,
+      "4 Erzähl-Stationen erwartet: Geschichte " + e.tag);
+    for (const stimme of ["thorsten", "ramona"]) {
+      const datei = path.join(ordner, stimme, "tag" + nr + "-text.mp3");
+      assert(fs.existsSync(datei) && fs.statSync(datei).size > 0,
+        "Text-Audio fehlt oder leer: " + stimme + "/tag" + nr + "-text.mp3");
+    }
+    if (e.bild) {
+      const bildDatei = path.join(__dirname, "..", e.bild);
+      assert(fs.existsSync(bildDatei) && fs.statSync(bildDatei).size > 0,
+        "Geschichten-Bild fehlt oder leer: " + e.bild);
     }
   }
+  assert(SPRECHTRAINING.EINHEITEN.filter(e => e.bild).length >= 12,
+    "mindestens 12 Geschichten haben bereits ein Bild");
 });
 
 test("DATEN: fragenSet wählt nach Nummer und läuft am Ende um", () => {
@@ -112,7 +142,7 @@ test("DATEN: jede Welt hat mindestens 8 Figuren mit Bild-Dateien und passenden N
 
 /* -------------------------------------------------------------- Übersicht */
 
-test("SPRECH: Übersicht zeigt Welten, Los-Knopf und alle Geschichten offen", () => {
+test("SPRECH: Übersicht zeigt Welten & 6 Deutsch-Themen und startet Sprechtraining direkt", () => {
   const g = game({}, { now: JETZT });
   assert.equal(g.data().sprechtraining, undefined, "Es gibt keinen Tag-1-bis-14-Spielstand mehr");
   g.run("sprech.oeffnen()");
@@ -120,24 +150,55 @@ test("SPRECH: Übersicht zeigt Welten, Los-Knopf und alle Geschichten offen", ()
   const inhalt = g.nodes.get("sprechInhalt");
   const welten = inhalt.querySelectorAll(".deutsch-welt");
   assert.equal(welten.length, 3);
-  assert.equal(inhalt.querySelectorAll(".sprech-los").length, 1, "großer Start-Knopf");
-  const tage = tageInhalte(g);
-  assert.equal(tage.length, 20);
-  assert(tage.every(t => !t.disabled), "keine Geschichte ist gesperrt");
-  assert.match(inhalt.textContent, /bestimmte Geschichte aussuchen/);
+  const kacheln = inhalt.querySelectorAll(".themen-kachel");
+  assert.equal(kacheln.length, 6, "alle 6 Deutsch-Themen gleichberechtigt als Kacheln");
+  assert.equal(kacheln[0].dataset.deutschThema, "sprechtraining");
+  assert.equal(inhalt.querySelectorAll(".eltern-kasten").length, 0, "keine Anleitungs-Kästen auf der Startseite");
   const namen = plain(g.run("DEUTSCH_WELTEN.hunde.namen"));
   const reihe = g.nodes.get("sprechMaskottchenReihe").querySelectorAll(".maskottchen");
   assert.equal(reihe.length, 8, "die Maskottchen-Reihe zeigt alle Figuren der Welt");
   assert(reihe.every(k => namen.includes(k.title)), "jedes Maskottchen trägt einen Namen der Welt");
+
+  // Klick auf Sprechtraining-Kachel springt direkt in Schritt 1 (ohne Zwischenseite).
+  kacheln[0].emit("click");
+  assert.equal(aktiverSchritt(g), "Zuhören");
+  assert.equal(inhalt.querySelectorAll(".sprech-los").length, 0, "keine Zwischenseite mit Los-Knopf");
+  assert.equal(inhalt.querySelectorAll(".eltern-kasten").length, 0, "kein Anleitungskasten im Zuhören-Schritt");
+  assert(!/Mini-Ziel/.test(inhalt.textContent), "Mini-Ziel wurde entfernt");
+  assert.equal(inhalt.querySelector(".sprech-weiter").textContent, "Weiter ▶", "knapper Weiter-Button");
+
+  // Klick auf „Andere Geschichte“ öffnet das Auswahl-Pop-up mit allen 20 Geschichten.
+  inhalt.querySelector(".sprech-andere").emit("click");
+  const dialog = g.nodes.get("geschichtenUeberlagerung");
+  assert.equal(dialog.hidden, false, "Geschichten-Pop-up ist geöffnet");
+  const eintraege = dialog.querySelectorAll(".geschichte-karte");
+  assert.equal(eintraege.length, 20, "alle 20 Geschichten im Pop-up auswählbar");
+  eintraege[4].emit("click"); // Geschichte 5: Der Apfelkuchen
+  assert.equal(dialog.hidden, true, "Pop-up schließt sich nach Auswahl");
+  assert.match(inhalt.querySelector(".sprech-titel").textContent, /Der Apfelkuchen/);
 });
 
-test("SPRECH: eine Geschichte aus dem Raster öffnet die Übung mit Zufallssatz", () => {
+test("SPRECH: eine geöffnete Einheit zeigt Breadcrumbs oben, kein Mini-Ziel und keine doppelte Schritt-Überschrift", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheit(g, 1);
   const inhalt = g.nodes.get("sprechInhalt");
-  assert.match(inhalt.textContent, /1\. Zuhören/);
-  assert.match(inhalt.textContent, /Emma geht am Nachmittag in den Garten/);
+  assert.equal(g.nodes.get("sprechUeberschrift").hidden, true, "überflüssige Hauptüberschrift ist in der Übung ausgeblendet");
+  assert.equal(inhalt.children[0].className, "sprech-topbar");
+  assert.equal(inhalt.children[1].className, "sprech-schritte", "Breadcrumbs stehen ganz oben unter der Topbar");
+  assert.equal(inhalt.querySelectorAll(".sprech-ziel").length, 0, "kein Mini-Ziel");
+  const karte = inhalt.querySelector(".sprech-karte");
+  assert(!/1\. Zuhören/.test(karte.textContent), "keine redundante 1. Zuhören-Überschrift im Textblock");
+  const bild = karte.querySelector(".sprech-bild");
+  assert(bild && bild.src === "bilder/geschichten/tag01.webp", "passendes Geschichten-Bild auf Seite 1");
+  karte.querySelector(".sprech-bild-knopf").emit("click");
+  assert.equal(g.nodes.get("bildUeberlagerung").hidden, false, "Klick auf Bild öffnet Großansicht-Pop-up");
+  assert.equal(g.nodes.get("bildGrossImg").src, "bilder/geschichten/tag01.webp");
+  assert.equal(g.nodes.get("bildTitel").textContent, "Emma im Garten");
+  g.nodes.get("bildWegKnopf").emit("click");
+  assert.equal(g.nodes.get("bildUeberlagerung").hidden, true, "Großansicht-Pop-up schließt wieder sauber");
+  assert.match(karte.textContent, /Emma geht am Nachmittag in den sonnigen Garten/);
+  assert(!/Erst hören, dann sprecht ihr darüber/.test(inhalt.textContent), "Erklärsatz entfernt");
   assert(!/Tag 1/.test(inhalt.textContent), "die Tageszählung ist verschwunden");
   assert.equal(inhalt.querySelectorAll(".sprech-figur").length, 1, "Welt-Figur begleitet die Übung");
 });
@@ -165,12 +226,12 @@ test("NAVI: Startseite-Knopf geht zum Start des aktuellen Bereichs", () => {
   const g = game({}, { now: JETZT });
   g.nodes.get("deutschUmschalter").emit("click");
   g.run("sprech.oeffneEinheit(SPRECHTRAINING.einheit(1), 1)");
-  assert.match(g.nodes.get("sprechInhalt").textContent, /1\. Zuhören/);
+  assert.equal(aktiverSchritt(g), "Zuhören");
 
   g.nodes.get("abbruchKnopf").emit("click");
   assert.equal(g.nodes.get("sprechBildschirm").hidden, false, "bleibt im Deutsch-Bereich");
-  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".sprech-los").length, 1,
-    "Deutsch-Startseite, nicht die laufende Übung");
+  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".themen-kachel").length, 6,
+    "Deutsch-Startseite mit allen 6 Themen, nicht die laufende Übung");
 
   g.nodes.get("matheUmschalter").emit("click");
   g.nodes.get("abbruchKnopf").emit("click");
@@ -198,8 +259,8 @@ test("SPRECH: Zuhören spielt die eingebettete Thorsten-Stimme", () => {
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
   const inhalt = g.nodes.get("sprechInhalt");
-  assert.match(inhalt.textContent, /1\. Zuhören/);
-  assert.match(inhalt.textContent, /Emma geht am Nachmittag in den Garten/);
+  assert.equal(aktiverSchritt(g), "Zuhören");
+  assert.match(inhalt.textContent, /Emma geht am Nachmittag in den sonnigen Garten/);
   const vorlesen = () => inhalt.querySelectorAll(".vorlesen-knopf")[0];
   vorlesen().emit("click");
   assert.equal(g.audios.length, 1);
@@ -244,20 +305,37 @@ test("SPRECH: eine späte Absage der unterbrochenen Wiedergabe setzt nichts zur�
   assert.equal(vorlesen().textContent, "⏸ Pause");
 });
 
-test("SPRECH: Verstehen – Antworten für die Begleitung sind verbergbar", () => {
+test("SPRECH: Verstehen – 5 Fragen mit Radio/Checkbox-Auswahl und Prüfen-Button", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
   weiter(g);
   const inhalt = g.nodes.get("sprechInhalt");
-  assert.match(inhalt.textContent, /2\. Verstehen/);
-  assert.match(inhalt.textContent, /Wer geht in den Garten\?/);
-  assert.match(inhalt.textContent, /→ Emma geht in den Garten\./);
-  const antworten = inhalt.querySelectorAll(".sprech-antwort");
-  assert(antworten.every(a => a.classList.contains("verborgen")), "Antworten sind anfangs verborgen");
-  inhalt.querySelectorAll("button").find(b => /Antworten zeigen/.test(b.textContent)).emit("click");
-  const sichtbar = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-antwort");
-  assert(!sichtbar.some(a => a.classList.contains("verborgen")), "Antworten sind sichtbar");
+  const karte = inhalt.querySelector(".sprech-karte");
+  assert(!/2\. Verstehen/.test(karte.textContent), "keine redundante 2. Verstehen-Überschrift im Textblock");
+  const fragenBloecke = inhalt.querySelectorAll(".sprech-frage");
+  assert.equal(fragenBloecke.length, 5, "genau 5 Verständnisfragen");
+  assert.equal(inhalt.querySelectorAll(".vorlesen-knopf").length, 0, "keine Vorlesen-Buttons bei Fragen");
+  assert(!/Antworten zeigen/.test(inhalt.textContent), "kein Antworten-zeigen-Button mehr");
+
+  const fragen = SPRECHTRAINING.fragenSet(SPRECHTRAINING.einheit(1), 1);
+  let hatRadio = false;
+  let hatCheckbox = false;
+  fragen.forEach((f, fIdx) => {
+    const inputs = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-frage")[fIdx].querySelectorAll("input");
+    const erwartetTyp = f.richtig.length > 1 ? "checkbox" : "radio";
+    if (erwartetTyp === "radio") { hatRadio = true; } else { hatCheckbox = true; }
+    assert.equal(inputs[0].getAttribute("type"), erwartetTyp, "passender Eingabetyp bei Frage " + (fIdx + 1));
+    f.richtig.forEach(optIdx => {
+      const aktuell = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-frage")[fIdx].querySelectorAll("input")[optIdx];
+      aktuell.checked = true;
+      aktuell.emit("change");
+    });
+  });
+  assert(hatRadio && hatCheckbox, "sowohl Radio-Buttons als auch Checkboxes vorhanden");
+
+  g.nodes.get("sprechInhalt").querySelector(".sprech-verstehen-pruefen").emit("click");
+  assert.match(g.nodes.get("sprechInhalt").textContent, /5 von 5 richtig – Alles richtig/);
 });
 
 test("SPRECH: Fragensätze wechseln – Satz 2 fragt anders als Satz 1", () => {
@@ -266,57 +344,70 @@ test("SPRECH: Fragensätze wechseln – Satz 2 fragt anders als Satz 1", () => {
   offneEinheitMitSatz(g, 1, 2);
   weiter(g);
   const text = g.nodes.get("sprechInhalt").textContent;
-  assert.match(text, /Wann geht Emma in den Garten\?/);
-  assert(!text.includes("Wer geht in den Garten?"), "Satz 2 ist nicht einfach Satz 1");
-  const vorlesen = g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf");
-  vorlesen[0].emit("click");
-  assert.equal(g.audios[0].src, "audio/sprechtraining/thorsten/tag01-s2-f1.mp3",
-    "auch die Alternativfragen haben ihren eigenen Clip");
+  assert.match(text, /Wie ist das Wetter im Garten\?/);
+  assert(!text.includes("Wann geht Emma in den Garten?"), "Satz 2 ist nicht einfach Satz 1");
 });
 
-test("SPRECH: Satzbildung – Satzanfänge erst auf „Hilfe zeigen“", () => {
+test("SPRECH: Satzbildung – 4 Wortpuzzles + 4 Sätze verbinden prüfen", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
   weiter(g); weiter(g);
   const inhalt = g.nodes.get("sprechInhalt");
-  assert.match(inhalt.textContent, /3\. Satz bilden/);
-  assert(inhalt.querySelectorAll(".sprech-satzanfaenge")[0].classList.contains("verborgen"));
-  inhalt.querySelectorAll("button").find(b => /Hilfe zeigen/.test(b.textContent)).emit("click");
-  assert(!g.nodes.get("sprechInhalt").querySelectorAll(".sprech-satzanfaenge")[0].classList.contains("verborgen"));
-  assert.match(g.nodes.get("sprechInhalt").textContent, /Emma geht …/);
+  assert.equal(inhalt.querySelectorAll(".sprech-puzzle-vorrat").length, 4, "4 Satzpuzzles");
+  assert.equal(inhalt.querySelectorAll(".sprech-verbinden-block").length, 4, "4 Sätze-verbinden-Aufgaben");
+
+  const einheit = SPRECHTRAINING.einheit(1);
+  einheit.satzPuzzle.forEach((p, idx) => {
+    for (const teil of p.teile) {
+      const vorrat = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-puzzle-vorrat")[idx];
+      const chip = vorrat.querySelectorAll(".extra-chip").find(c => c.textContent === teil && !c.disabled);
+      chip.emit("click");
+    }
+    const vorratNachher = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-puzzle-vorrat")[idx];
+    assert(vorratNachher.querySelectorAll(".extra-chip").every(c => c.classList.contains("benutzt") && c.disabled),
+      "angeklickte Wortkarten sind im Vorrat als benutzt markiert und gesperrt");
+    const zielNachher = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-puzzle-ziel")[idx];
+    assert(zielNachher.querySelectorAll(".extra-chip").every(c => c.classList.contains("gewaehlt")),
+      "gelegte Wortkarten im Ziel tragen die Klasse gewaehlt wie beim Satzbau-Puzzle");
+  });
+  einheit.satzVerbinden.forEach((v, idx) => {
+    const block = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-verbinden-block")[idx];
+    block.querySelectorAll(".sprech-bindewort")[v.richtig].emit("click");
+  });
+
+  g.nodes.get("sprechInhalt").querySelector(".sprech-satz-pruefen").emit("click");
+  assert.match(g.nodes.get("sprechInhalt").textContent, /8 von 8 richtig – Alles richtig/);
 });
 
-test("SPRECH: Bewertung – Stichworte und Stufen, Abschluss zeigt Rückmeldung", () => {
+test("SPRECH: Erzählen – direkt einfach mit 4 Karten, optionalem Verdecken und Feier", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
   weiter(g); weiter(g); weiter(g);
   const inhalt = g.nodes.get("sprechInhalt");
-  assert.match(inhalt.textContent, /4\. Erzählen/);
-  assert.match(inhalt.textContent, /Hinweis heute: Emma soll drei Informationen finden/);
+  assert.equal(inhalt.querySelectorAll(".sprech-ordnen-pruefen").length, 0, "keine komplizierte Vor-Phase mehr");
+  assert.equal(inhalt.querySelectorAll(".sprech-bingo-karte").length, 4, "sofort alle 4 Erzähl-Karten sichtbar");
 
-  const abschluss = inhalt.querySelectorAll(".sprech-fertig-knopf")[0];
-  assert.equal(abschluss.disabled, true, "Ohne Bewertung darf nicht abgeschlossen werden");
+  // Verdecken-Knopf verdeckt unerzählte Karten
+  g.nodes.get("sprechInhalt").querySelector(".sprech-profi-knopf").emit("click");
+  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")
+    .filter(k => k.classList.contains("verdeckt")).length, 4);
 
-  inhalt.querySelectorAll(".sprech-chip")[0].emit("click"); // „Garten"
-  inhalt.querySelectorAll(".sprech-chip")[2].emit("click"); // „hebt auf"
-  setzeStufe(g, 0, 1); // Reihenfolge: größtenteils richtig
-  assert.equal(abschluss.disabled, true);
-  setzeStufe(g, 1, 2); // Grammatik: selbstständig
-  setzeStufe(g, 2, 1); // Aussprache: meistens verständlich
-  setzeStufe(g, 3, 1); // Zusammengehörigkeit: verbindet schon
+  // 2 Stationen abhaken
+  g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[0].emit("click");
+  g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[2].emit("click");
+  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")
+    .filter(k => k.classList.contains("erzaehlt")).length, 2);
 
-  const fertig = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-fertig-knopf")[0];
-  assert.equal(fertig.disabled, false);
-  fertig.emit("click");
-
+  g.nodes.get("sprechInhalt").querySelector(".sprech-fertig-knopf").emit("click");
   const karte = g.nodes.get("sprechInhalt").textContent;
   assert.match(karte, /Übung geschafft/);
-  assert.match(karte, /Heute schon richtig stark: Ganze Sätze & Grammatik/);
-  assert.match(karte, /Nächstes Mal drauf achten: Reihenfolge/);
-  assert.match(karte, /2 von 4 wichtigen Dingen/);
-  assert.equal(g.data().sprechtraining, undefined, "Bewertungen landen nicht mehr im Spielstand");
+  assert.match(karte, /Verstehen0 von 5 richtig/);
+  assert.match(karte, /Satz bilden0 von 8 richtig/);
+  assert.match(karte, /Erzählen2 von 4 Stationen/);
+  assert.match(karte, /Gesamt: 0 von 13 Aufgaben richtig/);
+  assert.equal(g.data().sprechtraining, undefined, "Bewertungen landen nicht im Spielstand");
   assert(g.nodes.get("sprechInhalt").querySelectorAll("button")
     .some(b => /Neue Übung/.test(b.textContent)), "es geht direkt weiter mit einer neuen Übung");
 });
@@ -327,7 +418,7 @@ test("SPRECH: Die Schaltfläche „Neue Übung“ startet wieder eine Geschichte
   g.run("sprech.starteZufaellig()");
   const vorlesen = g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf");
   assert(vorlesen.length >= 1, "eine Übung ist offen");
-  assert.match(g.nodes.get("sprechInhalt").textContent, /1\. Zuhören/);
+  assert.equal(aktiverSchritt(g), "Zuhören");
 });
 
 /* --------------------------------------------------------- Vorlesestimmen */
@@ -362,26 +453,25 @@ test("SPRECH: „◀ Zurück“ blättert wie in Mathe einen Schritt zurück", (
   const zurueckKnopf = () => inhalt.querySelectorAll("button").find(b => b.textContent === "◀ Zurück");
   assert(!zurueckKnopf(), "Schritt 1 hat keinen Zurück-Knopf");
   weiter(g);
-  assert.match(inhalt.textContent, /2\. Verstehen/);
+  assert.equal(aktiverSchritt(g), "Verstehen");
   zurueckKnopf().emit("click");
-  assert.match(inhalt.textContent, /1\. Zuhören/, "Zurück führt zu Zuhören");
+  assert.equal(aktiverSchritt(g), "Zuhören", "Zurück führt zu Zuhören");
   assert(!zurueckKnopf(), "am Anfang gibt es keinen Zurück-Knopf");
   weiter(g);
   weiter(g);
-  assert.match(inhalt.textContent, /3\. Satz bilden/);
+  assert.equal(aktiverSchritt(g), "Satz bilden");
   zurueckKnopf().emit("click");
-  assert.match(inhalt.textContent, /2\. Verstehen/);
+  assert.equal(aktiverSchritt(g), "Verstehen");
   weiter(g);
   weiter(g);
-  assert.match(inhalt.textContent, /4\. Erzählen/);
-  assert(zurueckKnopf(), "auch die Bewertung hat einen Zurück-Knopf");
-  // Ausgewählte Punkte bleiben beim Hin- und Zurblättern erhalten.
-  const chip = inhalt.querySelectorAll(".sprech-chip")[0];
-  chip.emit("click");
+  assert.equal(aktiverSchritt(g), "Erzählen");
+  assert(zurueckKnopf(), "auch Schritt 4 hat einen Zurück-Knopf");
+  // Abgehakte Erzähl-Stationen bleiben beim Hin- und Zurückblättern erhalten.
+  g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[0].emit("click");
   zurueckKnopf().emit("click");
   weiter(g);
-  const an = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-chip")[0];
-  assert(an.classList.contains("an"), "die Markierung übersteht das Blättern");
+  const an = g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[0];
+  assert(an.classList.contains("erzaehlt"), "die Markierung übersteht das Blättern");
 });
 
 /* ----------------------------------------------------------- Ton-Reiter */
@@ -441,10 +531,8 @@ test("DEUTSCH: Welt-Figuren begleiten die Einheit und der Abschluss lobt die Wel
   offneEinheit(g, 1);
   assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".sprech-figur").length, 1);
   weiter(g); weiter(g); weiter(g);
-  const inhalt = g.nodes.get("sprechInhalt");
-  inhalt.querySelectorAll(".sprech-chip")[0].emit("click");
-  for (let i = 0; i < 4; i += 1) { setzeStufe(g, i, 2); }
-  inhalt.querySelectorAll(".sprech-fertig-knopf")[0].emit("click");
+  g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[0].emit("click");
+  g.nodes.get("sprechInhalt").querySelector(".sprech-fertig-knopf").emit("click");
   const karte = g.nodes.get("sprechInhalt");
   const figuren = karte.querySelectorAll(".sprech-figuren")[0].children;
   assert.equal(figuren.length, 8);
@@ -608,7 +696,7 @@ test("SPRECH: Systemstimme pausiert, setzt fort, duckt Musik und ignoriert versp
   assert(g.run("window.__sys.abgebrochen") >= 1);
 });
 
-test("SPRECH: Schrittwechsel, Startseite und Hinweis-Vorlesen stoppen bzw. nutzen Audio sauber", () => {
+test("SPRECH: Schrittwechsel und Startseite stoppen laufendes Audio sauber", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
@@ -619,15 +707,10 @@ test("SPRECH: Schrittwechsel, Startseite und Hinweis-Vorlesen stoppen bzw. nutze
   weiter(g);
   assert.equal(g.run("sprechAudio.aktuell()"), null);
 
-  // Bis Schritt 4 (Erzählen): der Hinweis hat jetzt einen eigenen Vorlese-Knopf.
-  weiter(g);
-  weiter(g);
-  const hinweisKnopf = g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0];
-  assert(hinweisKnopf, "Hinweis-Vorleseknopf fehlt in Schritt 4");
-  hinweisKnopf.emit("click");
-  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-hinweis");
-
-  // Startseite-Knopf stoppt die laufende Sprachausgabe.
+  // Zurück zu Schritt 1, Audio starten, dann über Startseite-Knopf stoppen.
+  g.nodes.get("sprechInhalt").querySelectorAll("button").find(b => b.textContent === "◀ Zurück").emit("click");
+  g.nodes.get("sprechInhalt").querySelectorAll(".vorlesen-knopf")[0].emit("click");
+  assert.equal(g.run("sprechAudio.aktuell()"), "tag01-text");
   g.nodes.get("abbruchKnopf").emit("click");
   assert.equal(g.run("sprechAudio.aktuell()"), null);
 });

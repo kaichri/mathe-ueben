@@ -11,7 +11,7 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.3.3";
+const APP_VERSION = "1.3.4";
 const VERSION_STAND = "24. November 2026";
 
 const EINSTELLUNGEN = {
@@ -5547,18 +5547,30 @@ const sprech = (function () {
   let letzteLeseId = null;
   let frageSetNummer = 1;    // welcher der vier Fragensätze gerade dran ist
   let schritt = 0;
-  let hilfeSichtbar = false;
-  let antwortenSichtbar = false;
-  let bewertung = null;      // { punkte:Set, reihenfolge, grammatik, aussprache, zusammen }
+  let verstehenStand = null;
+  let satzStand = null;
+  let erzaehlStand = null;
   let letzteFragenSet = {};  // Geschichte → Fragensatz der letzten Runde (kein sofortiges Wiederholen)
   let letzteGeschichte = null;
+
+  function mischeSicher(liste) {
+    const kopie = liste.slice();
+    for (let i = kopie.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [kopie[i], kopie[j]] = [kopie[j], kopie[i]];
+    }
+    if (kopie.length > 1 && kopie.every(function (x, i) { return x === liste[i]; })) {
+      return kopie.reverse();
+    }
+    return kopie;
+  }
 
   function oeffnen() {
     sprechAudio.stoppe();
     zeigeBildschirm("sprechBildschirm");
     rendere();
   }
-  /* Deutsch-Startseite: laufende Übung verwerfen und zur Übersicht. */
+  /* Deutsch-Startseite: laufende Übung verwerfen und zur Themen-Übersicht. */
   function oeffneStart() {
     sprechAudio.stoppe();
     einheit = null;
@@ -5587,19 +5599,81 @@ const sprech = (function () {
       geschichte = alle[(start + 1) % alle.length];
     }
     oeffneEinheit(geschichte);
+    if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
+  }
+  function oeffneBildGross(quelle, titel) {
+    const img = document.getElementById("bildGrossImg");
+    const kopf = document.getElementById("bildTitel");
+    if (!img || !kopf) { return; }
+    kopf.textContent = titel || "";
+    img.src = quelle;
+    img.alt = titel || "";
+    dialogOeffnen("bildUeberlagerung");
+  }
+  function oeffneGeschichtenAuswahl() {
+    const raster = document.getElementById("geschichtenRaster");
+    if (!raster) { starteZufaellig(); return; }
+    raster.textContent = "";
+    SPRECHTRAINING.EINHEITEN.forEach(function (e) {
+      const aktiv = einheit && einheit.tag === e.tag;
+      const karte = element("button", "geschichte-karte" + (aktiv ? " aktiv" : ""));
+      karte.type = "button";
+      karte.dataset.geschichteTag = String(e.tag);
+      karte.appendChild(element("span", "geschichte-nr", String(e.tag)));
+      karte.appendChild(element("span", "geschichte-titel", e.titel));
+      if (aktiv) {
+        karte.appendChild(element("span", "geschichte-aktiv-hinweis", "Aktuell"));
+      }
+      karte.addEventListener("click", function () {
+        dialogSchliessen("geschichtenUeberlagerung");
+        oeffneEinheit(e);
+        if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
+      });
+      raster.appendChild(karte);
+    });
+    dialogOeffnen("geschichtenUeberlagerung");
   }
   function oeffneEinheit(e, setNummer) {
     sprechAudio.stoppe();
     const anzahl = (Array.isArray(e.fragenSets) && e.fragenSets.length) || 1;
     einheit = e;
+    deutschUebungId = null;
     frageSetNummer = (typeof setNummer === "number" && setNummer >= 1 && setNummer <= anzahl)
       ? setNummer : waehleFragenSet(e);
     letzteFragenSet[e.tag] = frageSetNummer;
     letzteGeschichte = e.tag;
     schritt = 0;
-    hilfeSichtbar = false;
-    antwortenSichtbar = false;
-    bewertung = { punkte: new Set() };
+    const fragen = SPRECHTRAINING.fragenSet(e, frageSetNummer);
+    verstehenStand = {
+      wahl: fragen.map(function () { return new Set(); }),
+      geprueft: false
+    };
+    satzStand = {
+      puzzles: (e.satzPuzzle || []).map(function (p) {
+        return {
+          bausteine: mischeSicher(p.teile),
+          loesung: p.teile.slice(),
+          satz: p.satz,
+          wahl: []
+        };
+      }),
+      verbinden: (e.satzVerbinden || []).map(function (v) {
+        return {
+          teil1: v.teil1,
+          teil2: v.teil2,
+          optionen: v.optionen.slice(),
+          richtig: v.richtig,
+          loesung: v.loesung,
+          wahl: null
+        };
+      }),
+      geprueft: false
+    };
+    erzaehlStand = {
+      stationen: (e.wichtigePunkte || []).slice(),
+      profiModus: false,
+      abgehakt: new Set()
+    };
     rendere();
   }
   function zurueckZurUebersicht() {
@@ -5613,11 +5687,11 @@ const sprech = (function () {
     const ueberschrift = document.getElementById("sprechUeberschrift");
     const reihe = document.getElementById("sprechMaskottchenReihe");
     if (einheit) {
-      if (ueberschrift) { ueberschrift.textContent = "Deutsch üben"; }
+      if (ueberschrift) { ueberschrift.hidden = true; }
       if (reihe) { reihe.hidden = true; }
       rendereEinheit();
     } else if (deutschUebungId && DEUTSCH_UEBUNGEN) {
-      if (ueberschrift) { ueberschrift.textContent = "Deutsch üben"; }
+      if (ueberschrift) { ueberschrift.hidden = false; ueberschrift.textContent = "Deutsch üben"; }
       if (reihe) { reihe.hidden = true; }
       const inhalt = document.getElementById("sprechInhalt");
       const paket = DEUTSCH_UEBUNGEN.erzeuge(deutschUebungId, deutschWeltId(), letzteLeseId);
@@ -5628,7 +5702,7 @@ const sprech = (function () {
         aufNeu: function () { oeffneDeutschUebung(deutschUebungId); }
       });
     } else {
-      if (ueberschrift) { ueberschrift.textContent = "Hallo " + SPIELERIN + "!"; }
+      if (ueberschrift) { ueberschrift.hidden = false; ueberschrift.textContent = "Hallo " + SPIELERIN + "!"; }
       if (reihe) { reihe.hidden = false; }
       rendereUebersicht();
     }
@@ -5653,20 +5727,6 @@ const sprech = (function () {
     sprechAudio.aufAenderung(auffrischen);
     auffrischen();
     return knopf;
-  }
-
-  function elternKasten(ueberschrift) {
-    const kasten = element("div", "eltern-kasten");
-    kasten.appendChild(element("h4", null, ueberschrift));
-    const liste = element("ul", "eltern-liste");
-    SPRECHTRAINING.BEGLEITUNG.forEach(function (text) {
-      liste.appendChild(element("li", null, text));
-    });
-    const dreh = element("details", null);
-    dreh.appendChild(element("summary", null, "Für dich, erwachsene Person: Anleitung"));
-    dreh.appendChild(liste);
-    kasten.appendChild(dreh);
-    return kasten;
   }
 
   function fuelleMaskottchenReihe() {
@@ -5699,9 +5759,7 @@ const sprech = (function () {
     fuelleMaskottchenReihe();
 
     inhalt.appendChild(element("p", "start-info",
-      "Jede Übung dauert etwa 10 Minuten: einen kurzen Text anhören, Fragen beantworten, " +
-      "Sätze bilden und am Ende mit eigenen Worten erzählen. Gemeinsam mit Mama oder Papa – " +
-      "und jede Runde ist neu zusammengestellt."));
+      "Such dir deine Welt und eine Deutsch-Übung aus – jede Runde ist neu zusammengestellt!"));
 
     inhalt.appendChild(element("p", "feldueberschrift", "Wer soll mit dir üben?"));
     const weltZeile = element("div", "themen-auswahl");
@@ -5726,36 +5784,22 @@ const sprech = (function () {
     });
     inhalt.appendChild(weltZeile);
 
-    const aktionen = element("div", "start-aktionen");
-    const los = element("button", "knopf primaer riesig sprech-los", "Los geht's!");
-    los.type = "button";
-    los.addEventListener("click", starteZufaellig);
-    aktionen.appendChild(los);
-    inhalt.appendChild(aktionen);
+    inhalt.appendChild(element("p", "feldueberschrift", "Was möchtest du üben?"));
+    const kacheln = element("div", "themen-kacheln");
 
-    const wahl = element("details", "sprech-wahl");
-    wahl.appendChild(element("summary", null, "Oder eine bestimmte Geschichte aussuchen"));
-    const raster = element("div", "sprech-tage");
-    SPRECHTRAINING.EINHEITEN.forEach(function (e, i) {
-      const knopf = element("button", "sprech-tag");
-      knopf.type = "button";
-      knopf.appendChild(element("span", "sprech-tag-nummer", "Übung " + (i + 1)));
-      knopf.appendChild(element("span", "sprech-tag-titel", e.ziel));
-      knopf.appendChild(element("span", "sprech-tag-status", "▶ üben"));
-      knopf.addEventListener("click", function () { oeffneEinheit(e); });
-      raster.appendChild(knopf);
-    });
-    wahl.appendChild(raster);
-    inhalt.appendChild(wahl);
+    // 1. Sprechtraining (Eltern-Kind-Übung) startet direkt eine zufällige Geschichte
+    const sprechKachel = element("button", "themen-kachel");
+    sprechKachel.type = "button";
+    sprechKachel.dataset.deutschThema = "sprechtraining";
+    sprechKachel.appendChild(element("span", "kachel-symbol", "🗣️"));
+    sprechKachel.appendChild(element("span", "kachel-titel", "Sprechtraining"));
+    sprechKachel.appendChild(element("span", "kachel-text",
+      "Mit Mama oder Papa: Geschichte anhören, Fragen beantworten und nacherzählen"));
+    sprechKachel.addEventListener("click", starteZufaellig);
+    kacheln.appendChild(sprechKachel);
 
-    inhalt.appendChild(elternKasten("So läuft das Sprechtraining"));
-
+    // 2–6. Selbstständige Deutsch-Übungen
     if (DEUTSCH_UEBUNGEN) {
-      const extraBlock = element("div", "extra-themen-bereich");
-      extraBlock.appendChild(element("h3", "extra-ueberschrift", "Selbstständig Deutsch üben"));
-      extraBlock.appendChild(element("p", "rand",
-        "Diese fünf Übungen kann " + SPIELERIN + " auch ganz allein spielen – mit sofortiger Hilfe."));
-      const kacheln = element("div", "themen-kacheln");
       DEUTSCH_UEBUNGEN.THEMEN.forEach(function (thema) {
         const kachel = element("button", "themen-kachel");
         kachel.type = "button";
@@ -5768,16 +5812,29 @@ const sprech = (function () {
         });
         kacheln.appendChild(kachel);
       });
-      extraBlock.appendChild(kacheln);
-      inhalt.appendChild(extraBlock);
     }
+    inhalt.appendChild(kacheln);
   }
 
   function schrittLeiste() {
-    const leiste = element("p", "sprech-schritte");
+    const leiste = element("nav", "sprech-schritte");
+    leiste.setAttribute("aria-label", "Schritte im Sprechtraining");
     SCHRITTE.forEach(function (name, i) {
+      if (i > 0) {
+        leiste.appendChild(element("span", "sprech-schritt-trenner", "›"));
+      }
       const klasse = "sprech-schritt" + (i === schritt ? " aktiv" : "") + (i < schritt ? " erledigt" : "");
-      leiste.appendChild(element("span", klasse, (i < schritt ? "✓ " : "") + name));
+      const knopf = element("button", klasse, (i < schritt ? "✓ " : "") + name);
+      knopf.type = "button";
+      knopf.setAttribute("aria-current", i === schritt ? "step" : "false");
+      knopf.addEventListener("click", function () {
+        if (i === schritt) { return; }
+        sprechAudio.stoppe();
+        schritt = i;
+        rendere();
+        if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
+      });
+      leiste.appendChild(knopf);
     });
     return leiste;
   }
@@ -5816,134 +5873,346 @@ const sprech = (function () {
     const nr = ("0" + einheit.tag).slice(-2);
     const fragen = SPRECHTRAINING.fragenSet(einheit, frageSetNummer);
 
-    const kopf = element("div", "sprech-kopf");
-    const zurueck = element("button", "knopf schlicht", "◀ Übersicht");
+    const topbar = element("div", "sprech-topbar");
+    const zurueck = element("button", "knopf klein schlicht", "◀ Alle Deutsch-Übungen");
     zurueck.type = "button";
     zurueck.addEventListener("click", zurueckZurUebersicht);
-    kopf.appendChild(zurueck);
-    kopf.appendChild(element("h3", null, einheit.titel));
-    kopf.appendChild(figurBild(DEUTSCH_WELTEN[deutschWeltId()].figur, "sprech-figur"));
-    kopf.appendChild(element("p", "sprech-ziel", "Mini-Ziel: " + einheit.ziel));
-    inhalt.appendChild(kopf);
+    topbar.appendChild(zurueck);
+    const andere = element("button", "knopf klein schlicht sprech-andere", "📖 Andere Geschichte");
+    andere.type = "button";
+    andere.addEventListener("click", oeffneGeschichtenAuswahl);
+    topbar.appendChild(andere);
+    inhalt.appendChild(topbar);
+
     inhalt.appendChild(schrittLeiste());
 
+    const kopf = element("div", "sprech-kopf");
+    kopf.appendChild(element("h3", "sprech-titel", einheit.titel));
+    kopf.appendChild(figurBild(DEUTSCH_WELTEN[deutschWeltId()].figur, "sprech-figur"));
+    inhalt.appendChild(kopf);
+
     if (schritt === 0) {
-      const karte = element("div", "sterne-karte");
-      karte.appendChild(element("h4", null, "1. Zuhören"));
-      karte.appendChild(element("p", "sprech-text", einheit.text));
-      const zeile = element("div", "sprech-zeile");
-      zeile.appendChild(vorleseKnopf("tag" + nr + "-text", einheit.text));
-      zeile.appendChild(element("span", "rand", "Erst hören, dann sprecht ihr darüber."));
-      karte.appendChild(zeile);
-      inhalt.appendChild(karte);
-      inhalt.appendChild(elternKasten("Für die Begleitung"));
-      inhalt.appendChild(schrittNavi("Verstanden! Weiter ▶"));
-    } else if (schritt === 1) {
-      const karte = element("div", "sterne-karte");
-      karte.appendChild(element("h4", null, "2. Verstehen"));
-      karte.appendChild(element("p", "rand",
-        "Stelle jede Frage mündlich. Die kleine Antwort daneben ist für dich zum Nachschlagen."));
-      fragen.forEach(function (f, i) {
-        const zeile = element("div", "sprech-frage");
-        zeile.appendChild(vorleseKnopf("tag" + nr + "-s" + frageSetNummer + "-f" + (i + 1), f.frage));
-        zeile.appendChild(element("span", "sprech-frage-text", f.frage));
-        const antwort = element("span", "sprech-antwort" + (antwortenSichtbar ? "" : " verborgen"), "→ " + f.antwort);
-        zeile.appendChild(antwort);
+      const karte = element("div", "sterne-karte sprech-karte");
+      if (einheit.bild) {
+        const inhaltZeile = element("div", "sprech-geschichte-layout");
+        const bildKnopf = element("button", "sprech-bild-knopf");
+        bildKnopf.type = "button";
+        bildKnopf.title = "Bild groß anzeigen";
+        bildKnopf.setAttribute("aria-label", "Bild groß anzeigen: " + einheit.titel);
+        const bild = element("img", "sprech-bild");
+        bild.src = einheit.bild;
+        bild.alt = einheit.titel;
+        bildKnopf.appendChild(bild);
+        bildKnopf.appendChild(element("span", "sprech-bild-lupe", "🔍"));
+        bildKnopf.addEventListener("click", function () {
+          oeffneBildGross(einheit.bild, einheit.titel);
+        });
+        inhaltZeile.appendChild(bildKnopf);
+        const textSpalte = element("div", "sprech-geschichte-textspalte");
+        textSpalte.appendChild(element("p", "sprech-text", einheit.text));
+        const zeile = element("div", "sprech-zeile");
+        zeile.appendChild(vorleseKnopf("tag" + nr + "-text", einheit.text));
+        textSpalte.appendChild(zeile);
+        inhaltZeile.appendChild(textSpalte);
+        karte.appendChild(inhaltZeile);
+      } else {
+        karte.appendChild(element("p", "sprech-text", einheit.text));
+        const zeile = element("div", "sprech-zeile");
+        zeile.appendChild(vorleseKnopf("tag" + nr + "-text", einheit.text));
         karte.appendChild(zeile);
-      });
-      const antwortKnopf = element("button", "knopf schlicht", antwortenSichtbar ? "Antworten verbergen" : "Antworten zeigen");
-      antwortKnopf.type = "button";
-      antwortKnopf.addEventListener("click", function () {
-        antwortenSichtbar = !antwortenSichtbar;
-        rendere();
-      });
-      karte.appendChild(antwortKnopf);
+      }
       inhalt.appendChild(karte);
-      inhalt.appendChild(elternKasten("Für die Begleitung"));
+      inhalt.appendChild(schrittNavi("Weiter ▶"));
+    } else if (schritt === 1) {
+      inhalt.appendChild(rendereVerstehen(fragen));
       inhalt.appendChild(schrittNavi("Weiter ▶"));
     } else if (schritt === 2) {
-      const karte = element("div", "sterne-karte");
-      karte.appendChild(element("h4", null, "3. Satz bilden"));
-      karte.appendChild(element("p", "rand",
-        SPIELERIN + " übt die Sätze zum Text. Diese Satzanfänge helfen – erst zeigen, wenn sie gebraucht werden."));
-      const liste = element("ul", "sprech-satzanfaenge" + (hilfeSichtbar ? "" : " verborgen"));
-      einheit.satzAnfaenge.forEach(function (anfang) {
-        liste.appendChild(element("li", null, anfang));
-      });
-      karte.appendChild(liste);
-      const hilfe = element("button", "knopf schlicht", hilfeSichtbar ? "Hilfe verbergen" : "Hilfe zeigen");
-      hilfe.type = "button";
-      hilfe.addEventListener("click", function () {
-        hilfeSichtbar = !hilfeSichtbar;
-        rendere();
-      });
-      karte.appendChild(hilfe);
-      inhalt.appendChild(karte);
-      inhalt.appendChild(elternKasten("Für die Begleitung"));
+      inhalt.appendChild(rendereSatzBilden());
       inhalt.appendChild(schrittNavi("Weiter ▶"));
     } else if (schritt === 3) {
-      inhalt.appendChild(rendereBewertung());
+      inhalt.appendChild(rendereErzaehlen());
     } else {
       rendereFertig(inhalt);
     }
   }
 
-  function rendereBewertung() {
-    const fragment = document.createDocumentFragment();
+  function frageIstRichtig(frage, gewaehltSet) {
+    const richtig = frage.richtig || [];
+    return gewaehltSet.size === richtig.length &&
+      richtig.every(function (idx) { return gewaehltSet.has(idx); });
+  }
 
-    const emmaKarte = element("div", "sterne-karte");
-    emmaKarte.appendChild(element("h4", null, "4. Erzählen"));
-    emmaKarte.appendChild(element("p", "sprech-text",
-      "Jetzt erzählst du den Abschnitt mit deinen eigenen Worten! Versuche zwei bis fünf Sätze. Du darfst dir Zeit lassen."));
-    fragment.appendChild(emmaKarte);
+  function rendereVerstehen(fragen) {
+    const stand = verstehenStand;
+    const karte = element("div", "sterne-karte sprech-karte");
 
-    const kasten = element("div", "eltern-kasten");
-    kasten.appendChild(element("h4", null, "Bewertung für Mama oder Papa"));
-    const nr = ("0" + einheit.tag).slice(-2);
-    const hinweisZeile = element("div", "sprech-zeile");
-    hinweisZeile.appendChild(vorleseKnopf("tag" + nr + "-hinweis", einheit.hinweis));
-    hinweisZeile.appendChild(element("p", "rand", "Hinweis heute: " + einheit.hinweis));
-    kasten.appendChild(hinweisZeile);
+    fragen.forEach(function (f, fIdx) {
+      const mehrfach = Array.isArray(f.richtig) && f.richtig.length > 1;
+      const gewaehlt = stand.wahl[fIdx] || (stand.wahl[fIdx] = new Set());
+      const block = element("div", "sprech-frage sprech-quiz-frage");
 
-    kasten.appendChild(element("p", "sprech-abschnitt", "Was hat " + SPIELERIN + " erwähnt?"));
-    const chips = element("div", "sprech-chips");
-    einheit.wichtigePunkte.forEach(function (punkt) {
-      const aktiv = bewertung.punkte.has(punkt);
-      const chip = element("button", "sprech-chip" + (aktiv ? " an" : ""), punkt);
-      chip.type = "button";
-      chip.setAttribute("aria-pressed", String(aktiv));
-      chip.addEventListener("click", function () {
-        if (bewertung.punkte.has(punkt)) { bewertung.punkte.delete(punkt); }
-        else { bewertung.punkte.add(punkt); }
-        rendere();
-      });
-      chips.appendChild(chip);
-    });
-    kasten.appendChild(chips);
+      const frageKopf = element("div", "sprech-frage-kopf");
+      frageKopf.appendChild(element("span", "sprech-frage-nr", (fIdx + 1) + "."));
+      frageKopf.appendChild(element("span", "sprech-frage-text", f.frage));
+      if (mehrfach) {
+        frageKopf.appendChild(element("span", "sprech-mehrfach-hinweis", "Mehrere Antworten möglich"));
+      }
+      block.appendChild(frageKopf);
 
-    SPRECHTRAINING.KRITERIEN.forEach(function (k) {
-      const block = element("div", "sprech-kriterium");
-      block.appendChild(element("p", "sprech-kriterium-titel", k.titel));
-      block.appendChild(element("p", "rand", "Worauf achten: " + k.achten));
-      const stufen = element("div", "stufen-gruppe");
-      k.stufen.forEach(function (text, i) {
-        const aktiv = bewertung[k.name] === i;
-        const knopf = element("button", "stufen-knopf" + (aktiv ? " aktiv" : ""), text);
-        knopf.type = "button";
-        knopf.setAttribute("aria-pressed", String(aktiv));
-        knopf.addEventListener("click", function () {
-          bewertung[k.name] = i;
+      const liste = element("div", "sprech-wahl-liste");
+      f.optionen.forEach(function (optText, oIdx) {
+        const ausgewaehlt = gewaehlt.has(oIdx);
+        const istKorrekt = f.richtig.includes(oIdx);
+        let cls = "sprech-wahl-zeile";
+        if (stand.geprueft) {
+          if (istKorrekt) { cls += " richtig"; }
+          else if (ausgewaehlt) { cls += " falsch"; }
+        } else if (ausgewaehlt) {
+          cls += " aktiv";
+        }
+        const label = element("label", cls);
+        const eingabe = element("input", "sprech-wahl-eingabe");
+        eingabe.type = mehrfach ? "checkbox" : "radio";
+        eingabe.setAttribute("type", mehrfach ? "checkbox" : "radio");
+        eingabe.name = "sprech-frage-" + fIdx;
+        eingabe.value = String(oIdx);
+        eingabe.checked = ausgewaehlt;
+        eingabe.disabled = stand.geprueft;
+        eingabe.addEventListener("change", function () {
+          if (stand.geprueft) { return; }
+          if (mehrfach) {
+            if (eingabe.checked) { gewaehlt.add(oIdx); }
+            else { gewaehlt.delete(oIdx); }
+          } else {
+            gewaehlt.clear();
+            if (eingabe.checked) { gewaehlt.add(oIdx); }
+          }
           rendere();
         });
-        stufen.appendChild(knopf);
+        label.appendChild(eingabe);
+        label.appendChild(element("span", "sprech-wahl-text", optText));
+        liste.appendChild(label);
       });
-      block.appendChild(stufen);
-      kasten.appendChild(block);
+      block.appendChild(liste);
+
+      if (stand.geprueft) {
+        const stimmt = frageIstRichtig(f, gewaehlt);
+        block.appendChild(element("p", "sprech-satz-feedback " + (stimmt ? "richtig" : "falsch"),
+          stimmt
+            ? "✓ Richtig!"
+            : "✗ Nicht ganz – richtig: " + f.antwort));
+      }
+      karte.appendChild(block);
     });
 
-    const fertig = bewertung.reihenfolge !== undefined && bewertung.grammatik !== undefined &&
-      bewertung.aussprache !== undefined && bewertung.zusammen !== undefined;
-    const zeile = element("div", "sprech-zeile sprech-navi");
+    const aktionen = element("div", "sprech-zeile");
+    if (!stand.geprueft) {
+      const pruefen = element("button", "knopf primaer sprech-verstehen-pruefen", "Antworten prüfen ✓");
+      pruefen.type = "button";
+      pruefen.addEventListener("click", function () {
+        stand.geprueft = true;
+        const richtig = fragen.filter(function (f, i) { return frageIstRichtig(f, stand.wahl[i]); }).length;
+        if (richtig === fragen.length) { musik.ton("freude"); }
+        rendere();
+      });
+      aktionen.appendChild(pruefen);
+    } else {
+      const gesamt = fragen.length;
+      const richtig = fragen.filter(function (f, i) { return frageIstRichtig(f, stand.wahl[i]); }).length;
+      aktionen.appendChild(element("p", "sprech-ergebnis-kurz",
+        richtig + " von " + gesamt + " richtig – " + lobFuerAnteil(gesamt ? richtig / gesamt : 0, richtig, gesamt)));
+    }
+    karte.appendChild(aktionen);
+    return karte;
+  }
+
+  function rendereSatzBilden() {
+    const fragment = document.createDocumentFragment();
+    const stand = satzStand;
+
+    // Teil 1: Satz-Baukasten (Wortpuzzle zur Geschichte)
+    const puzzleKarte = element("div", "sterne-karte sprech-karte");
+    puzzleKarte.appendChild(element("h4", null, "🧩 Satz-Baukasten"));
+    puzzleKarte.appendChild(element("p", "rand",
+      "Lege die Wortkarten in die richtige Reihenfolge und lies jeden Satz laut vor:"));
+
+    stand.puzzles.forEach(function (p, pIdx) {
+      const aufg = element("div", "sprech-satz-block");
+      aufg.appendChild(element("p", "sprech-abschnitt", "Satz " + (pIdx + 1)));
+
+      const ziel = element("div", "extra-ordnen-ziel sprech-puzzle-ziel");
+      if (p.wahl.length === 0) {
+        ziel.appendChild(element("span", "rand", "Klicke die Wortkarten unten der Reihe nach an …"));
+      } else {
+        p.wahl.forEach(function (bausteinIdx, pos) {
+          const chip = element("button", "extra-chip gewaehlt", p.bausteine[bausteinIdx]);
+          chip.type = "button";
+          chip.disabled = stand.geprueft;
+          chip.addEventListener("click", function () {
+            if (stand.geprueft) { return; }
+            p.wahl.splice(pos, 1);
+            rendere();
+          });
+          ziel.appendChild(chip);
+        });
+      }
+      aufg.appendChild(ziel);
+
+      const vorrat = element("div", "extra-ordnen-vorrat sprech-puzzle-vorrat");
+      p.bausteine.forEach(function (wort, bIdx) {
+        const benutzt = p.wahl.includes(bIdx);
+        const chip = element("button", "extra-chip" + (benutzt ? " benutzt" : ""), wort);
+        chip.type = "button";
+        chip.disabled = stand.geprueft || benutzt;
+        chip.addEventListener("click", function () {
+          if (stand.geprueft || benutzt) { return; }
+          p.wahl.push(bIdx);
+          rendere();
+        });
+        vorrat.appendChild(chip);
+      });
+      aufg.appendChild(vorrat);
+
+      const leeren = element("button", "knopf schlicht klein extra-leeren", "↺ Neu legen");
+      leeren.type = "button";
+      leeren.disabled = stand.geprueft || p.wahl.length === 0;
+      leeren.addEventListener("click", function () {
+        if (stand.geprueft || p.wahl.length === 0) { return; }
+        p.wahl = [];
+        rendere();
+      });
+      aufg.appendChild(leeren);
+
+      if (stand.geprueft) {
+        const gebaut = p.wahl.map(idx => p.bausteine[idx]);
+        const stimmt = gebaut.length === p.loesung.length &&
+          gebaut.every((t, i) => t === p.loesung[i]);
+        const meldung = element("p", "sprech-satz-feedback " + (stimmt ? "richtig" : "falsch"),
+          stimmt
+            ? "✓ Richtig! Lies den Satz jetzt laut vor: „" + p.satz + "“"
+            : "✗ Nicht ganz – richtig heißt es: „" + p.satz + "“");
+        aufg.appendChild(meldung);
+      }
+      puzzleKarte.appendChild(aufg);
+    });
+    fragment.appendChild(puzzleKarte);
+
+    // Teil 2: Sätze verbinden (weil, deshalb, aber, danach)
+    const verbindKarte = element("div", "sterne-karte sprech-karte");
+    verbindKarte.appendChild(element("h4", null, "🔗 Sätze verbinden"));
+    verbindKarte.appendChild(element("p", "rand",
+      "Wähle das passende Bindewort und sprich den ganzen Satz laut aus:"));
+
+    stand.verbinden.forEach(function (v) {
+      const block = element("div", "sprech-satz-block sprech-verbinden-block");
+      const zeile = element("div", "sprech-verbinden-zeile");
+      zeile.appendChild(element("span", "sprech-verbinden-teil", v.teil1));
+      const wahlBox = element("span", "sprech-bindewort-gruppe");
+      v.optionen.forEach(function (wort, oIdx) {
+        const gewaehlt = v.wahl === oIdx;
+        let cls = "sprech-bindewort";
+        if (stand.geprueft) {
+          if (oIdx === v.richtig) { cls += " richtig"; }
+          else if (gewaehlt) { cls += " falsch"; }
+        } else if (gewaehlt) {
+          cls += " aktiv";
+        }
+        const knopf = element("button", cls, wort);
+        knopf.type = "button";
+        knopf.disabled = stand.geprueft;
+        knopf.setAttribute("aria-pressed", String(gewaehlt));
+        knopf.addEventListener("click", function () {
+          if (stand.geprueft) { return; }
+          v.wahl = oIdx;
+          rendere();
+        });
+        wahlBox.appendChild(knopf);
+      });
+      zeile.appendChild(wahlBox);
+      zeile.appendChild(element("span", "sprech-verbinden-teil", v.teil2));
+      block.appendChild(zeile);
+
+      if (stand.geprueft) {
+        const stimmt = v.wahl === v.richtig;
+        block.appendChild(element("p", "sprech-satz-feedback " + (stimmt ? "richtig" : "falsch"),
+          stimmt
+            ? "✓ Super! Sprich laut: „" + v.loesung + "“"
+            : "✗ Nicht ganz – richtig heißt es: „" + v.loesung + "“"));
+      }
+      verbindKarte.appendChild(block);
+    });
+
+    const aktionen = element("div", "sprech-zeile");
+    if (!stand.geprueft) {
+      const pruefen = element("button", "knopf primaer sprech-satz-pruefen", "Sätze prüfen ✓");
+      pruefen.type = "button";
+      pruefen.addEventListener("click", function () {
+        stand.geprueft = true;
+        rendere();
+      });
+      aktionen.appendChild(pruefen);
+    } else {
+      const gesamt = stand.puzzles.length + stand.verbinden.length;
+      let richtig = 0;
+      stand.puzzles.forEach(function (p) {
+        const gebaut = p.wahl.map(idx => p.bausteine[idx]);
+        if (gebaut.length === p.loesung.length && gebaut.every((t, i) => t === p.loesung[i])) {
+          richtig += 1;
+        }
+      });
+      stand.verbinden.forEach(function (v) {
+        if (v.wahl === v.richtig) { richtig += 1; }
+      });
+      aktionen.appendChild(element("p", "sprech-ergebnis-kurz",
+        richtig + " von " + gesamt + " richtig – " + lobFuerAnteil(gesamt ? richtig / gesamt : 0, richtig, gesamt)));
+      if (richtig === gesamt) { musik.ton("freude"); }
+    }
+    verbindKarte.appendChild(aktionen);
+    fragment.appendChild(verbindKarte);
+    return fragment;
+  }
+
+  function rendereErzaehlen() {
+    const fragment = document.createDocumentFragment();
+    const stand = erzaehlStand;
+    const karte = element("div", "sterne-karte sprech-karte");
+
+    karte.appendChild(element("p", "sprech-text",
+      "Erzähle die Geschichte mit deinen eigenen Worten nach! Tippe an, was du schon erzählt hast:"));
+
+    const bingo = element("div", "sprech-bingo-raster");
+    stand.stationen.forEach(function (punkt, i) {
+      const abgehakt = stand.abgehakt.has(punkt);
+      const verdeckt = stand.profiModus && !abgehakt;
+      const kachel = element("button",
+        "sprech-bingo-karte" + (abgehakt ? " erzaehlt" : "") + (verdeckt ? " verdeckt" : ""));
+      kachel.type = "button";
+      kachel.setAttribute("aria-pressed", String(abgehakt));
+      kachel.appendChild(element("span", "sprech-bingo-nr", abgehakt ? "✓ " + (i + 1) : String(i + 1)));
+      kachel.appendChild(element("span", "sprech-bingo-text", verdeckt ? "Frei erzählen …" : punkt));
+      kachel.addEventListener("click", function () {
+        if (stand.abgehakt.has(punkt)) { stand.abgehakt.delete(punkt); }
+        else { stand.abgehakt.add(punkt); }
+        rendere();
+      });
+      bingo.appendChild(kachel);
+    });
+    karte.appendChild(bingo);
+
+    const schalterZeile = element("div", "sprech-zeile");
+    const profiKnopf = element("button", "knopf klein schlicht sprech-profi-knopf",
+      stand.profiModus ? "👀 Hilfe zeigen" : "🙈 Karten verdecken");
+    profiKnopf.type = "button";
+    profiKnopf.addEventListener("click", function () {
+      stand.profiModus = !stand.profiModus;
+      rendere();
+    });
+    schalterZeile.appendChild(profiKnopf);
+    karte.appendChild(schalterZeile);
+
+    fragment.appendChild(karte);
+
+    const navi = element("div", "sprech-zeile sprech-navi");
     const zurueck = element("button", "knopf schlicht", "◀ Zurück");
     zurueck.type = "button";
     zurueck.addEventListener("click", function () {
@@ -5952,24 +6221,19 @@ const sprech = (function () {
       rendere();
       if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
     });
-    zeile.appendChild(zurueck);
-    const abschliessen = element("button", "knopf primaer sprech-fertig-knopf", "Übung abschließen ✓");
+    navi.appendChild(zurueck);
+
+    const abschliessen = element("button", "knopf primaer sprech-fertig-knopf", "🎉 Fertig erzählt!");
     abschliessen.type = "button";
-    abschliessen.disabled = !fertig;
     abschliessen.addEventListener("click", function () {
-      if (!fertig) { return; }
       sprechAudio.stoppe();
       musik.ton("freude");
       schritt = 4;
       rendere();
       if (typeof window.scrollTo === "function") { window.scrollTo(0, 0); }
     });
-    if (!fertig) {
-      abschliessen.setAttribute("aria-disabled", "true");
-    }
-    zeile.appendChild(abschliessen);
-    kasten.appendChild(zeile);
-    fragment.appendChild(kasten);
+    navi.appendChild(abschliessen);
+    fragment.appendChild(navi);
     return fragment;
   }
 
@@ -5982,33 +6246,61 @@ const sprech = (function () {
     return kasten;
   }
 
+  function zaehleSatzErgebnis() {
+    const stand = satzStand;
+    if (!stand) { return { richtig: 0, gesamt: 0 }; }
+    const gesamt = stand.puzzles.length + stand.verbinden.length;
+    let richtig = 0;
+    stand.puzzles.forEach(function (p) {
+      const gebaut = p.wahl.map(function (idx) { return p.bausteine[idx]; });
+      if (gebaut.length === p.loesung.length && gebaut.every(function (t, i) { return t === p.loesung[i]; })) {
+        richtig += 1;
+      }
+    });
+    stand.verbinden.forEach(function (v) {
+      if (v.wahl === v.richtig) { richtig += 1; }
+    });
+    return { richtig: richtig, gesamt: gesamt };
+  }
+
   function rendereFertig(inhalt) {
-    const karte = element("div", "sterne-karte");
+    const karte = element("div", "sterne-karte sprech-karte");
     karte.appendChild(element("h3", null, "✓ Übung geschafft!"));
     karte.appendChild(figurenGruß(DEUTSCH_WELTEN[deutschWeltId()]));
-    const stufen = [bewertung.reihenfolge, bewertung.grammatik, bewertung.aussprache, bewertung.zusammen];
-    const namen = SPRECHTRAINING.KRITERIEN.map(k => k.titel);
-    const stark = [];
-    let schwaechste = null;
-    let schwaechsterWert = 3;
-    stufen.forEach(function (wert, i) {
-      if (wert >= 2) { stark.push(namen[i]); }
-      if (wert < schwaechsterWert) { schwaechsterWert = wert; schwaechste = namen[i]; }
+
+    const fragen = SPRECHTRAINING.fragenSet(einheit, frageSetNummer);
+    const verstehenRichtig = verstehenStand
+      ? fragen.filter(function (f, i) { return frageIstRichtig(f, verstehenStand.wahl[i] || new Set()); }).length
+      : 0;
+    const verstehenGesamt = fragen.length;
+
+    const satzErg = zaehleSatzErgebnis();
+    const erzaehlAnzahl = erzaehlStand ? erzaehlStand.abgehakt.size : 0;
+    const erzaehlGesamt = einheit.wichtigePunkte.length;
+
+    const uebersichtBox = element("div", "sprech-abschluss-liste");
+    [
+      { label: "Verstehen", wert: verstehenRichtig + " von " + verstehenGesamt + " richtig", gut: verstehenRichtig === verstehenGesamt },
+      { label: "Satz bilden", wert: satzErg.richtig + " von " + satzErg.gesamt + " richtig", gut: satzErg.richtig === satzErg.gesamt },
+      { label: "Erzählen", wert: erzaehlAnzahl + " von " + erzaehlGesamt + " Stationen", gut: erzaehlAnzahl === erzaehlGesamt }
+    ].forEach(function (zeileDaten) {
+      const eintrag = element("div", "sprech-abschluss-zeile" + (zeileDaten.gut ? " gut" : ""));
+      eintrag.appendChild(element("span", "sprech-abschluss-label", zeileDaten.label));
+      eintrag.appendChild(element("span", "sprech-abschluss-wert", zeileDaten.wert));
+      uebersichtBox.appendChild(eintrag);
     });
-    if (stark.length > 0) {
-      karte.appendChild(element("p", null, "Heute schon richtig stark: " + stark.join(", ") + "."));
-    }
-    if (schwaechste && schwaechsterWert < 2) {
-      const k = SPRECHTRAINING.KRITERIEN.find(k => k.titel === schwaechste);
-      karte.appendChild(element("p", null, "Nächstes Mal drauf achten: " + schwaechste + "."));
-      if (k) { karte.appendChild(element("p", "rand", k.achten)); }
-    }
-    karte.appendChild(element("p", "rand", SPIELERIN + " hat " + bewertung.punkte.size + " von " +
-      einheit.wichtigePunkte.length + " wichtigen Dingen erwähnt."));
+    karte.appendChild(uebersichtBox);
+
+    const gesamtRichtig = verstehenRichtig + satzErg.richtig;
+    const gesamtAufgaben = verstehenGesamt + satzErg.gesamt;
+    const anteil = gesamtAufgaben > 0 ? gesamtRichtig / gesamtAufgaben : 0;
+    karte.appendChild(element("p", "sprech-ergebnis-kurz",
+      "Gesamt: " + gesamtRichtig + " von " + gesamtAufgaben + " Aufgaben richtig – " +
+      lobFuerAnteil(anteil, gesamtRichtig, gesamtAufgaben)));
     inhalt.appendChild(karte);
 
     const zeile = element("div", "sprech-zeile");
-    const uebersicht = element("button", "knopf", "◀ Übersicht");
+    const uebersicht = element("button", "knopf", "◀ Alle Deutsch-Übungen");
     uebersicht.type = "button";
     uebersicht.addEventListener("click", zurueckZurUebersicht);
     zeile.appendChild(uebersicht);
@@ -6024,6 +6316,7 @@ const sprech = (function () {
     oeffneStart: oeffneStart,
     oeffneEinheit: oeffneEinheit,
     oeffneDeutschUebung: oeffneDeutschUebung,
+    oeffneGeschichtenAuswahl: oeffneGeschichtenAuswahl,
     starteZufaellig: starteZufaellig,
     rendere: rendere
   };
@@ -6532,6 +6825,47 @@ document.getElementById("musikKnopf").addEventListener("click", musik.umschalten
 document.getElementById("geschenkWegKnopf").addEventListener("click", function () {
   dialogSchliessen("geschenkUeberlagerung");
 });
+const geschichtenWegKnopfKnoten = document.getElementById("geschichtenWegKnopf");
+if (geschichtenWegKnopfKnoten) {
+  geschichtenWegKnopfKnoten.addEventListener("click", function () {
+    dialogSchliessen("geschichtenUeberlagerung");
+  });
+}
+const geschichtenZufallKnopfKnoten = document.getElementById("geschichtenZufallKnopf");
+if (geschichtenZufallKnopfKnoten) {
+  geschichtenZufallKnopfKnoten.addEventListener("click", function () {
+    dialogSchliessen("geschichtenUeberlagerung");
+    sprech.starteZufaellig();
+  });
+}
+const geschichtenUeberlagerungKnoten = document.getElementById("geschichtenUeberlagerung");
+if (geschichtenUeberlagerungKnoten) {
+  geschichtenUeberlagerungKnoten.addEventListener("click", function (ereignis) {
+    if (ereignis.target === geschichtenUeberlagerungKnoten) {
+      dialogSchliessen("geschichtenUeberlagerung");
+    }
+  });
+}
+const bildWegKnopfKnoten = document.getElementById("bildWegKnopf");
+if (bildWegKnopfKnoten) {
+  bildWegKnopfKnoten.addEventListener("click", function () {
+    dialogSchliessen("bildUeberlagerung");
+  });
+}
+const bildGrossImgKnoten = document.getElementById("bildGrossImg");
+if (bildGrossImgKnoten) {
+  bildGrossImgKnoten.addEventListener("click", function () {
+    dialogSchliessen("bildUeberlagerung");
+  });
+}
+const bildUeberlagerungKnoten = document.getElementById("bildUeberlagerung");
+if (bildUeberlagerungKnoten) {
+  bildUeberlagerungKnoten.addEventListener("click", function (ereignis) {
+    if (ereignis.target === bildUeberlagerungKnoten) {
+      dialogSchliessen("bildUeberlagerung");
+    }
+  });
+}
 const geschenkUeberraschungKnopfKnoten = document.getElementById("geschenkUeberraschungKnopf");
 if (geschenkUeberraschungKnopfKnoten) {
   geschenkUeberraschungKnopfKnoten.addEventListener("click", geschenkUeberraschungZiehen);
