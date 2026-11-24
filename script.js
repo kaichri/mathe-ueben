@@ -11,8 +11,8 @@
 const SPIELERIN = "Emma";
 
 /* Programmversion für den Reiter „Version" in den Einstellungen; Historie im README. */
-const APP_VERSION = "1.3.1";
-const VERSION_STAND = "22. November 2026";
+const APP_VERSION = "1.3.2";
+const VERSION_STAND = "24. November 2026";
 
 const EINSTELLUNGEN = {
   divisionMitRestAktiv: true, // true = 4 Divisionen mit Rest, false = ohne Rest
@@ -2539,15 +2539,19 @@ function pruefeRunde() {
       kasten.classList.add("richtig");
       kontrolle.prepend(element("span", "markierung", "Genau!"));
     } else {
+      const hatEingabe = (kartenEingaben.get(karte.ident) || []).some(function (knoten) {
+        return String(knoten.value || "").trim() !== "";
+      });
       kasten.classList.add("falsch");
-      kontrolle.prepend(element("span", "markierung", "Da war ein Fehler."));
+      kontrolle.prepend(element("span", "markierung",
+        hatEingabe ? "Da war ein Fehler." : "Nicht beantwortet."));
       falschKarten.push(karte);
     }
   });
 
   const gesamt = runde.karten.length;
-  const anteil = richtig / gesamt;
-  const lob = lobFuerAnteil(anteil);
+  const anteil = gesamt > 0 ? richtig / gesamt : 0;
+  const lob = lobFuerAnteil(anteil, richtig, gesamt);
 
   pausiereUebezeit();
   speichernRunde(richtig, gesamt, bereichErgebnis, 0, false);
@@ -2719,7 +2723,7 @@ function pruefeBonusRunde() {
   aktualisiereWeltwahl();
   // "Neue Aufgaben" verschwindet, sobald das Tageskontingent erschöpft ist.
   aktualisiereKnopfLeiste();
-  meldeRueckmeldung(vergeben + " neue Bonussterne. " + bonusTagesText());
+  meldeRueckmeldung((vergeben === 1 ? "1 neuer Bonusstern. " : vergeben + " neue Bonussterne. ") + bonusTagesText());
 
   if (daten.bonusStufenOffen.length > 0 &&
       document.getElementById("geschenkUeberlagerung").hidden) {
@@ -2777,20 +2781,36 @@ function fehlerZeilen(karte) {
   });
 }
 
-function lobFuerAnteil(anteil) {
-  if (anteil >= 0.95) {
-    return "Fast alles richtig – stark, " + SPIELERIN + "!";
+function lobFuerAnteil(anteil, richtig, gesamt) {
+  const hatZahlen = typeof richtig === "number" && typeof gesamt === "number" && gesamt > 0;
+  const alleRichtig = hatZahlen ? richtig === gesamt : anteil >= 1;
+  const keineRichtig = hatZahlen ? richtig === 0 : anteil <= 0;
+  const fehler = hatZahlen ? gesamt - richtig : null;
+
+  if (alleRichtig) {
+    return "Alles richtig – fantastisch gemacht, " + SPIELERIN + "!";
   }
-  if (anteil >= 0.8) {
-    return "Das war richtig gut. Weiter so!";
+  // „Fast alles richtig“: ab 90 % (z. B. 45–49/50, 9/10) oder genau 1 Fehler bei mind. 5 Aufgaben (4/5, 5/6, 7/8).
+  if (anteil >= 0.9 || (hatZahlen && gesamt >= 5 && fehler === 1)) {
+    return "Fast alles richtig – stark gemacht, " + SPIELERIN + "!";
   }
-  if (anteil >= 0.6) {
-    return "Schon gut! Ein paar Aufgaben üben wir noch einmal.";
+  if (anteil >= 0.75) {
+    return "Das war richtig gut, " + SPIELERIN + "! Weiter so!";
   }
-  if (anteil >= 0.4) {
-    return "Du hast durchgehalten – das zählt. Schau dir die Fehler an, dann klappt es beim nächsten Mal besser.";
+  if (anteil >= 0.55) {
+    return fehler === 1
+      ? "Schon gut! Die eine Aufgabe üben wir noch einmal."
+      : "Schon gut! Schau dir die Fehler noch einmal in Ruhe an.";
   }
-  return "Noch ist nicht alles rund – fang einfach noch einmal an. Du schaffst das!";
+  if (anteil >= 0.35) {
+    return "Du hast durchgehalten – das zählt. Schau dir in Ruhe an, wo es noch gehakt hat, dann klappt es beim nächsten Mal besser.";
+  }
+  if (!keineRichtig) {
+    return "Ein Anfang ist gemacht – schau dir die Lösungen in Ruhe an und probier es noch einmal. Du schaffst das!";
+  }
+  return (hatZahlen && gesamt === 1)
+    ? "Diesmal hat es noch nicht geklappt – schau dir die Lösung in Ruhe an und probier es noch einmal. Du schaffst das!"
+    : "Diesmal hat noch keine Aufgabe geklappt – schau dir die Lösungen in Ruhe an und probier es noch einmal. Du schaffst das!";
 }
 
 /* Alles wird angehängt – nichts wird überschrieben. */
@@ -2840,7 +2860,8 @@ function merkeGeschichten(karten) {
 }
 
 function zeigeZusammenfassung(richtig, gesamt, lob, falschKarten, hinweise) {
-  meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig.");
+  const aufgabenWort = gesamt === 1 ? "Aufgabe" : "Aufgaben";
+  meldeRueckmeldung(richtig + " von " + gesamt + " " + aufgabenWort + " richtig.");
   letzteZusammenfassung = {
     richtig: richtig,
     gesamt: gesamt,
@@ -2852,7 +2873,7 @@ function zeigeZusammenfassung(richtig, gesamt, lob, falschKarten, hinweise) {
   kasten.hidden = false;
 
   kasten.appendChild(element("p", "ergebnis-zeile",
-    "Du hast " + richtig + " von " + gesamt + " Aufgaben richtig!"));
+    "Du hast " + richtig + " von " + gesamt + " " + aufgabenWort + " richtig!"));
   kasten.appendChild(element("p", "ergebnis-lob", lob));
 
   /* Freundlicher Hinweis zur Bonuswelt dieser Welt */
@@ -5443,7 +5464,8 @@ const extraUebung = (function () {
           res.kontrolle.appendChild(element("span", "markierung", "✓ Richtig!"));
         } else {
           res.karte.classList.add("falsch");
-          res.kontrolle.appendChild(element("span", "markierung", "Fast! "));
+          res.kontrolle.appendChild(element("span", "markierung",
+            res.aufgabe.erklaerung ? "✗ Nicht ganz: " : "✗ Noch nicht richtig."));
           if (res.aufgabe.erklaerung) {
             res.kontrolle.appendChild(element("span", "loesung", res.aufgabe.erklaerung));
           }
@@ -5454,14 +5476,14 @@ const extraUebung = (function () {
       ergebnisBox.textContent = "";
       ergebnisBox.hidden = false;
       ergebnisBox.appendChild(element("p", "ergebnis-zeile", richtig + " von " + gesamt + " richtig!"));
-      ergebnisBox.appendChild(element("p", "ergebnis-lob", lobFuerAnteil(anteil)));
+      ergebnisBox.appendChild(element("p", "ergebnis-lob", lobFuerAnteil(anteil, richtig, gesamt)));
       pruefenKnopf.hidden = true;
       neuKnopf.hidden = false;
       if (anteil >= 0.8) {
         musik.fanfare(anteil === 1 ? 5 : 4);
         if (EINSTELLUNGEN.spaessig) { sternenRegen(anteil === 1); }
       }
-      meldeRueckmeldung(richtig + " von " + gesamt + " Aufgaben richtig gelöst.");
+      meldeRueckmeldung(richtig + " von " + gesamt + (gesamt === 1 ? " Aufgabe" : " Aufgaben") + " richtig gelöst.");
       if (typeof ergebnisBox.scrollIntoView === "function") {
         ergebnisBox.scrollIntoView({ block: "nearest" });
       }

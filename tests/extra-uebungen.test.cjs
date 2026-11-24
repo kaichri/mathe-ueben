@@ -199,3 +199,41 @@ test("UI: Rechendreieck zeichnet echtes SVG-Dreieck mit 3 Innen- und 3 Außenfel
     assert.equal(d.querySelectorAll(".dreieck-aussen").length, 3, "3 Außenzahlen erwartet");
   }
 });
+
+test("Rückmeldungen: lobFuerAnteil unterscheidet Alles richtig, Fast alles richtig und 0 richtig genau", () => {
+  const g = game({}, { now: JETZT });
+  const lob = (r, n) => g.run(`lobFuerAnteil(${n > 0 ? r / n : 0}, ${r}, ${n})`);
+
+  // 100 %: immer „Alles richtig“, niemals „Fast alles richtig“
+  for (const n of [1, 3, 5, 6, 8, 10, 50]) {
+    const text = lob(n, n);
+    assert.match(text, /^Alles richtig/, `${n}/${n} muss „Alles richtig“ melden, bekam: ${text}`);
+    assert.doesNotMatch(text, /Fast alles/i);
+  }
+
+  // Fast alles richtig: 90–98 % bzw. genau 1 Fehler bei mind. 5 Aufgaben (4/5, 5/6, 7/8, 9/10, 45–49/50)
+  for (const [r, n] of [[4, 5], [5, 6], [7, 8], [9, 10], [45, 50], [49, 50]]) {
+    assert.match(lob(r, n), /^Fast alles richtig/, `${r}/${n} muss „Fast alles richtig“ melden`);
+  }
+
+  // Richtig gut (75–89 % ohne 1-Fehler-Sonderfall)
+  for (const [r, n] of [[3, 4], [6, 8], [8, 10], [40, 50]]) {
+    assert.match(lob(r, n), /richtig gut/, `${r}/${n} muss „richtig gut“ melden`);
+  }
+
+  // Mittelfeld (55–74 %) inkl. Singular bei 2/3
+  assert.match(lob(2, 3), /Die eine Aufgabe/);
+  assert.match(lob(30, 50), /Schon gut/);
+
+  // Durchgehalten (35–54 %)
+  assert.match(lob(20, 50), /durchgehalten/);
+  assert.match(lob(1, 2), /durchgehalten/);
+
+  // Wenige richtig (1–34 %)
+  assert.match(lob(5, 50), /Anfang ist gemacht/);
+
+  // 0 richtig: nie „nicht alles rund“, Singular bei 0/1
+  assert.match(lob(0, 50), /noch keine Aufgabe geklappt/);
+  assert.match(lob(0, 1), /noch nicht geklappt.*die Lösung\b/);
+  assert.doesNotMatch(lob(0, 50), /nicht alles rund/i);
+});

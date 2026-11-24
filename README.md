@@ -531,6 +531,17 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.2 — Präzisere Ergebnis-Rückmeldungen
+
+- **Genauere Lob-Stufen:** 100 % meldet nun „Alles richtig“ (statt „Fast alles
+  richtig“), „Fast alles richtig“ gilt ab 90 % sowie bei genau 1 Fehler ab
+  5 Aufgaben (z. B. 4/5, 5/6, 7/8, 9/10), und 0 richtige Aufgaben erhalten eine
+  eigene, ehrliche Rückmeldung.
+- **Einzel-Rückmeldungen & Singular/Plural:** Leere Karten im Quiz melden
+  „Nicht beantwortet.“ (statt „Da war ein Fehler.“), falsche Antworten in den
+  Extra-Übungen „✗ Nicht ganz:“ (statt „Fast!“), und Singular/Plural bei
+  „1 neuer Bonusstern“ sowie „1 Aufgabe“ stimmt jetzt überall.
+
 ### 1.3.1 — Rechendreiecke als echtes SVG-Dreieck
 
 - **Rechendreiecke klarer dargestellt:** Unter *Mathe → Rechenmauern & Dreiecke*
