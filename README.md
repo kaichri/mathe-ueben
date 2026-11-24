@@ -553,7 +553,7 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
   Sperrung und „↺ Neu legen“ wie beim Satzbau-Puzzle) + 4 Sätze-verbinden-Aufgaben
   (`weil`, `deshalb`, `aber`, `danach`) pro Geschichte.
 - **Einfaches Erzählen & Gesamtauswertung (Schritt 4):** Direkte 4-Stationen-Karten
-  zum Abhaken (mit optionalem Verdecken) und vollständiger Abschlussübersicht über
+  zum Abhaken und vollständiger Abschlussübersicht über
   *Verstehen*, *Satz bilden* und *Erzählen* (246 Node-Tests grün).
 
 ### 1.3.3 — Mehr Deutsch-Übungsaufgaben (245 Einträge) & erweiterte Tests

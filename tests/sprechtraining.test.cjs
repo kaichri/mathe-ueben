@@ -380,19 +380,15 @@ test("SPRECH: Satzbildung – 4 Wortpuzzles + 4 Sätze verbinden prüfen", () =>
   assert.match(g.nodes.get("sprechInhalt").textContent, /8 von 8 richtig – Alles richtig/);
 });
 
-test("SPRECH: Erzählen – direkt einfach mit 4 Karten, optionalem Verdecken und Feier", () => {
+test("SPRECH: Erzählen – direkt einfach mit 4 Karten und Feier", () => {
   const g = game({}, { now: JETZT });
   g.run("sprech.oeffnen()");
   offneEinheitMitSatz(g, 1, 1);
   weiter(g); weiter(g); weiter(g);
   const inhalt = g.nodes.get("sprechInhalt");
   assert.equal(inhalt.querySelectorAll(".sprech-ordnen-pruefen").length, 0, "keine komplizierte Vor-Phase mehr");
+  assert.equal(inhalt.querySelectorAll(".sprech-profi-knopf").length, 0, "kein Karten-verdecken-Knopf mehr");
   assert.equal(inhalt.querySelectorAll(".sprech-bingo-karte").length, 4, "sofort alle 4 Erzähl-Karten sichtbar");
-
-  // Verdecken-Knopf verdeckt unerzählte Karten
-  g.nodes.get("sprechInhalt").querySelector(".sprech-profi-knopf").emit("click");
-  assert.equal(g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")
-    .filter(k => k.classList.contains("verdeckt")).length, 4);
 
   // 2 Stationen abhaken
   g.nodes.get("sprechInhalt").querySelectorAll(".sprech-bingo-karte")[0].emit("click");

@@ -5671,7 +5671,6 @@ const sprech = (function () {
     };
     erzaehlStand = {
       stationen: (e.wichtigePunkte || []).slice(),
-      profiModus: false,
       abgehakt: new Set()
     };
     rendere();
@@ -6183,13 +6182,11 @@ const sprech = (function () {
     const bingo = element("div", "sprech-bingo-raster");
     stand.stationen.forEach(function (punkt, i) {
       const abgehakt = stand.abgehakt.has(punkt);
-      const verdeckt = stand.profiModus && !abgehakt;
-      const kachel = element("button",
-        "sprech-bingo-karte" + (abgehakt ? " erzaehlt" : "") + (verdeckt ? " verdeckt" : ""));
+      const kachel = element("button", "sprech-bingo-karte" + (abgehakt ? " erzaehlt" : ""));
       kachel.type = "button";
       kachel.setAttribute("aria-pressed", String(abgehakt));
       kachel.appendChild(element("span", "sprech-bingo-nr", abgehakt ? "✓ " + (i + 1) : String(i + 1)));
-      kachel.appendChild(element("span", "sprech-bingo-text", verdeckt ? "Frei erzählen …" : punkt));
+      kachel.appendChild(element("span", "sprech-bingo-text", punkt));
       kachel.addEventListener("click", function () {
         if (stand.abgehakt.has(punkt)) { stand.abgehakt.delete(punkt); }
         else { stand.abgehakt.add(punkt); }
@@ -6198,17 +6195,6 @@ const sprech = (function () {
       bingo.appendChild(kachel);
     });
     karte.appendChild(bingo);
-
-    const schalterZeile = element("div", "sprech-zeile");
-    const profiKnopf = element("button", "knopf klein schlicht sprech-profi-knopf",
-      stand.profiModus ? "👀 Hilfe zeigen" : "🙈 Karten verdecken");
-    profiKnopf.type = "button";
-    profiKnopf.addEventListener("click", function () {
-      stand.profiModus = !stand.profiModus;
-      rendere();
-    });
-    schalterZeile.appendChild(profiKnopf);
-    karte.appendChild(schalterZeile);
 
     fragment.appendChild(karte);
 

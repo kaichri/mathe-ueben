@@ -1835,12 +1835,6 @@ main {
   color: var(--text);
 }
 .sprech-bingo-karte:hover { background: var(--akzent-hell); }
-.sprech-bingo-karte.verdeckt {
-  background: #f5f2eb;
-  border-style: dashed;
-  border-color: var(--linien);
-  color: var(--text-mild);
-}
 .sprech-bingo-karte.erzaehlt {
   background: var(--gut-hell);
   border-color: var(--gut);
