@@ -531,6 +531,17 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.3 — Mehr Deutsch-Übungsaufgaben (245 Einträge) & erweiterte Tests
+
+- **Aufgabenpool der 5 Deutsch-Übungen mehr als verdoppelt** (`deutsch-uebungen.js`):
+  Rechtschreib-Detektiv (30 → 70), Wortarten sortieren (24 → 60, exakt 20/20/20),
+  Satzbau-Puzzle (16 → 40), Leseverständnis (6 → 15, je 5 Geschichten pro Welt)
+  und Wort-Training (24 → 60, je 15 pro Kategorie).
+- **Wiederholungsschutz pro Sitzung:** Aufeinanderfolgende Runden in den
+  Deutsch-Übungen wiederholen keine Aufgaben unmittelbar.
+- **Erweiterte Deutsch-Testsuite:** Duplikat-, Ausgewogenheits- und komplette
+  UI-Durchlauftests für alle 5 Deutsch-Übungen (246 Node-Tests grün).
+
 ### 1.3.2 — Präzisere Ergebnis-Rückmeldungen
 
 - **Genauere Lob-Stufen:** 100 % meldet nun „Alles richtig“ (statt „Fast alles

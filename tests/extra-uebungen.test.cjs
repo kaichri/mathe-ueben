@@ -80,47 +80,207 @@ test("MATHE-THEMEN: analoge Uhr akzeptiert 12h- und 24h-Format", () => {
    2. DEUTSCH-ÜBUNGEN: Datenintegrität & Erzeugung
    ========================================================================= */
 
-test("DEUTSCH-ÜBUNGEN: alle 5 Themen und Datenbestände sind widerspruchsfrei", () => {
+test("DEUTSCH-ÜBUNGEN: alle 5 Themen und 245 Datenbestände sind widerspruchsfrei und duplikatfrei", () => {
   assert.equal(DEUTSCH_UEBUNGEN.THEMEN.length, 5);
   assert.deepEqual(DEUTSCH_UEBUNGEN.WORTARTEN_LABELS, [
     "Namenwort (Nomen)", "Tunwort (Verb)", "Wiewort (Adjektiv)"
   ]);
 
+  // 1. Rechtschreib-Detektiv (70 Aufgaben, keine doppelten Sätze)
+  assert.equal(DEUTSCH_UEBUNGEN.RECHTSCHREIBUNG.length, 70);
+  const rsSaetze = new Set();
   for (const r of DEUTSCH_UEBUNGEN.RECHTSCHREIBUNG) {
     assert(r.satz.includes("___"), "Lücke fehlt: " + r.satz);
+    assert(!rsSaetze.has(r.satz), "Doppelter Rechtschreib-Satz: " + r.satz);
+    rsSaetze.add(r.satz);
+    assert.equal(r.optionen.length, 2, "Genau 2 Optionen erwartet: " + r.satz);
+    assert.notEqual(r.optionen[0], r.optionen[1], "Identische Optionen: " + r.satz);
     assert(r.richtig >= 0 && r.richtig < r.optionen.length);
+    assert(typeof r.regel === "string" && r.regel.length > 0);
+    assert(typeof r.erklaerung === "string" && r.erklaerung.length > 10);
   }
+  const katze = DEUTSCH_UEBUNGEN.RECHTSCHREIBUNG.find(r => r.optionen.includes("Katze"));
+  assert.equal(katze.regel, "tz oder z?");
+
+  // 2. Wortarten (60 Aufgaben, ausgewogen 20/20/20, keine doppelten Sätze)
+  assert.equal(DEUTSCH_UEBUNGEN.WORTARTEN.length, 60);
+  const waSaetze = new Set();
+  const waZaehler = [0, 0, 0];
   for (const w of DEUTSCH_UEBUNGEN.WORTARTEN) {
     assert(w.satz.includes("**" + w.wort + "**"), "Markierung fehlt: " + w.satz);
+    assert(!waSaetze.has(w.satz), "Doppelter Wortarten-Satz: " + w.satz);
+    waSaetze.add(w.satz);
     assert([0, 1, 2].includes(w.art));
+    waZaehler[w.art] += 1;
+    assert(typeof w.erklaerung === "string" && w.erklaerung.length > 10);
   }
+  assert.deepEqual(waZaehler, [20, 20, 20]);
+
+  // 3. Satzbau-Puzzle (40 eindeutige Sätze)
+  assert.equal(DEUTSCH_UEBUNGEN.SATZBAU.length, 40);
+  const sbSaetze = new Set();
   for (const s of DEUTSCH_UEBUNGEN.SATZBAU) {
+    assert(s.teile.length >= 4 && s.teile.length <= 5, "Baustein-Anzahl unerwartet: " + s.erklaerung);
     assert.equal(s.teile.join(" "), s.erklaerung, "Satzbau weicht ab: " + s.erklaerung);
+    assert(s.teile[s.teile.length - 1].endsWith("."), "Satzpunkt fehlt: " + s.erklaerung);
+    assert(!sbSaetze.has(s.erklaerung), "Doppelter Satzbau-Satz: " + s.erklaerung);
+    sbSaetze.add(s.erklaerung);
   }
+
+  // 4. Leseverständnis (15 Geschichten, je 5 pro Welt)
+  assert.equal(DEUTSCH_UEBUNGEN.LESETEXTE.length, 15);
+  const leseIds = new Set();
+  const leseTitel = new Set();
   for (const welt of ["hunde", "hamster", "weihnachten"]) {
     const passend = DEUTSCH_UEBUNGEN.LESETEXTE.filter(t => t.welt === welt);
-    assert(passend.length >= 2, "Zu wenige Lesetexte für Welt " + welt);
+    assert.equal(passend.length, 5, "Genau 5 Lesetexte pro Welt erwartet für " + welt);
     for (const t of passend) {
+      assert(!leseIds.has(t.id), "Doppelte Lesetext-ID: " + t.id);
+      assert(!leseTitel.has(t.titel), "Doppelter Lesetext-Titel: " + t.titel);
+      leseIds.add(t.id);
+      leseTitel.add(t.titel);
+      assert(t.text.length >= 180, "Lesetext zu kurz: " + t.titel);
       assert.equal(t.fragen.length, 3);
       for (const f of t.fragen) {
+        assert.equal(f.optionen.length, 3);
+        assert.equal(new Set(f.optionen).size, 3, "Doppelte Antwortoption in " + t.titel);
         assert(f.richtig >= 0 && f.richtig < f.optionen.length);
+        assert(typeof f.erklaerung === "string" && f.erklaerung.length > 5);
       }
     }
   }
-  for (const wt of DEUTSCH_UEBUNGEN.WORTTRAINING) {
-    assert(wt.richtig >= 0 && wt.richtig < wt.optionen.length);
-  }
 
-  // Alle 5 Übungen erzeugen gültige Pakete; Leseverständnis vermeidet sofortige Wiederholung.
-  for (const thema of DEUTSCH_UEBUNGEN.THEMEN) {
-    const p1 = DEUTSCH_UEBUNGEN.erzeuge(thema.id, "hunde");
-    assert(p1.aufgaben.length >= 3);
-    if (thema.id === "lesen") {
-      assert.equal(p1.lesetext.welt, "hunde");
-      const p2 = DEUTSCH_UEBUNGEN.erzeuge("lesen", "hunde", p1.lesetext.id);
-      assert.notEqual(p2.lesetext.id, p1.lesetext.id);
+  // 5. Wort-Training (60 Aufgaben, je 15 pro Kategorie)
+  assert.equal(DEUTSCH_UEBUNGEN.WORTTRAINING.length, 60);
+  const wtFragen = new Set();
+  const wtKat = {};
+  for (const wt of DEUTSCH_UEBUNGEN.WORTTRAINING) {
+    assert(!wtFragen.has(wt.frage), "Doppelte Wort-Training-Frage: " + wt.frage);
+    wtFragen.add(wt.frage);
+    assert.equal(wt.optionen.length, 3);
+    assert.equal(new Set(wt.optionen).size, 3, "Doppelte Optionen bei: " + wt.frage);
+    assert(wt.richtig >= 0 && wt.richtig < wt.optionen.length);
+    assert(typeof wt.erklaerung === "string" && wt.erklaerung.length > 5);
+    wtKat[wt.kategorie] = (wtKat[wt.kategorie] || 0) + 1;
+  }
+  assert.deepEqual(wtKat, { Gegenteil: 15, Mehrzahl: 15, Wortfamilie: 15, Vergangenheit: 15 });
+});
+
+test("DEUTSCH-ÜBUNGEN: aufeinanderfolgende Runden vermeiden direkte Wiederholungen und mischen Satzbau", () => {
+  for (const id of ["rechtschreibung", "wortarten", "satzbau", "worttraining"]) {
+    const r1 = DEUTSCH_UEBUNGEN.erzeuge(id, "hunde");
+    const r2 = DEUTSCH_UEBUNGEN.erzeuge(id, "hunde");
+    const schluessel = a => (id === "satzbau" ? a.erklaerung : (a.frage || a.satz));
+    const k1 = new Set(r1.aufgaben.map(schluessel));
+    const k2 = r2.aufgaben.map(schluessel);
+    for (const key of k2) {
+      assert(!k1.has(key), `${id}: Aufgabe wiederholte sich direkt in Runde 2: ${key}`);
+    }
+    if (id === "satzbau") {
+      for (const a of r1.aufgaben.concat(r2.aufgaben)) {
+        assert(!a.bausteine.every((t, i) => t === a.loesung[i]), "Satzbau nicht gemischt: " + a.erklaerung);
+      }
     }
   }
+
+  // Leseverständnis bevorzugt aktive Welt und wiederholt nicht direkt
+  for (const welt of ["hunde", "hamster", "weihnachten"]) {
+    const l1 = DEUTSCH_UEBUNGEN.erzeuge("lesen", welt);
+    assert.equal(l1.lesetext.welt, welt);
+    const l2 = DEUTSCH_UEBUNGEN.erzeuge("lesen", welt, l1.lesetext.id);
+    assert.equal(l2.lesetext.welt, welt);
+    assert.notEqual(l2.lesetext.id, l1.lesetext.id);
+  }
+});
+
+test("UI: alle 5 Deutsch-Übungen lassen sich vollständig durchspielen und korrekt bewerten", () => {
+  const g = game({}, { now: JETZT });
+  g.nodes.get("deutschUmschalter").emit("click");
+  const inhalt = g.nodes.get("sprechInhalt");
+
+  // 1. Rechtschreib-Detektiv: alle 8 richtig -> „Alles richtig“
+  g.run("sprech.oeffneDeutschUebung('rechtschreibung')");
+  const rsKarten = inhalt.querySelectorAll(".extra-aufgabe");
+  assert.equal(rsKarten.length, 8);
+  for (const karte of rsKarten) {
+    const frage = karte.querySelector(".extra-frage").textContent;
+    const eintrag = DEUTSCH_UEBUNGEN.RECHTSCHREIBUNG.find(e => e.satz === frage);
+    assert(eintrag, "Rechtschreib-Eintrag nicht gefunden: " + frage);
+    karte.querySelectorAll(".extra-option")[eintrag.richtig].emit("click");
+  }
+  inhalt.querySelector(".extra-pruefen").emit("click");
+  assert.match(inhalt.querySelector(".extra-ergebnis").textContent, /8 von 8 richtig!.*Alles richtig/);
+
+  // 2. Wortarten: 7 von 8 richtig (genau 1 Fehler) -> „Fast alles richtig“
+  g.run("sprech.oeffneDeutschUebung('wortarten')");
+  const waKarten = inhalt.querySelectorAll(".extra-aufgabe");
+  assert.equal(waKarten.length, 8);
+  waKarten.forEach((karte, idx) => {
+    const satzText = karte.querySelector(".extra-frage").textContent;
+    const markiert = karte.querySelector(".wort-markiert").textContent;
+    const eintrag = DEUTSCH_UEBUNGEN.WORTARTEN.find(e =>
+      e.satz.replace(/\*\*/g, "") === satzText && e.wort === markiert);
+    assert(eintrag, "Wortarten-Eintrag nicht gefunden: " + satzText + " / " + markiert);
+    const wahl = idx === 0 ? (eintrag.art + 1) % 3 : eintrag.art;
+    karte.querySelectorAll(".extra-option")[wahl].emit("click");
+  });
+  inhalt.querySelector(".extra-pruefen").emit("click");
+  assert.match(inhalt.querySelector(".extra-ergebnis").textContent, /7 von 8 richtig!.*Fast alles richtig/);
+
+  // 3. Satzbau-Puzzle: Baustein ablegen, wieder entfernen und korrekt legen
+  g.run("sprech.oeffneDeutschUebung('satzbau')");
+  const sbKarten = inhalt.querySelectorAll(".extra-aufgabe");
+  assert.equal(sbKarten.length, 6);
+  const ersteVorrat = sbKarten[0].querySelector(".extra-ordnen-vorrat").querySelectorAll(".extra-chip");
+  ersteVorrat[0].emit("click");
+  assert.equal(sbKarten[0].querySelector(".extra-ordnen-ziel").querySelectorAll(".extra-chip").length, 1);
+  sbKarten[0].querySelector(".extra-ordnen-ziel").querySelectorAll(".extra-chip")[0].emit("click");
+  assert.equal(sbKarten[0].querySelector(".extra-ordnen-ziel").querySelectorAll(".extra-chip").length, 0);
+  for (const karte of sbKarten) {
+    const chips = karte.querySelector(".extra-ordnen-vorrat").querySelectorAll(".extra-chip");
+    const texte = chips.map(c => c.textContent);
+    const eintrag = DEUTSCH_UEBUNGEN.SATZBAU.find(s =>
+      s.teile.length === texte.length && s.teile.every(t => texte.includes(t)));
+    assert(eintrag, "Satzbau-Eintrag nicht gefunden");
+    for (const teil of eintrag.teile) {
+      chips.find(c => c.textContent === teil && !c.disabled).emit("click");
+    }
+  }
+  inhalt.querySelector(".extra-pruefen").emit("click");
+  assert.match(inhalt.querySelector(".extra-ergebnis").textContent, /6 von 6 richtig!.*Alles richtig/);
+
+  // 4. Leseverständnis: Text sichtbar, 0 Antworten -> „noch keine Aufgabe geklappt“ + „✗ Nicht ganz:“
+  g.run("sprech.oeffneDeutschUebung('lesen')");
+  assert(inhalt.querySelector(".extra-lesetext"), "Lesetext-Kasten fehlt");
+  assert.equal(inhalt.querySelectorAll(".extra-aufgabe").length, 3);
+  inhalt.querySelector(".extra-pruefen").emit("click");
+  assert.match(inhalt.querySelector(".extra-ergebnis").textContent, /0 von 3 richtig!.*noch keine Aufgabe geklappt/);
+  assert.match(inhalt.textContent, /✗ Nicht ganz:/);
+
+  // 5. Wort-Training: alle 8 richtig + „Neue Übung“ erzeugt frische Runde
+  g.run("sprech.oeffneDeutschUebung('worttraining')");
+  const wtKarten = inhalt.querySelectorAll(".extra-aufgabe");
+  assert.equal(wtKarten.length, 8);
+  const ersteFragen = new Set();
+  for (const karte of wtKarten) {
+    const frage = karte.querySelector(".extra-frage").textContent;
+    ersteFragen.add(frage);
+    const eintrag = DEUTSCH_UEBUNGEN.WORTTRAINING.find(e => e.frage === frage);
+    assert(eintrag, "Wort-Training-Eintrag nicht gefunden: " + frage);
+    karte.querySelectorAll(".extra-option")[eintrag.richtig].emit("click");
+  }
+  inhalt.querySelector(".extra-pruefen").emit("click");
+  assert.match(inhalt.querySelector(".extra-ergebnis").textContent, /8 von 8 richtig!.*Alles richtig/);
+  inhalt.querySelector(".extra-neu").emit("click");
+  const zweiteFragen = inhalt.querySelectorAll(".extra-aufgabe").map(k => k.querySelector(".extra-frage").textContent);
+  assert.equal(zweiteFragen.length, 8);
+  for (const f of zweiteFragen) {
+    assert(!ersteFragen.has(f), "Neue Wort-Training-Runde wiederholte sofort Frage: " + f);
+  }
+
+  // Deutsch-Übungen lassen Bonussterne und Quiz-Statistik unberührt
+  assert.equal(g.data().bonusGesamt, 0);
+  assert.equal(g.data().runden.length, 0);
 });
 
 /* =========================================================================
