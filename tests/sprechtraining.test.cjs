@@ -106,14 +106,12 @@ test("DATEN: jede Geschichte hat 5–7 Sätze, 4×5 Auswahl-Fragen, 4+4 Satz-Üb
       assert(fs.existsSync(datei) && fs.statSync(datei).size > 0,
         "Text-Audio fehlt oder leer: " + stimme + "/tag" + nr + "-text.mp3");
     }
-    if (e.bild) {
-      const bildDatei = path.join(__dirname, "..", e.bild);
-      assert(fs.existsSync(bildDatei) && fs.statSync(bildDatei).size > 0,
-        "Geschichten-Bild fehlt oder leer: " + e.bild);
-    }
+    assert(typeof e.bild === "string" && e.bild.endsWith(".webp"),
+      "Geschichten-Bildpfad fehlt: Geschichte " + e.tag);
+    const bildDatei = path.join(__dirname, "..", e.bild);
+    assert(fs.existsSync(bildDatei) && fs.statSync(bildDatei).size > 0,
+      "Geschichten-Bild fehlt oder leer: " + e.bild);
   }
-  assert(SPRECHTRAINING.EINHEITEN.filter(e => e.bild).length >= 12,
-    "mindestens 12 Geschichten haben bereits ein Bild");
 });
 
 test("DATEN: fragenSet wählt nach Nummer und läuft am Ende um", () => {

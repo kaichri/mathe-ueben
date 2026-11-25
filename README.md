@@ -531,6 +531,13 @@ Der Desktop-Starter beachtet Tags nicht; er holt beim Start nur den Stand auf
 
 ## Versionshistorie
 
+### 1.3.5 — Alle 20 Geschichten-Bilder komplett
+
+- **8 fehlende Aquarell-Illustrationen ergänzt:** Auch die Geschichten 11, 12,
+  14, 16, 17, 18, 19 und 20 haben nun eigene, vollflächige 960×720 `.webp`-Bilder
+  auf Seite 1 (*Zuhören*) inklusive Klick-Großansicht – damit sind alle **20 von
+  20 Geschichten** vollständig illustriert (246 Node-Tests grün).
+
 ### 1.3.4 — Sprechtraining komplett überarbeitet, Geschichten-Bilder & einheitliche Deutsch-Startseite
 
 - **Einheitliche Deutsch-Startseite:** Alle 6 Deutsch-Übungen (inkl. **Sprechtraining**)

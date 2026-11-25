@@ -44,15 +44,13 @@
     ];
   }
 
-  const BILD_TAGE = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 15]);
-
   function baueEinheit(roh) {
     const nr = ("0" + roh.tag).slice(-2);
     return {
       tag: roh.tag,
       titel: roh.titel,
       text: roh.text,
-      bild: BILD_TAGE.has(roh.tag) ? "bilder/geschichten/tag" + nr + ".webp" : null,
+      bild: "bilder/geschichten/tag" + nr + ".webp",
       fragenSets: baueFragenSets(roh.fragen),
       satzPuzzle: roh.satzPuzzle,
       satzVerbinden: roh.satzVerbinden,
